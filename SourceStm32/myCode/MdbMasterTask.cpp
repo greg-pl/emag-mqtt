@@ -257,12 +257,12 @@ void MdbMasterTask::proceedRecFrame() {
 		if (TCrc::Check(inBuf, n)) {
 			if (inBuf[0] != state.sent.devNr) {
 				if (m.err)
-					shellTask->msg(colRED, "MDB%u: replay DEVNR not agree: %u<->%u", mMdbNr, state.sent.devNr, inBuf[0]);
+					shellTask->oMsgX(colRED, "MDB%u: replay DEVNR not agree: %u<->%u", mMdbNr, state.sent.devNr, inBuf[0]);
 			} else {
 				uint8_t rxCmd = inBuf[1] & 0x7F;
 				if (rxCmd != state.sent.code) {
 					if (m.err)
-						shellTask->msg(colRED, "MDB%u: replay FUN not agree: %u<->%u", mMdbNr, state.sent.code, rxCmd);
+						shellTask->oMsgX(colRED, "MDB%u: replay FUN not agree: %u<->%u", mMdbNr, state.sent.code, rxCmd);
 				} else {
 					state.sent.currReq = reqEMPTY;
 					if ((inBuf[1] & 0x80) == 0) {
@@ -272,7 +272,7 @@ void MdbMasterTask::proceedRecFrame() {
 							int n = inBuf[2] >> 1;
 							if (n != state.sent.regCnt) {
 								if (m.err)
-									shellTask->msg(colRED, "MDB%u: Fun%u REPLY ERROR", mMdbNr, rxCmd);
+									shellTask->oMsgX(colRED, "MDB%u: Fun%u REPLY ERROR", mMdbNr, rxCmd);
 								onReciveData(false, rxCmd, NULL, 0);
 
 							} else {
@@ -283,7 +283,7 @@ void MdbMasterTask::proceedRecFrame() {
 										uint16_t w = GetWord(&inBuf[3 + 2 * i]);
 										m += snprintf(&txt[m], sizeof(txt) - m, "%02X,", w);
 									}
-									shellTask->msg(colWHITE, txt);
+									shellTask->oMsgX(colWHITE, txt);
 								}
 								onReciveData(true, rxCmd, &inBuf[3], n);
 							}
@@ -295,10 +295,10 @@ void MdbMasterTask::proceedRecFrame() {
 							uint16_t v = GetWord(&inBuf[4]);
 							if ((reg == state.sent.regAdr) && (v == state.sent.regVal)) {
 								if (m.info)
-									shellTask->msg(colWHITE, "MDB%u: Fun6 ACK", mMdbNr);
+									shellTask->oMsgX(colWHITE, "MDB%u: Fun6 ACK", mMdbNr);
 							} else {
 								if (m.err)
-									shellTask->msg(colRED, "MDB%u: Fun6 ACK ERROR", mMdbNr);
+									shellTask->oMsgX(colRED, "MDB%u: Fun6 ACK ERROR", mMdbNr);
 							}
 						}
 							break;
@@ -308,11 +308,11 @@ void MdbMasterTask::proceedRecFrame() {
 							if ((reg == state.sent.regAdr) && (cnt == state.sent.regCnt)) {
 								onReciveData(true, rxCmd, NULL, 0);
 								if (m.info)
-									shellTask->msg(colWHITE, "MDB%u: Fun16 ACK", mMdbNr);
+									shellTask->oMsgX(colWHITE, "MDB%u: Fun16 ACK", mMdbNr);
 							} else {
 								onReciveData(false, rxCmd, NULL, 0);
 								if (m.err)
-									shellTask->msg(colRED, "MDB%u: Fun16 ACK ERROR", mMdbNr);
+									shellTask->oMsgX(colRED, "MDB%u: Fun16 ACK ERROR", mMdbNr);
 							}
 						}
 							break;
@@ -320,7 +320,7 @@ void MdbMasterTask::proceedRecFrame() {
 					} else {
 						onReciveData(false, rxCmd, NULL, 0);
 						if (m.err)
-							shellTask->msg(colRED, "MDB%u: Modbus exception %u", mMdbNr, inBuf[2]);
+							shellTask->oMsgX(colRED, "MDB%u: Modbus exception %u", mMdbNr, inBuf[2]);
 					}
 				}
 
@@ -386,7 +386,7 @@ void MdbMasterTask::ThreadFunc() {
 				state.timeOutCnt++;
 				doOnTimeOut();
 				if (m.err)
-					shellTask->msg(colRED, "MDB%u: TimeOut DevNr=%u Fun=%u", mMdbNr, state.sent.devNr, state.sent.code);
+					shellTask->oMsgX(colRED, "MDB%u: TimeOut DevNr=%u Fun=%u", mMdbNr, state.sent.devNr, state.sent.code);
 			}
 		}
 
@@ -413,12 +413,12 @@ void MdbMasterTask::ThreadFunc() {
 	} // koniec pętli
 }
 
-void MdbMasterTask::showState(MsgStream *strm) {
-	if (strm->msgOpen(colWHITE)) {
-		strm->msgItem("PWR_ON=%u", getPower());
-		strm->msgItem("PWR_FLT=%u", getPowerFlt());
-		strm->msgItem("RxCnt=%u", mUart->getRxGlobCnt());
-		strm->msgClose();
+void MdbMasterTask::showState(OutStream *strm) {
+	if (strm->oOpen(colWHITE)) {
+		strm->oMsg("PWR_ON=%u", getPower());
+		strm->oMsg("PWR_FLT=%u", getPowerFlt());
+		strm->oMsg("RxCnt=%u", mUart->getRxGlobCnt());
+		strm->oClose();
 	}
 
 }
@@ -442,7 +442,7 @@ const char* MdbMasterTask::getMenuName() {
 	return "Modbus Menu";
 }
 
-void MdbMasterTask::shell(MsgStream *strm, const char *cmd) {
+void MdbMasterTask::shell(OutStream *strm, const char *cmd) {
 	char tok[20];
 	int idx = -1;
 
@@ -490,7 +490,7 @@ void MdbMasterTask::buildMenu(const ShellItem *toAddMenu) {
 	menu.tab[k].descr = NULL;
 }
 
-bool MdbMasterTask::execMenuItem(MsgStream *strm, int idx, const char *cmd) {
+bool MdbMasterTask::execMenuItem(OutStream *strm, int idx, const char *cmd) {
 	switch (idx) {
 	case 0:  //dbg
 		Token::getAsInt(&cmd, &mDbgLevel);
@@ -502,7 +502,7 @@ bool MdbMasterTask::execMenuItem(MsgStream *strm, int idx, const char *cmd) {
 		bool q;
 		Token::getAsBool(&cmd, &q);
 		setPower(q);
-		strm->msg(colWHITE, "SetPower=%u", q);
+		strm->oMsgX(colWHITE, "SetPower=%u", q);
 	}
 		break;
 	case 3: //rdreg
@@ -524,7 +524,7 @@ bool MdbMasterTask::execMenuItem(MsgStream *strm, int idx, const char *cmd) {
 						reqConsola.fun = 4;
 						nm = "RdInp";
 					}
-					strm->msg(colWHITE, "DevNr=%u %s %u,%u", reqConsola.devNr, nm, reqConsola.regAdr, reqConsola.regCnt);
+					strm->oMsgX(colWHITE, "DevNr=%u %s %u,%u", reqConsola.devNr, nm, reqConsola.regAdr, reqConsola.regCnt);
 					osSignalSet(getThreadId(), SIGNAL_CMD);
 				}
 			}
@@ -543,7 +543,7 @@ bool MdbMasterTask::execMenuItem(MsgStream *strm, int idx, const char *cmd) {
 					reqConsola.devNr = devNr;
 					reqConsola.regAdr = adr;
 					reqConsola.regVal[0] = val;
-					strm->msg(colWHITE, "DevNr=%u WrReg %u: %u", reqConsola.devNr, reqConsola.regAdr, reqConsola.regVal[0]);
+					strm->oMsgX(colWHITE, "DevNr=%u WrReg %u: %u", reqConsola.devNr, reqConsola.regAdr, reqConsola.regVal[0]);
 					osSignalSet(getThreadId(), SIGNAL_CMD);
 				}
 			}
@@ -569,7 +569,7 @@ bool MdbMasterTask::execMenuItem(MsgStream *strm, int idx, const char *cmd) {
 					reqConsola.devNr = devNr;
 					reqConsola.regAdr = adr;
 					reqConsola.regCnt = n;
-					strm->msg(colWHITE, "DevNr=%u WrMulReg %u: n=%u", reqConsola.devNr, reqConsola.regAdr, n);
+					strm->oMsgX(colWHITE, "DevNr=%u WrMulReg %u: n=%u", reqConsola.devNr, reqConsola.regAdr, n);
 					osSignalSet(getThreadId(), SIGNAL_CMD);
 				}
 			}
@@ -753,7 +753,7 @@ void MdbMasterGasTask::onReciveData(bool replOK, uint8_t mdbFun, const uint8_t *
 		}
 	}
 	if (zeroOfs.phase > 0) {
-		shellTask->msg(colWHITE, "MDB%u: Ack %s. Phase=%u sensNr=%u", mMdbNr, ErrOk(!replOK), zeroOfs.phase, zeroOfs.sensNr);
+		shellTask->oMsgX(colWHITE, "MDB%u: Ack %s. Phase=%u sensNr=%u", mMdbNr, ErrOk(!replOK), zeroOfs.phase, zeroOfs.sensNr);
 		if (replOK) {
 			switch (zeroOfs.phase) {
 			case 2:
@@ -771,13 +771,13 @@ void MdbMasterGasTask::onReciveData(bool replOK, uint8_t mdbFun, const uint8_t *
 				if (zeroOfs.sensNr < gasData.devCntTh) {
 					sendZeroOfs_Phase5Frame();
 				} else {
-					shellTask->msg(colGREEN, "MDB%u: Send zero offset OK", mMdbNr);
+					shellTask->oMsgX(colGREEN, "MDB%u: Send zero offset OK", mMdbNr);
 					zeroOfs.phase = 0;
 				}
 				break;
 			}
 		} else {
-			shellTask->msg(colRED, "MDB%u: Send zero offset ERROR. Phase=%u sensNr=%u", mMdbNr, zeroOfs.phase, zeroOfs.sensNr);
+			shellTask->oMsgX(colRED, "MDB%u: Send zero offset ERROR. Phase=%u sensNr=%u", mMdbNr, zeroOfs.phase, zeroOfs.sensNr);
 			zeroOfs.phase = 0;
 		}
 	}
@@ -786,13 +786,13 @@ void MdbMasterGasTask::onReciveData(bool replOK, uint8_t mdbFun, const uint8_t *
 void MdbMasterGasTask::doOnTimeOut() {
 	if (zeroOfs.phase > 0) {
 		zeroOfs.phase = 0;
-		shellTask->msg(colRED, "MDB%u: Send zero offset TIMEOUT. Phase=%u sensNr=%u", mMdbNr, zeroOfs.phase, zeroOfs.sensNr);
+		shellTask->oMsgX(colRED, "MDB%u: Send zero offset TIMEOUT. Phase=%u sensNr=%u", mMdbNr, zeroOfs.phase, zeroOfs.sensNr);
 	} else if (autoRd.phase > 0) {
 		autoRd.phase = 0;
-		shellTask->msg(colRED, "MDB%u: read measure TIMEOUT", mMdbNr);
+		shellTask->oMsgX(colRED, "MDB%u: read measure TIMEOUT", mMdbNr);
 		strcpy(autoRd.statusTxt, "TimeOut");
 	} else {
-		shellTask->msg(colRED, "MDB%u: TIMEOUT", mMdbNr);
+		shellTask->oMsgX(colRED, "MDB%u: TIMEOUT", mMdbNr);
 	}
 }
 
@@ -866,7 +866,7 @@ void MdbMasterGasTask::loopFunc() {
 				zeroOfs.flag = false;
 				zeroOfs.phase = 1;
 				zeroOfs.sensNr = 0;
-				shellTask->msg(colYELLOW, "ZeroOfs  cnt=%u", zeroOfs.cnt);
+				shellTask->oMsgX(colYELLOW, "ZeroOfs  cnt=%u", zeroOfs.cnt);
 			}
 		}
 		if (zeroOfs.phase != 0) {
@@ -900,12 +900,12 @@ void MdbMasterGasTask::loopFunc() {
 	}
 }
 
-void MdbMasterGasTask::showState(MsgStream *strm) {
+void MdbMasterGasTask::showState(OutStream *strm) {
 	MdbMasterTask::showState(strm);
-	if (strm->msgOpen(colWHITE)) {
-		strm->msgItem("RedCnt=%d", autoRd.redCnt);
-		strm->msgItem("TmRd=%.2f[s]", (HAL_GetTick() - autoRd.redTick) / 1000.0);
-		strm->msgClose();
+	if (strm->oOpen(colWHITE)) {
+		strm->oMsg("RedCnt=%d", autoRd.redCnt);
+		strm->oMsg("TmRd=%.2f[s]", (HAL_GetTick() - autoRd.redTick) / 1000.0);
+		strm->oClose();
 
 	}
 }
@@ -947,15 +947,15 @@ const char* MdbMasterGasTask::getSensValidStr(uint16_t status) {
 		return "OK";
 }
 
-void MdbMasterGasTask::showMeas(MsgStream *strm) {
-	if (strm->msgOpen(colWHITE)) {
-		strm->msgItem("RedCnt=%d", autoRd.redCnt);
-		strm->msgItem("TmRd=%.2f[s]", (HAL_GetTick() - autoRd.redTick) / 1000.0);
-		strm->msgItem("DevCnt=%d (%d)", gasData.devCnt, gasData.devCntTh);
-		strm->msgItem("serialNum=%d", gasData.serialNum);
-		strm->msgItem("ProdYear=%d", gasData.ProdYear);
-		strm->msgItem("FirmwareVer=%d.%03d", gasData.FirmwareVer >> 8, gasData.FirmwareVer & 0xff);
-		strm->msgItem("FailureCode=%d", gasData.FailureCode);
+void MdbMasterGasTask::showMeas(OutStream *strm) {
+	if (strm->oOpen(colWHITE)) {
+		strm->oMsg("RedCnt=%d", autoRd.redCnt);
+		strm->oMsg("TmRd=%.2f[s]", (HAL_GetTick() - autoRd.redTick) / 1000.0);
+		strm->oMsg("DevCnt=%d (%d)", gasData.devCnt, gasData.devCntTh);
+		strm->oMsg("serialNum=%d", gasData.serialNum);
+		strm->oMsg("ProdYear=%d", gasData.ProdYear);
+		strm->oMsg("FirmwareVer=%d.%03d", gasData.FirmwareVer >> 8, gasData.FirmwareVer & 0xff);
+		strm->oMsg("FailureCode=%d", gasData.FailureCode);
 
 		SensorData *pD = gasData.sensorTab;
 		for (int i = 0; i < gasData.devCntTh; i++) {
@@ -968,12 +968,12 @@ void MdbMasterGasTask::showMeas(MsgStream *strm) {
 					n += snprintf(&gtxt[n], sizeof(gtxt) - n, " (FIR:%.3f) (IR:%.3f)", pD->filtrFIR->out(), pD->filtrIR->out());
 				}
 			}
-			strm->msgItem(gtxt);
+			strm->oMsg(gtxt);
 			pD++;
 
 		}
 
-		strm->msgClose();
+		strm->oClose();
 	}
 }
 
@@ -1060,31 +1060,31 @@ bool MdbMasterGasTask::zeroGasFromSMS(const char *ptr, char *resText, int maxLen
 			break;
 	}
 	if (zeroOfs.cnt == gasData.devCntTh) {
-		if (shellTask->msgOpen(colBLUE)) {
-			shellTask->msgItem("GAS: Zero offset z SMS");
+		if (shellTask->oOpen(colBLUE)) {
+			shellTask->oMsg("GAS: Zero offset z SMS");
 			for (int i = 0; i < gasData.devCntTh; i++) {
-				shellTask->msgItem("%u. z=%d", i + 1, (int) ((int16_t) zeroOfs.tab[i]));
+				shellTask->oMsg("%u. z=%d", i + 1, (int) ((int16_t) zeroOfs.tab[i]));
 			}
-			shellTask->msgClose();
+			shellTask->oClose();
 		}
 
 		zeroOfs.flag = true;
 		strlcpy(resText, "ZERO-GAS. Procedura rozpoczęta.", maxLen);
 		return true;
 	} else {
-		shellTask->msg(colBLUE, "SMS Błąd. Ilość parametrów powinna być %u", gasData.devCntTh);
+		shellTask->oMsgX(colBLUE, "SMS Błąd. Ilość parametrów powinna być %u", gasData.devCntTh);
 		snprintf(resText, maxLen, "ZERO-GAS. Błąd, ilość parametrów powinna być %u", gasData.devCntTh);
 		return false;
 	}
 }
 
-bool MdbMasterGasTask::execMyMenuItem(MsgStream *strm, int idx, const char *cmd) {
+bool MdbMasterGasTask::execMyMenuItem(OutStream *strm, int idx, const char *cmd) {
 	switch (idx) {
 	case 0:  //m
 		showMeas(strm);
 		break;
 	case 1: {  //zero
-		strm->msg(colWHITE, "Zero offset");
+		strm->oMsgX(colWHITE, "Zero offset");
 		zeroOfs.cnt = 0;
 		while (zeroOfs.cnt < MAX_DEV_CNT) {
 			int a;
@@ -1096,7 +1096,7 @@ bool MdbMasterGasTask::execMyMenuItem(MsgStream *strm, int idx, const char *cmd)
 		if (zeroOfs.cnt == gasData.devCntTh) {
 			zeroOfs.flag = true;
 		} else {
-			strm->msg(colYELLOW, "Błąd. Ilość parametrów powinna być %u", gasData.devCntTh);
+			strm->oMsgX(colYELLOW, "Błąd. Ilość parametrów powinna być %u", gasData.devCntTh);
 		}
 
 	}
@@ -1107,7 +1107,7 @@ bool MdbMasterGasTask::execMyMenuItem(MsgStream *strm, int idx, const char *cmd)
 	return true;
 }
 
-bool MdbMasterGasTask::execMenuItem(MsgStream *strm, int idx, const char *cmd) {
+bool MdbMasterGasTask::execMenuItem(OutStream *strm, int idx, const char *cmd) {
 	bool q = MdbMasterTask::execMenuItem(strm, idx, cmd);
 	if (!q) {
 		q = execMyMenuItem(strm, idx - menu.baseCnt, cmd);
@@ -1174,10 +1174,10 @@ void MdbMasterNoiseTask::onReciveData(bool replOK, uint8_t mdbFun, const uint8_t
 void MdbMasterNoiseTask::doOnTimeOut() {
 	if (autoRd.phase > 0) {
 		autoRd.phase = 0;
-		shellTask->msg(colRED, "MDB%u: read measure TIMEOUT", mMdbNr);
+		shellTask->oMsgX(colRED, "MDB%u: read measure TIMEOUT", mMdbNr);
 		strcpy(autoRd.statusTxt, "TimeOut");
 	} else {
-		shellTask->msg(colRED, "MDB%u: TIMEOUT", mMdbNr);
+		shellTask->oMsgX(colRED, "MDB%u: TIMEOUT", mMdbNr);
 	}
 }
 
@@ -1205,21 +1205,21 @@ void MdbMasterNoiseTask::loopFunc() {
 	}
 }
 
-void MdbMasterNoiseTask::showState(MsgStream *strm) {
+void MdbMasterNoiseTask::showState(OutStream *strm) {
 	MdbMasterTask::showState(strm);
-	if (strm->msgOpen(colWHITE)) {
-		strm->msgItem("RedCnt=%d", autoRd.redCnt);
-		strm->msgItem("TmRd=%.2f[s]", (HAL_GetTick() - autoRd.redTick) / 1000.0);
-		strm->msgClose();
+	if (strm->oOpen(colWHITE)) {
+		strm->oMsg("RedCnt=%d", autoRd.redCnt);
+		strm->oMsg("TmRd=%.2f[s]", (HAL_GetTick() - autoRd.redTick) / 1000.0);
+		strm->oClose();
 
 	}
 }
 
-void MdbMasterNoiseTask::showMeas(MsgStream *strm) {
-	if (strm->msgOpen(colWHITE)) {
-		strm->msgItem("ReqCnt=%d", autoRd.reqCnt);
-		strm->msgItem("RedCnt=%d", autoRd.redCnt);
-		strm->msgItem("TmRd=%.2f[s]", (HAL_GetTick() - autoRd.redTick) / 1000.0);
+void MdbMasterNoiseTask::showMeas(OutStream *strm) {
+	if (strm->oOpen(colWHITE)) {
+		strm->oMsg("ReqCnt=%d", autoRd.reqCnt);
+		strm->oMsg("RedCnt=%d", autoRd.redCnt);
+		strm->oMsg("TmRd=%.2f[s]", (HAL_GetTick() - autoRd.redTick) / 1000.0);
 
 		int n = snprintf(gtxt, sizeof(gtxt), "Noise: ");
 
@@ -1231,10 +1231,10 @@ void MdbMasterNoiseTask::showMeas(MsgStream *strm) {
 		} else {
 			n += snprintf(&gtxt[n], sizeof(gtxt) - n, "brak danych");
 		}
-		strm->msgItem(gtxt);
+		strm->oMsg(gtxt);
 	}
 
-	strm->msgClose();
+	strm->oClose();
 
 }
 
@@ -1281,7 +1281,7 @@ const ShellItem* MdbMasterNoiseTask::getMenu() {
 	return menu.tab;
 }
 
-bool MdbMasterNoiseTask::execMyMenuItem(MsgStream *strm, int idx, const char *cmd) {
+bool MdbMasterNoiseTask::execMyMenuItem(OutStream *strm, int idx, const char *cmd) {
 	switch (idx) {
 	case 0:  //m
 		showMeas(strm);
@@ -1292,7 +1292,7 @@ bool MdbMasterNoiseTask::execMyMenuItem(MsgStream *strm, int idx, const char *cm
 	return true;
 }
 
-bool MdbMasterNoiseTask::execMenuItem(MsgStream *strm, int idx, const char *cmd) {
+bool MdbMasterNoiseTask::execMenuItem(OutStream *strm, int idx, const char *cmd) {
 	bool q = MdbMasterTask::execMenuItem(strm, idx, cmd);
 	if (!q) {
 		q = execMyMenuItem(strm, idx - menu.baseCnt, cmd);
@@ -1364,7 +1364,7 @@ void MdbMasterDustTask::loopFunc() {
 							autoRd.heaterOrderLastSendTick = HAL_GetTick();
 							setHeater(reqSYS, doOn);
 							if (config->data.R.exDev.heater.showMsg>=1) {
-								shellTask->msg(colGREEN, "MDB%u:T=%u SetHeater:%u temp=%.1f[*C]", mMdbNr, autoRd.heaterOrderLastSendTick, doOn, dustData.temperature);
+								shellTask->oMsgX(colGREEN, "MDB%u:T=%u SetHeater:%u temp=%.1f[*C]", mMdbNr, autoRd.heaterOrderLastSendTick, doOn, dustData.temperature);
 							}
 						}
 
@@ -1379,10 +1379,10 @@ void MdbMasterDustTask::loopFunc() {
 void MdbMasterDustTask::doOnTimeOut() {
 	if (autoRd.phase > 0) {
 		autoRd.phase = 0;
-		shellTask->msg(colRED, "MDB%u: read dust measure TIMEOUT", mMdbNr);
+		shellTask->oMsgX(colRED, "MDB%u: read dust measure TIMEOUT", mMdbNr);
 		strcpy(autoRd.statusTxt, "TimeOut");
 	} else {
-		shellTask->msg(colRED, "MDB%u: TIMEOUT", mMdbNr);
+		shellTask->oMsgX(colRED, "MDB%u: TIMEOUT", mMdbNr);
 	}
 }
 
@@ -1429,15 +1429,15 @@ void MdbMasterDustTask::onReciveData(bool replOK, uint8_t mdbFun, const uint8_t 
 	}
 }
 
-void MdbMasterDustTask::showState(MsgStream *strm) {
+void MdbMasterDustTask::showState(OutStream *strm) {
 	MdbMasterTask::showState(strm);
-	if (strm->msgOpen(colWHITE)) {
-		strm->msgItem("RdTime=%.2f[s]", (float) ((HAL_GetTick() - autoRd.redTick)) / 1000.0);
-		strm->msgItem("autoRd.Status=%s", autoRd.statusTxt);
-		strm->msgItem("measValid=%u", isMeasValid());
-		strm->msgItem("autoRd.reqCnt=%u", autoRd.reqCnt);
-		strm->msgItem("autoRd.redCnt=%u", autoRd.redCnt);
-		strm->msgClose();
+	if (strm->oOpen(colWHITE)) {
+		strm->oMsg("RdTime=%.2f[s]", (float) ((HAL_GetTick() - autoRd.redTick)) / 1000.0);
+		strm->oMsg("autoRd.Status=%s", autoRd.statusTxt);
+		strm->oMsg("measValid=%u", isMeasValid());
+		strm->oMsg("autoRd.reqCnt=%u", autoRd.reqCnt);
+		strm->oMsg("autoRd.redCnt=%u", autoRd.redCnt);
+		strm->oClose();
 	}
 
 }
@@ -1459,29 +1459,29 @@ HAL_StatusTypeDef MdbMasterDustTask::getMeas(DustMeasRec *meas) {
 bool MdbMasterDustTask::isMeasValid() {
 	return ((dustData.PmStatus & 0x7F) == 0);
 }
-void MdbMasterDustTask::showMeas(MsgStream *strm) {
-	if (strm->msgOpen(colWHITE)) {
-		strm->msgItem("DevId=0x%04X", dustData.devID);
-		strm->msgItem("SerNum=%u", dustData.serialNumer);
-		strm->msgItem("prodYear=%u", dustData.productYear);
-		strm->msgItem("FirmVer=%u.%03u", dustData.firmware.ver, dustData.firmware.rev);
-		strm->msgItem("FailureCode=0x%04X", dustData.failureCode);
-		strm->msgItem("Temperature=%.1f", dustData.temperature);
-		strm->msgItem("HeaterOn=%u", dustData.heaterOn);
-		strm->msgItem("PM_Status=0x%04X", dustData.PmStatus);
+void MdbMasterDustTask::showMeas(OutStream *strm) {
+	if (strm->oOpen(colWHITE)) {
+		strm->oMsg("DevId=0x%04X", dustData.devID);
+		strm->oMsg("SerNum=%u", dustData.serialNumer);
+		strm->oMsg("prodYear=%u", dustData.productYear);
+		strm->oMsg("FirmVer=%u.%03u", dustData.firmware.ver, dustData.firmware.rev);
+		strm->oMsg("FailureCode=0x%04X", dustData.failureCode);
+		strm->oMsg("Temperature=%.1f", dustData.temperature);
+		strm->oMsg("HeaterOn=%u", dustData.heaterOn);
+		strm->oMsg("PM_Status=0x%04X", dustData.PmStatus);
 		if (isMeasValid()) {
-			strm->msgItem("PM 1.0= %.1f[ug/m3]", dustData.pm1_0);
-			strm->msgItem("PM 2.5= %.1f[ug/m3]", dustData.pm2_5);
-			strm->msgItem("PM 4.0= %.1f[ug/m3]", dustData.pm4_0);
-			strm->msgItem("PM 10 = %.1f[ug/m3]", dustData.pm10);
-			strm->msgItem("DustCnt'0_5'=%.2f[#/cm3]", dustData.dustCnt0_5);
-			strm->msgItem("DustCnt'1_0'=%.2f[#/cm3]", dustData.dustCnt1_0);
-			strm->msgItem("DustCnt'2_5'=%.2f[#/cm3]", dustData.dustCnt2_5);
-			strm->msgItem("DustCnt'4_0'=%.2f[#/cm3]", dustData.dustCnt4_0);
-			strm->msgItem("DustCnt'10' =%.2f[#/cm3]", dustData.dustCnt10);
-			strm->msgItem("DustSize =%.2f[nm]", dustData.dustSize);
+			strm->oMsg("PM 1.0= %.1f[ug/m3]", dustData.pm1_0);
+			strm->oMsg("PM 2.5= %.1f[ug/m3]", dustData.pm2_5);
+			strm->oMsg("PM 4.0= %.1f[ug/m3]", dustData.pm4_0);
+			strm->oMsg("PM 10 = %.1f[ug/m3]", dustData.pm10);
+			strm->oMsg("DustCnt'0_5'=%.2f[#/cm3]", dustData.dustCnt0_5);
+			strm->oMsg("DustCnt'1_0'=%.2f[#/cm3]", dustData.dustCnt1_0);
+			strm->oMsg("DustCnt'2_5'=%.2f[#/cm3]", dustData.dustCnt2_5);
+			strm->oMsg("DustCnt'4_0'=%.2f[#/cm3]", dustData.dustCnt4_0);
+			strm->oMsg("DustCnt'10' =%.2f[#/cm3]", dustData.dustCnt10);
+			strm->oMsg("DustSize =%.2f[nm]", dustData.dustSize);
 		}
-		strm->msgClose();
+		strm->oClose();
 	}
 }
 
@@ -1506,7 +1506,7 @@ void MdbMasterDustTask::setHeater(ReqSrc reqSrc, bool heaterOn) {
 	sendMdbFun6(reqSrc, config->data.R.rest.dustDevMdbNr, 8, w);
 }
 
-bool MdbMasterDustTask::execMyMenuItem(MsgStream *strm, int idx, const char *cmd) {
+bool MdbMasterDustTask::execMyMenuItem(OutStream *strm, int idx, const char *cmd) {
 	switch (idx) {
 	case 0:  //m
 		showMeas(strm);
@@ -1523,7 +1523,7 @@ bool MdbMasterDustTask::execMyMenuItem(MsgStream *strm, int idx, const char *cmd
 	return true;
 }
 
-bool MdbMasterDustTask::execMenuItem(MsgStream *strm, int idx, const char *cmd) {
+bool MdbMasterDustTask::execMenuItem(OutStream *strm, int idx, const char *cmd) {
 	bool q = MdbMasterTask::execMenuItem(strm, idx, cmd);
 	if (!q) {
 		q = execMyMenuItem(strm, idx - menu.baseCnt, cmd);

@@ -8,10 +8,10 @@
 #ifndef SHELL_H_
 #define SHELL_H_
 
+#include <IOStream.h>
 #include "uart.h"
 #include "TaskClass.h"
 #include "EscTerminal.h"
-#include "MsgStream.h"
 
 //------------------------------------------------------------------------------------------------------------
 // klasa virtualna
@@ -95,7 +95,7 @@ public:
 
 //------------------------------------------------------------------------------------------------------------
 
-class ShellTask: public TaskClass, public TermStream, public MsgStream {
+class ShellTask: public TaskClass, public TermStream, public OutStream {
 public:
 	enum {
 		SIGNAL_CHAR = 0x01, //
@@ -140,12 +140,12 @@ protected:
 private:
 public:
 	//MsgStream
-	virtual void msgAp(TermColor color, const char *pFormat, va_list ap);
-	virtual void msg(TermColor color, const char *pFormat, ...);
-	virtual bool msgOpen(TermColor color);
-	virtual void msgClose();
-	virtual void msgItemWr(const char *txt);
-	virtual void msgItem(const char *pFormat, ...);
+	virtual void oFormatX(TermColor color, const char *pFormat, va_list ap);
+	virtual void oMsgX(TermColor color, const char *pFormat, ...);
+	virtual bool oOpen(TermColor color);
+	virtual void oClose();
+	virtual void oWr(const char *txt);
+	virtual void oMsg(const char *pFormat, ...);
 	virtual void dumpBuf(TermColor color, const char *buf);
 public:
 	ShellTask();

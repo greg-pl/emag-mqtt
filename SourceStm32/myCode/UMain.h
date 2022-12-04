@@ -21,7 +21,7 @@ extern EventGroupHandle_t sysEvents;
 extern "C" {
 #endif
 
-#include "MsgStream.h"
+#include <IOStream.h>
 
 
 typedef volatile struct {
@@ -54,7 +54,7 @@ extern void getDevStatusAsTxt(char *buf,int max);
 extern void setLcdScrNr(int nr);
 extern void setLcdTime(int time);
 extern void setHeaterMsg(uint8_t show);
-extern MsgStream *getOutStream();
+extern OutStream *getOutStream();
 
 
 

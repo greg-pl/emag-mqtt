@@ -9,8 +9,8 @@
 #define LEDMATRIX_H_
 
 #include <uart.h>
-#include "MsgStream.h"
 #include <DustSensorBase.h>
+#include <IOStream.h>
 
 class LedMatrix: public TUart {
 private:
@@ -68,7 +68,7 @@ private:
 		DustMeasRec dustMeas;
 	} state;
 
-	void showState(MsgStream *strm);
+	void showState(OutStream *strm);
 	void startRecive();
 	void execNewFrame();
 	void sendFrame(const uint8_t *dt, int len);
@@ -90,7 +90,7 @@ public:
 	HAL_StatusTypeDef Init();
 
 	void tick();
-	void shell(MsgStream *strm, const char *cmd);
+	void shell(OutStream *strm, const char *cmd);
 };
 
 #endif /* LEDMATRIX_H_ */

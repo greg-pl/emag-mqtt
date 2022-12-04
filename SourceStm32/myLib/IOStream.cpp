@@ -5,9 +5,9 @@
  *      Author: Grzegorz
  */
 
+#include <IOStream.h>
 #include "string.h"
-#include "MsgStream.h"
-
+/*
 int findCmd(const ShellItem *item, const char *cmd) {
 	int idx = 0;
 	while (item->cmd) {
@@ -20,7 +20,7 @@ int findCmd(const ShellItem *item, const char *cmd) {
 	return -1;
 }
 
-void showHelp(MsgStream *strm, const char *caption, const ShellItem *item) {
+void showHelp(OutStream *strm, const char *caption, const ShellItem *item) {
 	const ShellItem *item2 = item;
 	int mx = 0;
 	while (item2->cmd) {
@@ -30,14 +30,15 @@ void showHelp(MsgStream *strm, const char *caption, const ShellItem *item) {
 	}
 
 	const char line[] = "-------------------------------------";
-	if (strm->msgOpen(colCYAN)) {
-		strm->msgItem(caption);
-		strm->msgItem(line);
+	if (strm->oOpen(colCYAN)) {
+		strm->oMsg(caption);
+		strm->oMsg(line);
 		while (item->cmd) {
-			strm->msgItem("%-*s : %s", mx, item->cmd, item->descr);
+			strm->oMsg("%-*s : %s", mx, item->cmd, item->descr);
 			item++;
 		}
-		strm->msgItem(line);
-		strm->msgClose();
+		strm->oMsg(line);
+		strm->oClose();
 	}
 }
+*/

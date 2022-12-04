@@ -62,8 +62,8 @@ void DustSensorNull::StartMeas() {
 void DustSensorNull::StopMeas() {
 }
 
-void DustSensorNull::shell(MsgStream *strm, const char *cmd) {
-	strm->msg(colRED, "No implemented");
+void DustSensorNull::shell(OutStream *strm, const char *cmd) {
+	strm->oMsgX(colRED, "No implemented");
 }
 
 HAL_StatusTypeDef DustSensorNull::getMeas(DustMeasRec *meas) {

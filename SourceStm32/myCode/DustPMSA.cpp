@@ -10,6 +10,7 @@
 #include <DustPMSA.h>
 #include <utils.h>
 #include <shell.h>
+#include <ShellItem.h>
 
 extern ShellTask *shellTask;
 
@@ -143,33 +144,33 @@ void DustPMSA::setPower(bool on) {
 }
 
 void DustPMSA::ShowMesuredRec() {
-	if (shellTask->msgOpen(colWHITE)) {
-		shellTask->msgItem("--- N=%u ------TT=%u--(dt=%u)---------", mShowMeasCnt, (int) HAL_GetTick(), state.measFrame.getMeasTick - state.measFrame.prevMeasTick);
+	if (shellTask->oOpen(colWHITE)) {
+		shellTask->oMsg("--- N=%u ------TT=%u--(dt=%u)---------", mShowMeasCnt, (int) HAL_GetTick(), state.measFrame.getMeasTick - state.measFrame.prevMeasTick);
 
-		shellTask->msgItem("PM1.0 : %.0f[ug/m3]", measHpma.PM_1_0);
-		shellTask->msgItem("PM2.5 : %.0f[ug/m3]", measHpma.PM_2_5);
-		shellTask->msgItem("PM10  : %.0f[ug/m3]", measHpma.PM_10);
-		shellTask->msgItem("Atmosferic environment");
-		shellTask->msgItem("PM1.0 : %.0f[ug/m3]", measHpma.PM_AE_1_0);
-		shellTask->msgItem("PM2.5 : %.0f[ug/m3]", measHpma.PM_AE_2_5);
-		shellTask->msgItem("PM10  : %.0f[ug/m3]", measHpma.PM_AE_10);
-		shellTask->msgItem("Number of particles");
-		shellTask->msgItem("Num D<0.3mm  : %u", measHpma.NUM_D03);
-		shellTask->msgItem("Num D<0.5mm  : %u", measHpma.NUM_D05);
-		shellTask->msgItem("Num D<1.0mm  : %u", measHpma.NUM_D10);
-		shellTask->msgItem("Num D<2.5mm  : %u", measHpma.NUM_D25);
-		shellTask->msgItem("Num D<5.0mm  : %u", measHpma.NUM_D50);
-		shellTask->msgItem("Num D<10.0mm : %u", measHpma.NUM_D100);
+		shellTask->oMsg("PM1.0 : %.0f[ug/m3]", measHpma.PM_1_0);
+		shellTask->oMsg("PM2.5 : %.0f[ug/m3]", measHpma.PM_2_5);
+		shellTask->oMsg("PM10  : %.0f[ug/m3]", measHpma.PM_10);
+		shellTask->oMsg("Atmosferic environment");
+		shellTask->oMsg("PM1.0 : %.0f[ug/m3]", measHpma.PM_AE_1_0);
+		shellTask->oMsg("PM2.5 : %.0f[ug/m3]", measHpma.PM_AE_2_5);
+		shellTask->oMsg("PM10  : %.0f[ug/m3]", measHpma.PM_AE_10);
+		shellTask->oMsg("Number of particles");
+		shellTask->oMsg("Num D<0.3mm  : %u", measHpma.NUM_D03);
+		shellTask->oMsg("Num D<0.5mm  : %u", measHpma.NUM_D05);
+		shellTask->oMsg("Num D<1.0mm  : %u", measHpma.NUM_D10);
+		shellTask->oMsg("Num D<2.5mm  : %u", measHpma.NUM_D25);
+		shellTask->oMsg("Num D<5.0mm  : %u", measHpma.NUM_D50);
+		shellTask->oMsg("Num D<10.0mm : %u", measHpma.NUM_D100);
 		if (!mFormaldehydeExist) {
-			shellTask->msgItem("reserved     : %u", measHpma.Reserved);
+			shellTask->oMsg("reserved     : %u", measHpma.Reserved);
 		} else {
-			shellTask->msgItem("Formaldehyde : %.3f[mg/m3]", measHpma.Formaldehyde);
-			shellTask->msgItem("Temperature  : %.1f[st.C]", measHpma.Temper);
-			shellTask->msgItem("Humidity     : %.1f[%%]", measHpma.Humidity);
-			shellTask->msgItem("Firm.Ver     : %u", measHpma.FirmwareVer);
-			shellTask->msgItem("ErrorCode    : %u", measHpma.ErrorCode);
+			shellTask->oMsg("Formaldehyde : %.3f[mg/m3]", measHpma.Formaldehyde);
+			shellTask->oMsg("Temperature  : %.1f[st.C]", measHpma.Temper);
+			shellTask->oMsg("Humidity     : %.1f[%%]", measHpma.Humidity);
+			shellTask->oMsg("Firm.Ver     : %u", measHpma.FirmwareVer);
+			shellTask->oMsg("ErrorCode    : %u", measHpma.ErrorCode);
 		}
-		shellTask->msgClose();
+		shellTask->oClose();
 	}
 
 }
@@ -312,24 +313,24 @@ void DustPMSA::tick() {
 
 }
 
-void DustPMSA::showState(MsgStream *strm) {
-	if (strm->msgOpen(colWHITE)) {
-		strm->msgItem("___PMSA Status___");
-		strm->msgItem("DUST_ON:%s", YN(Hdw::getDustSensorOn()));
-		strm->msgItem("DUST_FLG:%s", ErrOk(Hdw::getDustSensorFlg()));
-		strm->msgItem("DUST_SLEEP#:%s", YN(Hdw::getDustSleepOn()));
+void DustPMSA::showState(OutStream *strm) {
+	if (strm->oOpen(colWHITE)) {
+		strm->oMsg("___PMSA Status___");
+		strm->oMsg("DUST_ON:%s", YN(Hdw::getDustSensorOn()));
+		strm->oMsg("DUST_FLG:%s", ErrOk(Hdw::getDustSensorFlg()));
+		strm->oMsg("DUST_SLEEP#:%s", YN(Hdw::getDustSleepOn()));
 
-		strm->msgItem("loopCnt=%u", state.loopCnt);
-		strm->msgItem("IrqCnt=%u", mIrqCnt);
-		strm->msgItem("txCmplCnt=%u", state.txCmplCnt);
-		strm->msgItem("rxCnt=%u", state.rxCnt);
-		strm->msgItem("recFrameCnt=%u", state.recFrameCnt);
-		strm->msgItem("recFrameSumOkCnt=%u", state.recFrameSumOkCnt);
-		strm->msgItem("recFrameLenErr=%u", state.recFrameLenErr);
-		strm->msgItem("powerOffCnt=%u", state.powerOffCnt);
+		strm->oMsg("loopCnt=%u", state.loopCnt);
+		strm->oMsg("IrqCnt=%u", mIrqCnt);
+		strm->oMsg("txCmplCnt=%u", state.txCmplCnt);
+		strm->oMsg("rxCnt=%u", state.rxCnt);
+		strm->oMsg("recFrameCnt=%u", state.recFrameCnt);
+		strm->oMsg("recFrameSumOkCnt=%u", state.recFrameSumOkCnt);
+		strm->oMsg("recFrameLenErr=%u", state.recFrameLenErr);
+		strm->oMsg("powerOffCnt=%u", state.powerOffCnt);
 
 
-		strm->msgClose();
+		strm->oClose();
 	}
 }
 
@@ -347,7 +348,7 @@ const ShellItem menuDust[] = { //
 
 				{ NULL, NULL } };
 
-void DustPMSA::shell(MsgStream *strm, const char *cmd) {
+void DustPMSA::shell(OutStream *strm, const char *cmd) {
 
 	char tok[20];
 	int idx = -1;
@@ -362,7 +363,7 @@ void DustPMSA::shell(MsgStream *strm, const char *cmd) {
 		int a;
 		Token::getAsInt(&cmd, &a);
 		Hdw::dustSensorOn(a);
-		strm->msgItem("DustPower=%u", a);
+		strm->oMsg("DustPower=%u", a);
 	}
 		break;
 	case 2:  //get
@@ -384,13 +385,13 @@ void DustPMSA::shell(MsgStream *strm, const char *cmd) {
 		int a;
 		Token::getAsInt(&cmd, &a);
 		Hdw::dustSleepOn(a);
-		strm->msgItem("DustHDSleep=%u", a);
+		strm->oMsg("DustHDSleep=%u", a);
 	}
 		break;
 	case 8:  //meas
 		mShowMeasCnt = 1;
 		Token::getAsInt(&cmd, &mShowMeasCnt);
-		strm->msgItem("ShowMeasCnt=%u", mShowMeasCnt);
+		strm->oMsg("ShowMeasCnt=%u", mShowMeasCnt);
 		break;
 	case 9: //clrCnt
 		state.loopCnt=0;

@@ -103,7 +103,7 @@ private:
 
 	void putTxFrame(uint8_t a);
 	void SendFrame(uint8_t cmd, const uint8_t *dt, uint8_t len);
-	void ShowMesuredRec(MsgStream *strm);
+	void ShowMesuredRec(OutStream *strm);
 
 	SPS30_Status execNewFrame();
 	void sendGetDevInfo(uint8_t par);
@@ -121,7 +121,7 @@ public:
 	SPS30();
 	virtual void StartMeas();
 	virtual void StopMeas();
-	virtual void shell(MsgStream *strm, const char *cmd);
+	virtual void shell(OutStream *strm, const char *cmd);
 	virtual void setPower(bool on);
 	virtual HAL_StatusTypeDef Init(SignaledClass *signObj);
 	virtual void tick();

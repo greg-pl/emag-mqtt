@@ -19,9 +19,9 @@
 #include "Config.h"
 #include "Bg96Driver.h"
 #include <I2cDev.h>
+#include <IOStream.h>
 #include "DustPMSA.h"
 #include "SPS30.h"
-#include "MsgStream.h"
 #include "ssd1306/ssd1306.h"
 #include "GlobData.h"
 #include "MdbMasterTask.h"
@@ -64,7 +64,7 @@ SEC_LABEL char DevLabel[] = "TTT             "
 		"*              *"
 		"****************";
 
-extern "C" MsgStream* getOutStream() {
+extern "C" OutStream* getOutStream() {
 	return shellTask;
 }
 
@@ -251,7 +251,7 @@ void ethernetif_notify_conn_changed(struct netif *netif) {
 }
 
 void DefaultTask::doNetStatusChg() {
-	shellTask->msg(colYELLOW, "Net interface status changed.");
+	shellTask->oMsgX(colYELLOW, "Net interface status changed.");
 	NetState netState;
 	getNetIfState(&netState);
 
@@ -449,7 +449,7 @@ void DefaultTask::heaterTick() {
 				}
 
 				if (config->data.R.exDev.heater.showMsg >= 2) {
-					shellTask->msg(colYELLOW, "HEATER-%s, REG-%s QR-%s T=%.1f[*C] H=%.0f[%%] useNTC=%u tempOFF=%.1f[*C] DD=0x%08X", OnOff(heater.on), OnOff(heater.regTempOut), OnOff(qr), //
+					shellTask->oMsgX(colYELLOW, "HEATER-%s, REG-%s QR-%s T=%.1f[*C] H=%.0f[%%] useNTC=%u tempOFF=%.1f[*C] DD=0x%08X", OnOff(heater.on), OnOff(heater.regTempOut), OnOff(qr), //
 					temp, humidity, config->data.R.exDev.heater.useNTCtemp, config->data.R.exDev.heater.tempOFF, dd);
 				}
 
@@ -477,9 +477,9 @@ void DefaultTask::heaterTick() {
 			else
 				strcpy(buf, "??:??:??,??");
 			if (measOk) {
-				shellTask->msg(colYELLOW, "%s HEATER-%s, T=%.1f[st.C] H=%.0f[%%]", buf, OnOff(qw), temp, humidity);
+				shellTask->oMsgX(colYELLOW, "%s HEATER-%s, T=%.1f[st.C] H=%.0f[%%]", buf, OnOff(qw), temp, humidity);
 			} else {
-				shellTask->msg(colYELLOW, "%s HEATER-%s", buf, OnOff(qw));
+				shellTask->oMsgX(colYELLOW, "%s HEATER-%s", buf, OnOff(qw));
 			}
 		}
 	}
@@ -679,7 +679,7 @@ void WdgTask::ThreadFunc() {
 			HAL_IWDG_Refresh(&hiwdg);
 			upCnt = 0;
 		} else {
-			shellTask->msg(colRED, "DEAD_TASK:%s", deadTask->getThreadName());
+			shellTask->oMsgX(colRED, "DEAD_TASK:%s", deadTask->getThreadName());
 			if (upCnt++ < 5) {
 				HAL_IWDG_Refresh(&hiwdg);
 			}
@@ -786,14 +786,14 @@ void reboot(int tm) {
 }
 
 void shMsg(int color, const char *pFormat, ...) {
-	shellTask->msg((TermColor) color, pFormat);
+	shellTask->oMsgX((TermColor) color, pFormat);
 }
 unsigned char shMsgOpen(TermColor color) {
-	return shellTask->msgOpen((TermColor) color);
+	return shellTask->oOpen((TermColor) color);
 }
 void shMsgClose() {
-	shellTask->msgClose();
+	shellTask->oClose();
 }
 void shMsgItem(const char *pFormat, ...) {
-	shellTask->msgItem(pFormat);
+	shellTask->oMsg(pFormat);
 }

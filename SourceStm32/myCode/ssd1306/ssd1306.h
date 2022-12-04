@@ -47,14 +47,14 @@ private:
 	void Fill(SSD1306_COLOR color);
 protected:
 	virtual void init();
-	virtual void showState(MsgStream *strm);
+	virtual void showState(OutStream *strm);
 	virtual bool isError(){
 		return 0;
 	}
 
 public:
 	SSD1306Dev(uint8_t adr);
-	virtual void execFun(MsgStream *strm, int funNr);
+	virtual void execFun(OutStream *strm, int funNr);
 
 	void initHd(void);
 	void updateScr(void);

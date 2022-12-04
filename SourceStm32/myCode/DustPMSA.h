@@ -96,7 +96,7 @@ private:
 	} state;
 
 	void SendCmd(uint8_t cmd, uint16_t arg);
-	void showState(MsgStream *strm);
+	void showState(OutStream *strm);
 	void sendGetMeasure();
 	void sendGoSleep();
 	void sendWakeUp();
@@ -115,7 +115,7 @@ public:
 	DustPMSA(bool formal_exist);
 	virtual void StartMeas();
 	virtual void StopMeas();
-	virtual void shell(MsgStream *strm, const char *cmd);
+	virtual void shell(OutStream *strm, const char *cmd);
 	virtual void setPower(bool on);
 	virtual HAL_StatusTypeDef Init(SignaledClass *signObj);
 	virtual void tick();

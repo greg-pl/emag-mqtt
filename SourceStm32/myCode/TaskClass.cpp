@@ -144,7 +144,7 @@ int printTaskInf(char *buf, int max, TaskStatus_t *tsk) {
 			(int) tsk->ulRunTimeCounter);
 }
 
-void TaskClassList::ShowList(MsgStream *strm) {
+void TaskClassList::ShowList(OutStream *strm) {
 	int tCnt = uxTaskGetNumberOfTasks();
 
 	TaskStatus_t *aTaskBuf = (TaskStatus_t*) malloc(tCnt * sizeof(TaskStatus_t));
@@ -153,9 +153,9 @@ void TaskClassList::ShowList(MsgStream *strm) {
 	if ((aTaskBuf != NULL) && (flagsBuf != NULL)) {
 		tCnt = uxTaskGetSystemState(aTaskBuf, tCnt, NULL);
 		memset(flagsBuf, 0, tCnt * sizeof(bool));
-		if (strm->msgOpen(colWHITE)) {
-			strm->msgItem("lp|name            |r|loop/s|max.br|Tnr|OsName          |StackAdr  |StPos|bP|cP|Time |");
-			strm->msgItem("--+----------------+-+------+------+---+----------------+----------+-----+--+--+-----+");
+		if (strm->oOpen(colWHITE)) {
+			strm->oMsg("lp|name            |r|loop/s|max.br|Tnr|OsName          |StackAdr  |StPos|bP|cP|Time |");
+			strm->oMsg("--+----------------+-+------+------+---+----------------+----------+-----+--+--+-----+");
 			char buf[120];
 			for (int i = 0; i < taskCnt; i++) {
 				char ch = '.';
@@ -179,18 +179,18 @@ void TaskClassList::ShowList(MsgStream *strm) {
 				} else {
 					n += snprintf(&buf[n], sizeof(buf) - n, "   |");
 				}
-				strm->msgItem(buf);
+				strm->oMsg(buf);
 			}
 			for (int j = 0; j < tCnt; j++) {
 				if (!flagsBuf[j]) {
 					int n = snprintf(buf, sizeof(buf), "%2u|                | |      |      |", taskCnt + j);
 					n += printTaskInf(&buf[n], sizeof(buf) - n, &aTaskBuf[j]);
-					strm->msgItem(buf);
+					strm->oMsg(buf);
 				}
 			}
 
-			strm->msgItem("--+----------------+-+------+------+---+----------------+----------+-----+--+--+-----+\r\n");
-			strm->msgClose();
+			strm->oMsg("--+----------------+-+------+------+---+----------------+----------+-----+--+--+-----+\r\n");
+			strm->oClose();
 		}
 
 	}

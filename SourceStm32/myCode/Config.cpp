@@ -17,6 +17,7 @@
 #include <myDef.h>
 
 #include <Config.h>
+#include <ShellItem.h>
 
 extern Config *config;
 extern IWDG_HandleTypeDef hiwdg;
@@ -448,37 +449,37 @@ void Config::Default() {
 	saveRtc();
 }
 
-HAL_StatusTypeDef Config::Init(MsgStream *strm) {
+HAL_StatusTypeDef Config::Init(OutStream *strm) {
 	HAL_StatusTypeDef st_r = LoadIntern(CFG_ADDR_RTCRAM);
 	HAL_StatusTypeDef st_f = LoadIntern(CFG_ADDR_FLASH);
 
 	if ((st_r == HAL_OK) && (st_f != HAL_OK)) {
-		strm->msg(colWHITE, "Copy_cfg RTC->FLASH");
+		strm->oMsgX(colWHITE, "Copy_cfg RTC->FLASH");
 		saveFlash();
 	}
 	if ((st_f == HAL_OK) && (st_r != HAL_OK)) {
-		strm->msg(colWHITE, "Copy_cfg FLASH->RTC");
+		strm->oMsgX(colWHITE, "Copy_cfg FLASH->RTC");
 		saveRtc();
 	}
 
 	if (st_r == HAL_OK) {
 		LoadIntern(CFG_ADDR_RTCRAM);
-		strm->msg(colWHITE, "Cfg from RTC");
+		strm->oMsgX(colWHITE, "Cfg from RTC");
 		if (Korekt()) {
-			strm->msg(colRED, "Corection of CFG");
+			strm->oMsgX(colRED, "Corection of CFG");
 		}
 
 		return HAL_OK;
 	}
 	if (st_f == HAL_OK) {
 		LoadIntern(CFG_ADDR_FLASH);
-		strm->msg(colWHITE, "Cfg from FLASH");
+		strm->oMsgX(colWHITE, "Cfg from FLASH");
 		if (Korekt()) {
-			strm->msg(colRED, "Corection of CFG");
+			strm->oMsgX(colRED, "Corection of CFG");
 		}
 		return HAL_OK;
 	}
-	strm->msg(colRED, "Cfg default");
+	strm->oMsgX(colRED, "Cfg default");
 	Default();
 	return HAL_ERROR;
 }
@@ -495,7 +496,7 @@ const ShellItem menuCfg[] = { //
 				{ "help", "znaczenie nirktórych nastaw" }, //
 				{ NULL, NULL } };
 
-void Config::shell(MsgStream *strm, const char *cmd) {
+void Config::shell(OutStream *strm, const char *cmd) {
 	char tok[20];
 	int idx = -1;
 	if (Token::get(&cmd, tok, sizeof(tok)))
@@ -510,10 +511,10 @@ void Config::shell(MsgStream *strm, const char *cmd) {
 		if (Token::get(&cmd, tok, sizeof(tok))) {
 			if (strcmp(tok, "rtc") == 0) {
 				cpx.init(ConfigDscr, (void*) CFG_ADDR_RTCRAM);
-				strm->msg(colYELLOW, "RTC");
+				strm->oMsgX(colYELLOW, "RTC");
 			} else if (strcmp(tok, "flash") == 0) {
 				cpx.init(ConfigDscr, (void*) CFG_ADDR_FLASH);
-				strm->msg(colYELLOW, "FLASH");
+				strm->oMsgX(colYELLOW, "FLASH");
 			}
 		}
 		cpx.list(strm);
@@ -528,40 +529,40 @@ void Config::shell(MsgStream *strm, const char *cmd) {
 			Cpx cpx;
 			cpx.init(ConfigDscr, &data);
 			if (cpx.set(tok, valB)) {
-				strm->msg(colGREEN, "[%s]=(%s) OK", tok, valB);
+				strm->oMsgX(colGREEN, "[%s]=(%s) OK", tok, valB);
 			} else {
-				strm->msg(colRED, "[%s]=(%s) Error", tok, valB);
+				strm->oMsgX(colRED, "[%s]=(%s) Error", tok, valB);
 			}
 		}
 	}
 		break;
 	case 2: //default
-		strm->msg(colWHITE, "Ustawienia domyślne");
+		strm->oMsgX(colWHITE, "Ustawienia domyślne");
 		Default();
 		break;
 	case 3: //save
 		if (saveRtc())
-			strm->msg(colWHITE, "Saved to RTCRam");
+			strm->oMsgX(colWHITE, "Saved to RTCRam");
 		else
-			strm->msg(colRED, "Cfg Corrected");
+			strm->oMsgX(colRED, "Cfg Corrected");
 		break;
 
 	case 4: //saveFlash
 	{
 		HAL_StatusTypeDef st = saveFlash();
-		strm->msg(HAL_getColor(st), "Save to Flash & RTCRam : %s", HAL_getErrStr(st));
+		strm->oMsgX(HAL_getColor(st), "Save to Flash & RTCRam : %s", HAL_getErrStr(st));
 	}
 		break;
 	case 5: //init
 	{
 		HAL_StatusTypeDef st = LoadIntern(CFG_ADDR_RTCRAM);
-		strm->msg(HAL_getColor(st), "Load from RTCRam : %s", HAL_getErrStr(st));
+		strm->oMsgX(HAL_getColor(st), "Load from RTCRam : %s", HAL_getErrStr(st));
 	}
 		break;
 	case 6: //initflash
 	{
 		HAL_StatusTypeDef st = LoadIntern(CFG_ADDR_FLASH);
-		strm->msg(HAL_getColor(st), "Load from Flash: %s", HAL_getErrStr(st));
+		strm->oMsgX(HAL_getColor(st), "Load from Flash: %s", HAL_getErrStr(st));
 	}
 		break;
 
@@ -575,13 +576,13 @@ void Config::shell(MsgStream *strm, const char *cmd) {
 		break;
 	case 8: //help
 	{
-		if (strm->msgOpen(colWHITE)) {
-			strm->msgItem("Cfg Help");
-			strm->msgItem("--------------------");
-			strm->msgItem("DustSensorType: 0-SPS30(Sensirion), 1-HPMA(Honeywel), 2-PMSA003, 3-PMS5003ST");
-			strm->msgItem("GasFiltrType: 0-OFF, 1-FIR, 2-IR");
+		if (strm->oOpen(colWHITE)) {
+			strm->oMsg("Cfg Help");
+			strm->oMsg("--------------------");
+			strm->oMsg("DustSensorType: 0-SPS30(Sensirion), 1-HPMA(Honeywel), 2-PMSA003, 3-PMS5003ST");
+			strm->oMsg("GasFiltrType: 0-OFF, 1-FIR, 2-IR");
 
-			strm->msgClose();
+			strm->oClose();
 		}
 
 	}

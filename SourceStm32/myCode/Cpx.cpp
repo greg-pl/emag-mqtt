@@ -120,7 +120,7 @@ const char* getCodeName(CpxType typ) {
 		return "<?>";
 }
 
-void Cpx::showDef(MsgStream *strm, const CpxDef *def, char *wBuf, char *space) {
+void Cpx::showDef(OutStream *strm, const CpxDef *def, char *wBuf, char *space) {
 	while (def->ctype != cpxNULL) {
 		const GroupInfo *grInfo = NULL;
 		int n = snprintf(wBuf, WBUF_SIZE, "%styp=%s ofs=%u name=[%s] size=%u", space, getCodeName(def->ctype), (int) def->ofs, def->Name, def->size);
@@ -140,7 +140,7 @@ void Cpx::showDef(MsgStream *strm, const CpxDef *def, char *wBuf, char *space) {
 		default:
 			break;
 		}
-		strm->msgItemWr(wBuf);
+		strm->oWr(wBuf);
 		if (def->ctype == cpxTAB) {
 			int m = strlen(space);
 			space[m + 0] = ' ';
@@ -154,13 +154,13 @@ void Cpx::showDef(MsgStream *strm, const CpxDef *def, char *wBuf, char *space) {
 
 }
 
-void Cpx::showDef(MsgStream *strm) {
-	if (strm->msgOpen(colWHITE)) {
+void Cpx::showDef(OutStream *strm) {
+	if (strm->oOpen(colWHITE)) {
 		char spaceStr[40];
 		char wbuf[WBUF_SIZE];
 		spaceStr[0] = 0;
 		showDef(strm, mDef, wbuf, spaceStr);
-		strm->msgClose();
+		strm->oClose();
 	}
 }
 
@@ -217,7 +217,7 @@ void Cpx::getAsTxt(const CpxDef *def, const void *data, char *buf, int max) {
 
 }
 
-void Cpx::list(MsgStream *strm, char *space, int idx) {
+void Cpx::list(OutStream *strm, char *space, int idx) {
 
 	const CpxDef *def = mDef;
 	while (def->ctype != cpxNULL) {
@@ -226,42 +226,42 @@ void Cpx::list(MsgStream *strm, char *space, int idx) {
 
 		switch (def->ctype) {
 		case cpxBREAK_LINE:
-			strm->msgItem("--- %s ----------------------", def->Name);
+			strm->oMsg("--- %s ----------------------", def->Name);
 			break;
 		case cpxSTR:
-			strm->msgItem("%s%s:%s", space, def->Name, (char*) ptr);
+			strm->oMsg("%s%s:%s", space, def->Name, (char*) ptr);
 			break;
 		case cpxQUOTASTR: {
 			char buf[100];
 			Token::setQuotaStr(buf, (const char*) ptr, sizeof(buf));
-			strm->msgItem("%s%s:%s", space, def->Name, buf);
+			strm->oMsg("%s%s:%s", space, def->Name, buf);
 
 		}
 			break;
 
 		case cpxBOOL: {
 			bool *pb = (bool*) ptr;
-			strm->msgItem("%s%s:%u", space, def->Name, (int) (*pb));
+			strm->oMsg("%s%s:%u", space, def->Name, (int) (*pb));
 		}
 			break;
 		case cpxBYTE: {
 			uint8_t *pb = (uint8_t*) ptr;
-			strm->msgItem("%s%s:%u", space, def->Name, *pb);
+			strm->oMsg("%s%s:%u", space, def->Name, *pb);
 		}
 			break;
 		case cpxWORD: {
 			uint16_t *pb = (uint16_t*) ptr;
-			strm->msgItem("%s%s:%u", space, def->Name, *pb);
+			strm->oMsg("%s%s:%u", space, def->Name, *pb);
 		}
 			break;
 		case cpxHEXWORD: {
 			uint16_t *pb = (uint16_t*) ptr;
-			strm->msgItem("%s%s:0X%04X", space, def->Name, *pb);
+			strm->oMsg("%s%s:0X%04X", space, def->Name, *pb);
 		}
 			break;
 		case cpxINT: {
 			int *pi = (int*) ptr;
-			strm->msgItem("%s%s:%d", space, def->Name, *pi);
+			strm->oMsg("%s%s:%d", space, def->Name, *pi);
 		}
 			break;
 		case cpxFLOAT: {
@@ -273,7 +273,7 @@ void Cpx::list(MsgStream *strm, char *space, int idx) {
 			float *pf = (float*) ptr;
 			char buf[20];
 			snprintf(buf, sizeof(buf), frm, *pf);
-			strm->msgItem("%s%s:%s", space, def->Name, buf);
+			strm->oMsg("%s%s:%s", space, def->Name, buf);
 		}
 			break;
 
@@ -281,24 +281,24 @@ void Cpx::list(MsgStream *strm, char *space, int idx) {
 			ip4_addr_t *pf = (ip4_addr_t*) ptr;
 			char txt[20];
 			ipaddr_ntoa_r(pf, txt, sizeof(txt));
-			strm->msgItem("%s%s:%s", space, def->Name, txt);
+			strm->oMsg("%s%s:%s", space, def->Name, txt);
 		}
 			break;
 		case cpxTIME: {
 			const TDATE *tm = (const TDATE*) ptr;
 			char tmBuf[20];
 			TimeTools::DtTmStr(tmBuf, tm);
-			strm->msgItem("%s%s:%s", space, def->Name, tmBuf);
+			strm->oMsg("%s%s:%s", space, def->Name, tmBuf);
 		}
 			break;
 
 		case cpxTAB: {
 			const GroupInfo *grInfo = (const GroupInfo*) def->exPtr;
-			strm->msgItem("%s%s:TAB[%u]", space, def->Name, grInfo->itemCnt);
+			strm->oMsg("%s%s:TAB[%u]", space, def->Name, grInfo->itemCnt);
 			int m = strlen(space);
 			uint8_t *dt = (uint8_t*) ptr;
 			for (int k = 0; k < grInfo->itemCnt; k++) {
-				strm->msgItem("%s%u.", space, k);
+				strm->oMsg("%s%u.", space, k);
 				Cpx child;
 				child.init(grInfo->defs, dt);
 				strcat(space, "  ");
@@ -316,12 +316,12 @@ void Cpx::list(MsgStream *strm, char *space, int idx) {
 	}
 }
 
-void Cpx::list(MsgStream *strm) {
-	if (strm->msgOpen(colWHITE)) {
+void Cpx::list(OutStream *strm) {
+	if (strm->oOpen(colWHITE)) {
 		char spaceStr[40];
 		spaceStr[0] = 0;
 		list(strm, spaceStr, 0);
-		strm->msgClose();
+		strm->oClose();
 	}
 }
 

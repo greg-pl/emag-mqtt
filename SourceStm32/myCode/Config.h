@@ -8,8 +8,8 @@
 #ifndef CONFIG_H_
 #define CONFIG_H_
 
+#include <IOStream.h>
 #include "myDef.h"
-#include "MsgStream.h"
 
 #define CFG_REC_SIZE 0x800
 #define CFG_REC_SIZE_4 (CFG_REC_SIZE/4)
@@ -214,10 +214,10 @@ private:
 public:
 	CfgRec data;
 	Config();
-	HAL_StatusTypeDef Init(MsgStream *strm);
+	HAL_StatusTypeDef Init(OutStream *strm);
 	void Zero();
 	void Default();
-	void shell(MsgStream *strem, const char *cmd);
+	void shell(OutStream *strem, const char *cmd);
 	bool saveRtc();
 	HAL_StatusTypeDef saveFlash();
 

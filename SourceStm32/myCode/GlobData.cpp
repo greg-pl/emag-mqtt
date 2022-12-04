@@ -228,13 +228,13 @@ void GlobData::Fill() {
 
 }
 
-void GlobData::showDef(MsgStream *strm) {
+void GlobData::showDef(OutStream *strm) {
 	Cpx cpx;
 	cpx.init(GlobDataDscr, &dt);
 	cpx.showDef(strm);
 }
 
-void GlobData::show(MsgStream *strm) {
+void GlobData::show(OutStream *strm) {
 	Fill();
 	Cpx cpx;
 	cpx.init(GlobDataDscr, &dt);
@@ -242,7 +242,7 @@ void GlobData::show(MsgStream *strm) {
 
 }
 
-void GlobData::showJson(MsgStream *strm) {
+void GlobData::showJson(OutStream *strm) {
 	if (jsonbuf == NULL) {
 		jsonbuf = (char*) malloc(JSON_SIZE);
 	}
@@ -252,7 +252,7 @@ void GlobData::showJson(MsgStream *strm) {
 		cpx.init(GlobDataDscr, &dt);
 		int len0 = cpx.buildjson(jsonbuf, JSON_SIZE);
 		int len = strlen(jsonbuf);
-		strm->msg(colWHITE, "Len=%d %d", len, len0);
+		strm->oMsgX(colWHITE, "Len=%d %d", len, len0);
 		strm->dumpBuf(colYELLOW, jsonbuf);
 	}
 }

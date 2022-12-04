@@ -8,10 +8,10 @@
 #ifndef BG96DRIVER_H_
 #define BG96DRIVER_H_
 
+#include <IOStream.h>
 #include "TaskClass.h"
 #include "uart.h"
 #include "myDef.h"
-#include "MsgStream.h"
 
 #define CTRL_Z "\032"
 #define CTRL_Z_CH '\032'
@@ -267,15 +267,15 @@ private:
 	bool getDTR();
 private:
 	bool setEchoMode(const char *cmd);
-	void setEchoMode(MsgStream *strm, const char *cmd);
+	void setEchoMode(OutStream *strm, const char *cmd);
 	void showRxEcho(int idx, const char *txt);
 	void zeroState();
 	void clearRecDt();
 
-	void showState(MsgStream *strm);
-	void showHdwState(MsgStream *strm);
-	void showInformation(MsgStream *strm);
-	void showGpsInformation(MsgStream *strm);
+	void showState(OutStream *strm);
+	void showHdwState(OutStream *strm);
+	void showInformation(OutStream *strm);
+	void showGpsInformation(OutStream *strm);
 
 	int cmpToArray(const char *txt, const char *const*array);
 
@@ -438,7 +438,7 @@ public:
 	} state;
 
 	Bg96Driver();
-	void shell(MsgStream *strem, const char *cmd);
+	void shell(OutStream *strem, const char *cmd);
 public:
 	BgPhase getPhase() {
 		return mPhase;

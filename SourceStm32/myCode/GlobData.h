@@ -10,9 +10,9 @@
 
 #include "cpx.h"
 #include "config.h"
-#include "msgStream.h"
 #include "cmsis_os.h"
 #include <DustSensorBase.h>
+#include <IOStream.h>
 
 
 typedef struct {
@@ -62,9 +62,9 @@ public:
 	static char *jsonbuf;
 	static void Fill();
 	static void FillMeas(float *tab);
-	static void showDef(MsgStream *strm);
-	static void show(MsgStream *strm);
-	static void showJson(MsgStream *strm);
+	static void showDef(OutStream *strm);
+	static void show(OutStream *strm);
+	static void showJson(OutStream *strm);
 	static int buildExportJson();
 	static bool getData(float *data);
 	static bool isGasMeas(MeasType measTyp);

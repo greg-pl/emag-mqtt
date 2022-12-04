@@ -8,11 +8,12 @@
 #ifndef MDBMASTERTASK_H_
 #define MDBMASTERTASK_H_
 
+#include <IOStream.h>
 #include "TaskClass.h"
 #include "uart.h"
-#include "MsgStream.h"
 #include "GlobData.h"
 #include "DustSensorBase.h"
+#include "ShellItem.h"
 
 typedef enum {
 	reqEMPTY = 0, //
@@ -140,17 +141,17 @@ protected:
 
 	}
 
-	virtual void showState(MsgStream *strm);
+	virtual void showState(OutStream *strm);
 	virtual void onReciveData(bool replOK, uint8_t mdbFun, const uint8_t *tab, int regCnt) {
 	}
-	virtual bool execMenuItem(MsgStream *strm, int idx, const char *cmd);
+	virtual bool execMenuItem(OutStream *strm, int idx, const char *cmd);
 	virtual const ShellItem* getMenu();
 	virtual const char* getMenuName();
 
 public:
 	MdbMasterTask(int mdbNr, int portNr);
 	void Start(int BaudRate, int parity);
-	void shell(MsgStream *strm, const char *cmd);
+	void shell(OutStream *strm, const char *cmd);
 	void setPower(bool pwr);
 	bool getPower();
 	bool getPowerFlt();
@@ -233,9 +234,9 @@ private:
 	} zeroOfs;
 
 	float getGasFactor(int id);
-	bool execMyMenuItem(MsgStream *strm, int idx, const char *cmd);
+	bool execMyMenuItem(OutStream *strm, int idx, const char *cmd);
 	char gtxt[200]; //używane przez "showMeas"
-	void showMeas(MsgStream *strm);
+	void showMeas(OutStream *strm);
 	void sendZeroOfs_FrameZero(uint16_t *tab);
 	void sendZeroOfs_Phase1Frame();
 	void sendZeroOfs_Phase3Frame();
@@ -246,8 +247,8 @@ protected:
 	virtual void doOnTimeOut();
 
 	virtual void onReciveData(bool replOK, uint8_t mdbFun, const uint8_t *tab, int regCnt);
-	virtual void showState(MsgStream *strm);
-	virtual bool execMenuItem(MsgStream *strm, int idx, const char *cmd);
+	virtual void showState(OutStream *strm);
+	virtual bool execMenuItem(OutStream *strm, int idx, const char *cmd);
 	virtual const ShellItem* getMenu();
 	virtual const char* getMenuName();
 
@@ -290,17 +291,17 @@ private:
 		FiltrIR *filtrIR;
 	} noiseData;
 
-	bool execMyMenuItem(MsgStream *strm, int idx, const char *cmd);
+	bool execMyMenuItem(OutStream *strm, int idx, const char *cmd);
 	char gtxt[200]; //używane przez "showMeas"
-	void showMeas(MsgStream *strm);
+	void showMeas(OutStream *strm);
 
 protected:
 	virtual void loopFunc();
 	virtual void doOnTimeOut();
 
 	virtual void onReciveData(bool replOK, uint8_t mdbFun, const uint8_t *tab, int regCnt);
-	virtual void showState(MsgStream *strm);
-	virtual bool execMenuItem(MsgStream *strm, int idx, const char *cmd);
+	virtual void showState(OutStream *strm);
+	virtual bool execMenuItem(OutStream *strm, int idx, const char *cmd);
 	virtual const ShellItem* getMenu();
 	virtual const char* getMenuName();
 
@@ -357,8 +358,8 @@ private:
 
 
 
-	void showMeas(MsgStream *strm);
-	bool execMyMenuItem(MsgStream *strm, int idx, const char *cmd);
+	void showMeas(OutStream *strm);
+	bool execMyMenuItem(OutStream *strm, int idx, const char *cmd);
 	bool isMeasValid();
 
 protected:
@@ -366,8 +367,8 @@ protected:
 	virtual void doOnTimeOut();
 
 	virtual void onReciveData(bool replOK, uint8_t mdbFun, const uint8_t *tab, int regCnt);
-	virtual void showState(MsgStream *strm);
-	virtual bool execMenuItem(MsgStream *strm, int idx, const char *cmd);
+	virtual void showState(OutStream *strm);
+	virtual bool execMenuItem(OutStream *strm, int idx, const char *cmd);
 	virtual const ShellItem* getMenu();
 	virtual const char* getMenuName();
 

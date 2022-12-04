@@ -8,8 +8,8 @@
 #ifndef TASKCLASS_H_
 #define TASKCLASS_H_
 
+#include <IOStream.h>
 #include "cmsis_os.h"
-#include "MsgStream.h"
 
 enum {
 	SIGNAL_WAKEUP = 0x00010000, //
@@ -87,7 +87,7 @@ private:
 public:
 	static void Add1msTask(TaskClass *task);
 	static void Register(TaskClass *task);
-	static void ShowList(MsgStream *strm);
+	static void ShowList(OutStream *strm);
 	static void every1sek();
 	static void every1msek();
 	static TaskClass *isTasksAlive();

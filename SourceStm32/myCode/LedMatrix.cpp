@@ -11,6 +11,7 @@
 #include <UMain.h>
 #include <GlobData.h>
 #include <math.h>
+#include <ShellItem.h>
 
 typedef struct {
 	uint8_t device; // wersja urządzenia
@@ -97,14 +98,14 @@ void LedMatrix::sendCommand(uint8_t cmd, uint8_t param) {
 
 void LedMatrix::showRecDevInfo(uint8_t *dt) {
 	MatrixInfo *inf = (MatrixInfo*) dt;
-	MsgStream *strm = getOutStream();
-	if (strm->msgOpen(colWHITE)) {
-		strm->msgItem("Device code   :0x%02X", inf->device);
-		strm->msgItem("Device subcode:0x%02X", inf->device_subtype);
-		strm->msgItem("Firm.Ver      :%u.%03u", inf->firmware_version_aa, inf->firmware_version_bb);
-		strm->msgItem("Resolution    :%u x %u", inf->resolution_x, inf->resolution_y);
-		strm->msgItem("Status        :%u", inf->status);
-		strm->msgClose();
+	OutStream *strm = getOutStream();
+	if (strm->oOpen(colWHITE)) {
+		strm->oMsg("Device code   :0x%02X", inf->device);
+		strm->oMsg("Device subcode:0x%02X", inf->device_subtype);
+		strm->oMsg("Firm.Ver      :%u.%03u", inf->firmware_version_aa, inf->firmware_version_bb);
+		strm->oMsg("Resolution    :%u x %u", inf->resolution_x, inf->resolution_y);
+		strm->oMsg("Status        :%u", inf->status);
+		strm->oClose();
 	}
 }
 
@@ -136,7 +137,7 @@ void LedMatrix::execNewFrame() {
 							setState(6);
 						break;
 					default:
-						getOutStream()->msg(colRED, "Matrix unknow cmd : 0x%02X", rCmd);
+						getOutStream()->oMsgX(colRED, "Matrix unknow cmd : 0x%02X", rCmd);
 						break;
 					}
 				}
@@ -251,20 +252,20 @@ void LedMatrix::tick() {
 
 }
 
-void LedMatrix::showState(MsgStream *strm) {
-	if (strm->msgOpen(colWHITE)) {
-		strm->msgItem("___LedMatrix Status___");
+void LedMatrix::showState(OutStream *strm) {
+	if (strm->oOpen(colWHITE)) {
+		strm->oMsg("___LedMatrix Status___");
 
-		strm->msgItem("loopCnt=%u", state.loopCnt);
-		strm->msgItem("txCmplCnt=%u", state.txCmplCnt);
-		strm->msgItem("rxCnt=%u", state.rxCnt);
-		strm->msgItem("IrqCnt=%u", mIrqCnt);
-		strm->msgItem("recFrameCnt=%u", state.recFrameCnt);
-		strm->msgItem("recFrameOkCnt=%u", state.recFrameOkCnt);
-		strm->msgItem("sendAutoCntOk=%u", state.autoSend.sendCnt);
-		strm->msgItem("sendAutoFaceNr=%u", state.autoSend.faceNr);
+		strm->oMsg("loopCnt=%u", state.loopCnt);
+		strm->oMsg("txCmplCnt=%u", state.txCmplCnt);
+		strm->oMsg("rxCnt=%u", state.rxCnt);
+		strm->oMsg("IrqCnt=%u", mIrqCnt);
+		strm->oMsg("recFrameCnt=%u", state.recFrameCnt);
+		strm->oMsg("recFrameOkCnt=%u", state.recFrameOkCnt);
+		strm->oMsg("sendAutoCntOk=%u", state.autoSend.sendCnt);
+		strm->oMsg("sendAutoFaceNr=%u", state.autoSend.faceNr);
 
-		strm->msgClose();
+		strm->oClose();
 	}
 }
 
@@ -278,7 +279,7 @@ const ShellItem menuLedMatrix[] = { //
 
 				{ NULL, NULL } };
 
-void LedMatrix::shell(MsgStream *strm, const char *cmd) {
+void LedMatrix::shell(OutStream *strm, const char *cmd) {
 	char tok[20];
 	int idx = -1;
 
@@ -297,7 +298,7 @@ void LedMatrix::shell(MsgStream *strm, const char *cmd) {
 		state.recFrameOkCnt = 0;
 		break;
 	case 2: //getInfo
-		strm->msg(colWHITE, "sendGetInfo");
+		strm->oMsgX(colWHITE, "sendGetInfo");
 		sendCommand(CMD_GET_INFO);
 		break;
 
@@ -305,7 +306,7 @@ void LedMatrix::shell(MsgStream *strm, const char *cmd) {
 		int lev;
 		if (Token::getAsInt(&cmd, &lev)) {
 			sendCommand(CMD_SET_LIGHT_LEVEL, lev);
-			strm->msg(colWHITE, "sendLight %u", lev);
+			strm->oMsgX(colWHITE, "sendLight %u", lev);
 		}
 	}
 		break;
@@ -313,7 +314,7 @@ void LedMatrix::shell(MsgStream *strm, const char *cmd) {
 		int graph;
 		if (Token::getAsInt(&cmd, &graph)) {
 			sendCommand(CMD_SELECT_GRAPHIC, graph);
-			strm->msg(colWHITE, "setGraph %u", graph);
+			strm->oMsgX(colWHITE, "setGraph %u", graph);
 		}
 	}
 		break;
@@ -323,7 +324,7 @@ void LedMatrix::shell(MsgStream *strm, const char *cmd) {
 		if (Token::getAsInt(&cmd, &prev)) {
 			if (Token::getAsFloat(&cmd, &pm)) {
 				int faceNr = getFaceNr(prev, pm);
-				strm->msg(colWHITE, "prev=%u  pm=%.2f[%%] faceNr=%u", prev, pm, faceNr);
+				strm->oMsgX(colWHITE, "prev=%u  pm=%.2f[%%] faceNr=%u", prev, pm, faceNr);
 			}
 		}
 	}

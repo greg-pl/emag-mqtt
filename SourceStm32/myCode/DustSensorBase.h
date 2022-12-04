@@ -8,8 +8,8 @@
 #ifndef DUSTSENSORBASE_H_
 #define DUSTSENSORBASE_H_
 
+#include <IOStream.h>
 #include "stm32f4xx_hal.h"
-#include "MsgStream.h"
 #include "utils.h"
 
 typedef struct {
@@ -38,7 +38,7 @@ protected:
 public:
 	virtual void StartMeas()=0;
 	virtual void StopMeas()=0;
-	virtual void shell(MsgStream *strm, const char *cmd)=0;
+	virtual void shell(OutStream *strm, const char *cmd)=0;
 	virtual void setPower(bool on)=0;
 	virtual HAL_StatusTypeDef Init(SignaledClass *signObj)=0;
 	virtual void tick()=0;
@@ -52,7 +52,7 @@ class DustSensorNull: public DustSensorBase {
 public:
 	virtual void StartMeas();
 	virtual void StopMeas();
-	virtual void shell(MsgStream *strm, const char *cmd);
+	virtual void shell(OutStream *strm, const char *cmd);
 	virtual HAL_StatusTypeDef getMeas(DustMeasRec *meas);
 	virtual void setPower(bool on);
 	virtual HAL_StatusTypeDef Init(SignaledClass *signObj);

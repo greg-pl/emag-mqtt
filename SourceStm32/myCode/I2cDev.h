@@ -8,25 +8,25 @@
 #ifndef I2CDEV_H_
 #define I2CDEV_H_
 
+#include <IOStream.h>
 #include "cmsis_os.h"
 #include "stm32f4xx_hal.h"
-#include "MsgStream.h"
 
 class I2c1Dev {
 	friend class I2c1Bus;
 protected:
 	uint8_t mDevAdr;
 	bool mDevExist;
-	void showDevExist(MsgStream *strm);
+	void showDevExist(OutStream *strm);
 	virtual void tick() {
 	}
 	virtual void init() {
 	}
 public:
-	virtual void showState(MsgStream *strm)=0;
-	virtual void showMeas(MsgStream *strm) {
+	virtual void showState(OutStream *strm)=0;
+	virtual void showMeas(OutStream *strm) {
 	}
-	virtual void execFun(MsgStream *strm, int funNr) {
+	virtual void execFun(OutStream *strm, int funNr) {
 	}
 	uint8_t getAdr() {
 		return mDevAdr;
@@ -88,12 +88,12 @@ protected:
 private:
 	static int mLastMutexWho;
 	static int mMutexWho;
-	static void ScanBus(MsgStream *strm);
-	static void showState(MsgStream *strm);
-	static void showMeas(MsgStream *strm);
-	static void ShowBusRegisters(MsgStream *strm);
+	static void ScanBus(OutStream *strm);
+	static void showState(OutStream *strm);
+	static void showMeas(OutStream *strm);
+	static void ShowBusRegisters(OutStream *strm);
 
-	static void execFun(MsgStream *strm, int idx);
+	static void execFun(OutStream *strm, int idx);
 	static HAL_StatusTypeDef _InitHd();
 	static HAL_StatusTypeDef InitHd();
 	static void setAsGpio();
@@ -109,7 +109,7 @@ public:
 	static HAL_StatusTypeDef BusRestart();
 	static HAL_StatusTypeDef BusUnlock();
 
-	static void shell(MsgStream *strm, const char *cmd);
+	static void shell(OutStream *strm, const char *cmd);
 	static void addDev(I2c1Dev *dev);
 	static void tick();
 	static int getBusRestartCnt() {

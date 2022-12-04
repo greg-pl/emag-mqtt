@@ -263,7 +263,7 @@ void Bg96Driver::logT(LogLevel lev, const char *frm, ...) {
 		}
 		va_list ap;
 		va_start(ap, frm);
-		shellTask->msgAp(color, frm, ap);
+		shellTask->oFormatX(color, frm, ap);
 		va_end(ap);
 	}
 }
@@ -297,18 +297,18 @@ void Bg96Driver::writeCmd(const char *cmd) {
 	if (mEcho.tx) {
 		switch (mEcho.timeMode) {
 		case 0:
-			shellTask->msg(colMAGENTA, "%s", cmd);
+			shellTask->oMsgX(colMAGENTA, "%s", cmd);
 			break;
 		case 1:
 		case 2:
-			shellTask->msg(colMAGENTA, "%u:%s", HAL_GetTick() - mStartTick, cmd);
+			shellTask->oMsgX(colMAGENTA, "%u:%s", HAL_GetTick() - mStartTick, cmd);
 			break;
 		case 3: {
 			char buf[20];
 			TDATE tm;
 			Rtc::ReadOnlyTime(&tm);
 			TimeTools::TimeStrZZ(buf, &tm);
-			shellTask->msg(colMAGENTA, "%s:%s", buf, cmd);
+			shellTask->oMsgX(colMAGENTA, "%s:%s", buf, cmd);
 		}
 			break;
 		}
@@ -329,14 +329,14 @@ void Bg96Driver::showRxEcho(int idx, const char *txt) {
 
 	switch (mEcho.timeMode) {
 	case 0:
-		shellTask->msg(colGREEN, "%u>%s", idx, inpLine2);
+		shellTask->oMsgX(colGREEN, "%u>%s", idx, inpLine2);
 		break;
 	case 3:
 	case 1:
-		shellTask->msg(colGREEN, "%u>%u:%s", idx, HAL_GetTick() - mSendTick, inpLine2);
+		shellTask->oMsgX(colGREEN, "%u>%u:%s", idx, HAL_GetTick() - mSendTick, inpLine2);
 		break;
 	case 2:
-		shellTask->msg(colGREEN, "%u>%u:%s", idx, HAL_GetTick() - mStartTick, inpLine2);
+		shellTask->oMsgX(colGREEN, "%u>%u:%s", idx, HAL_GetTick() - mStartTick, inpLine2);
 		break;
 	}
 }
@@ -832,7 +832,7 @@ int Bg96Driver::showSslContext(int contextNr) {
 		cpx.init(SslCfgDscr, &sslCfg);
 		cpx.list(shellTask);
 	} else {
-		shellTask->msg(colRED, "Błąd odczytu, st=%d", st);
+		shellTask->oMsgX(colRED, "Błąd odczytu, st=%d", st);
 	}
 	return stOK;
 }
@@ -968,7 +968,7 @@ int Bg96Driver::sendMqqtData(const char *varName, const char *data, bool doDataC
 
 	writeCmdNoEcho(data, doDataCpy);
 	if (mEcho.tx)
-		shellTask->msg(colMAGENTA, "%u:*Dane*", HAL_GetTick() - mSendTick);
+		shellTask->oMsgX(colMAGENTA, "%u:*Dane*", HAL_GetTick() - mSendTick);
 
 	st = getReplWithErr(nnQmtPub, 20000); //todo: dorobić zależności od pkt_timeout i retry_times
 	if (st != stOK)
@@ -1455,21 +1455,21 @@ void Bg96Driver::mqttLoopFun() {
 }
 
 void Bg96Driver::execNewSMS() {
-	shellTask->msg(colBLUE, "SMS [%s]: %s", state.sms.nrTel, state.sms.msg);
+	shellTask->oMsgX(colBLUE, "SMS [%s]: %s", state.sms.nrTel, state.sms.msg);
 	const char *ptr = state.sms.msg;
 	char tok[40];
 	bool repl = false;
 
 	Token::get(&ptr, tok, sizeof(tok));
 	if (strcmp(tok, bgParam.imei) == 0) {
-		shellTask->msg(colBLUE, "SMS: IMEI OK");
+		shellTask->oMsgX(colBLUE, "SMS: IMEI OK");
 		Token::get(&ptr, tok, sizeof(tok));
 		if (strcmp(tok, "ZERO-GAS") == 0) {
-			shellTask->msg(colBLUE, "SMS: ZERO-GAS");
+			shellTask->oMsgX(colBLUE, "SMS: ZERO-GAS");
 			mdbMaster_2->zeroGasFromSMS(ptr, state.sendSms.msg, sizeof(state.sendSms.msg) - 1);
 			repl = true;
 		} else if (strcmp(tok, "REBOOT") == 0) {
-			shellTask->msg(colBLUE, "SMS: REBOOT");
+			shellTask->oMsgX(colBLUE, "SMS: REBOOT");
 			strlcpy(state.sendSms.msg, "REBOOTING", sizeof(state.sendSms.msg));
 			reboot(2000);
 			repl = true;
@@ -1759,91 +1759,91 @@ extern "C" const char* getPhaseName(BgPhase ph) {
 }
 
 //-------------------------------------------------------------------------------------------------------------
-void Bg96Driver::showState(MsgStream *strm) {
-	if (strm->msgOpen(colWHITE)) {
-		strm->msgItem("Running           : %s", YN(asynch.mRunning));
-		strm->msgItem("Phase             : %u - %s", mPhase, getPhaseName(mPhase));
-		strm->msgItem("Reg.status        : %s", getRegStatusAsName(bgParam.mRegStatus));
+void Bg96Driver::showState(OutStream *strm) {
+	if (strm->oOpen(colWHITE)) {
+		strm->oMsg("Running           : %s", YN(asynch.mRunning));
+		strm->oMsg("Phase             : %u - %s", mPhase, getPhaseName(mPhase));
+		strm->oMsg("Reg.status        : %s", getRegStatusAsName(bgParam.mRegStatus));
 		if (!isnanf(state.rssi.rssi)) {
-			strm->msgItem("RSSI              : %.1f[dB] (%.3f[s])", state.rssi.rssi, 0.001 * (HAL_GetTick() - state.rssi.recivedTick));
+			strm->oMsg("RSSI              : %.1f[dB] (%.3f[s])", state.rssi.rssi, 0.001 * (HAL_GetTick() - state.rssi.recivedTick));
 		} else {
-			strm->msgItem("RSSI              : brak");
+			strm->oMsg("RSSI              : brak");
 		}
-		strm->msgItem("BER               : %.1f", state.rssi.ber);
+		strm->oMsg("BER               : %.1f", state.rssi.ber);
 
-		strm->msgItem("LoopCnt           : %u", loopCnt);
-		strm->msgItem("uart.rxCnt        : %u", uart->stat.rxCnt);
-		strm->msgItem("uart.lnCnt        : %u", uart->stat.lnCnt);
-		strm->msgItem("uart.toBigLineCnt : %u", uart->stat.toBigLineCnt);
-		strm->msgItem("uart.errorCnt     : %u", state.uart.errorCnt);
-		strm->msgItem("uart.restartCnt   : %u", state.uart.uartRestartCnt);
-		strm->msgItem("echo              : rx=%u tx=%u timeMode=%u logLevel=%u", mEcho.rx, mEcho.tx, mEcho.timeMode, mEcho.logV);
+		strm->oMsg("LoopCnt           : %u", loopCnt);
+		strm->oMsg("uart.rxCnt        : %u", uart->stat.rxCnt);
+		strm->oMsg("uart.lnCnt        : %u", uart->stat.lnCnt);
+		strm->oMsg("uart.toBigLineCnt : %u", uart->stat.toBigLineCnt);
+		strm->oMsg("uart.errorCnt     : %u", state.uart.errorCnt);
+		strm->oMsg("uart.restartCnt   : %u", state.uart.uartRestartCnt);
+		strm->oMsg("echo              : rx=%u tx=%u timeMode=%u logLevel=%u", mEcho.rx, mEcho.tx, mEcho.timeMode, mEcho.logV);
 
-		strm->msgClose();
+		strm->oClose();
 	}
 
 }
-void Bg96Driver::showHdwState(MsgStream *strm) {
-	if (strm->msgOpen(colWHITE)) {
-		strm->msgItem("Out #Pwr3_8V: %s", YN(get3_8V()));
-		strm->msgItem("Out Reset   : %s", HL(getReset()));
-		strm->msgItem("Out PowerKey: %s", HL(getPowerKey()));
-		strm->msgItem("Out DTR     : %s", HL(getDTR()));
-		strm->msgItem("In  ApReady : %s", HL(getApReady()));
-		strm->msgItem("In  HdStatus: %s", HL(getHdStatus()));
-		strm->msgItem("In  DCD     : %s", HL(getDCD()));
-		strm->msgItem("In  RI      : %s", HL(getRI()));
-		strm->msgClose();
+void Bg96Driver::showHdwState(OutStream *strm) {
+	if (strm->oOpen(colWHITE)) {
+		strm->oMsg("Out #Pwr3_8V: %s", YN(get3_8V()));
+		strm->oMsg("Out Reset   : %s", HL(getReset()));
+		strm->oMsg("Out PowerKey: %s", HL(getPowerKey()));
+		strm->oMsg("Out DTR     : %s", HL(getDTR()));
+		strm->oMsg("In  ApReady : %s", HL(getApReady()));
+		strm->oMsg("In  HdStatus: %s", HL(getHdStatus()));
+		strm->oMsg("In  DCD     : %s", HL(getDCD()));
+		strm->oMsg("In  RI      : %s", HL(getRI()));
+		strm->oClose();
 	}
 }
 
-void Bg96Driver::showInformation(MsgStream *strm) {
-	if (strm->msgOpen(colWHITE)) {
-		strm->msgItem("Model  : %s", bgParam.model);
-		strm->msgItem("FirmVer: %s", bgParam.firmVer);
-		strm->msgItem("IMEI   : %s", bgParam.imei);
-		strm->msgItem("IMSI   : %s", bgParam.sim_imsi);
+void Bg96Driver::showInformation(OutStream *strm) {
+	if (strm->oOpen(colWHITE)) {
+		strm->oMsg("Model  : %s", bgParam.model);
+		strm->oMsg("FirmVer: %s", bgParam.firmVer);
+		strm->oMsg("IMEI   : %s", bgParam.imei);
+		strm->oMsg("IMSI   : %s", bgParam.sim_imsi);
 
-		strm->msgItem("File 0_server.psk : %s", YN(bgParam.file_0_server_exist));
-		strm->msgItem("myIP   : %s", bgParam.myIp);
+		strm->oMsg("File 0_server.psk : %s", YN(bgParam.file_0_server_exist));
+		strm->oMsg("myIP   : %s", bgParam.myIp);
 		if (state.gsmTime.recived) {
 			char buf[30];
 			TimeTools::DtTmStr(buf, &state.gsmTime.reciveTime);
-			strm->msgItem("GSM_TM : %s", buf);
+			strm->oMsg("GSM_TM : %s", buf);
 		} else
-			strm->msgItem("GSM_TM : brak");
+			strm->oMsg("GSM_TM : brak");
 
 		if (state.ntpTime.configured) {
 			if (state.ntpTime.recived) {
 				char buf[30];
 				TimeTools::DtTmStr(buf, &state.ntpTime.reciveTime);
-				strm->msgItem("NTP    : %s", buf);
+				strm->oMsg("NTP    : %s", buf);
 			} else
-				strm->msgItem("NTP    : error %d", state.ntpTime.recErrorCode);
+				strm->oMsg("NTP    : error %d", state.ntpTime.recErrorCode);
 
 		} else
-			strm->msgItem("NTP    : nie skonfigurowany");
-		strm->msgClose();
+			strm->oMsg("NTP    : nie skonfigurowany");
+		strm->oClose();
 	}
 }
 
-void Bg96Driver::showGpsInformation(MsgStream *strm) {
-	if (strm->msgOpen(colWHITE)) {
-		strm->msgItem("GpsFix         :%s", YN(state.gps.gpsFix));
+void Bg96Driver::showGpsInformation(OutStream *strm) {
+	if (strm->oOpen(colWHITE)) {
+		strm->oMsg("GpsFix         :%s", YN(state.gps.gpsFix));
 		if (state.gps.gpsFix) {
-			strm->msgItem("Ilość sat.     :%d", state.gps.satCnt);
-			strm->msgItem("Latitude (sz)  :%.5f", state.gps.latitude);
-			strm->msgItem("Longitude (dł) :%.5f", state.gps.longitude);
-			strm->msgItem("Precyzja       :%.1f[m]", state.gps.hdop); //  horizontal precision
-			strm->msgItem("Wysokość       :%.2f[m]", state.gps.altitude); // wysokość nap poz.morza
-			strm->msgItem("Kod pozycji    :%uD", state.gps.fix); // posiotion code
-			strm->msgItem("Kierunek ruchu :%.2f[stop]", state.gps.cog); // kierunek ruchu - kąt
-			strm->msgItem("Prędkość       :%.2f[km/h]", state.gps.spkm); // prędkość w km/h
+			strm->oMsg("Ilość sat.     :%d", state.gps.satCnt);
+			strm->oMsg("Latitude (sz)  :%.5f", state.gps.latitude);
+			strm->oMsg("Longitude (dł) :%.5f", state.gps.longitude);
+			strm->oMsg("Precyzja       :%.1f[m]", state.gps.hdop); //  horizontal precision
+			strm->oMsg("Wysokość       :%.2f[m]", state.gps.altitude); // wysokość nap poz.morza
+			strm->oMsg("Kod pozycji    :%uD", state.gps.fix); // posiotion code
+			strm->oMsg("Kierunek ruchu :%.2f[stop]", state.gps.cog); // kierunek ruchu - kąt
+			strm->oMsg("Prędkość       :%.2f[km/h]", state.gps.spkm); // prędkość w km/h
 			char buf[30];
 			TimeTools::DtTmStr(buf, &state.gps.reciveTime);
-			strm->msgItem("Odebrany czas  :%s", buf);
+			strm->oMsg("Odebrany czas  :%s", buf);
 		}
-		strm->msgClose();
+		strm->oClose();
 	}
 }
 
@@ -1889,15 +1889,15 @@ bool Bg96Driver::setEchoMode(const char *cmd) {
 	}
 }
 
-void Bg96Driver::setEchoMode(MsgStream *strm, const char *cmd) {
+void Bg96Driver::setEchoMode(OutStream *strm, const char *cmd) {
 	if (setEchoMode(cmd)) {
-		strm->msg(colWHITE, "rx:%u tx=%u timeMode=%u logLevel=%u", mEcho.rx, mEcho.tx, mEcho.timeMode, mEcho.logV);
+		strm->oMsgX(colWHITE, "rx:%u tx=%u timeMode=%u logLevel=%u", mEcho.rx, mEcho.tx, mEcho.timeMode, mEcho.logV);
 	} else {
-		strm->msg(colRED, "format: xxxx");
+		strm->oMsgX(colRED, "format: xxxx");
 	}
 }
 
-void Bg96Driver::shell(MsgStream *strm, const char *cmd) {
+void Bg96Driver::shell(OutStream *strm, const char *cmd) {
 	char tok[20];
 	int idx = -1;
 	bool q;
@@ -1937,30 +1937,30 @@ void Bg96Driver::shell(MsgStream *strm, const char *cmd) {
 		if (asynch.mRunning) {
 			asynch.doStop = true;
 			osSignalSet(getThreadId(), Bg96Driver::SIGNAL_BREAK);
-			strm->msg(colWHITE, "BG Stop");
+			strm->oMsgX(colWHITE, "BG Stop");
 		} else {
-			strm->msg(colRED, "No in running mode");
+			strm->oMsgX(colRED, "No in running mode");
 		}
 		break;
 	case 9: // Start
 		if (!asynch.mRunning) {
 			osSignalSet(getThreadId(), Bg96Driver::SIGNAL_BREAK);
 			asynch.doStart = true;
-			strm->msg(colWHITE, "BG Start");
+			strm->oMsgX(colWHITE, "BG Start");
 		} else
-			strm->msg(colRED, "No in idle mode");
+			strm->oMsgX(colRED, "No in idle mode");
 		break;
 	case 10: // restart
 		if (asynch.mRunning) {
 			asynch.doRestart = true;
 		} else
-			strm->msg(colRED, "No in running mode");
+			strm->oMsgX(colRED, "No in running mode");
 		break;
 	case 11: // PowerUp
 		if (!asynch.mRunning) {
 			asynch.doPowerUp = true;
 		} else
-			strm->msg(colRED, "No in idle mode");
+			strm->oMsgX(colRED, "No in idle mode");
 		break;
 	case 12: // w
 		Token::trim(&cmd);
@@ -2010,7 +2010,7 @@ void Bg96Driver::shell(MsgStream *strm, const char *cmd) {
 			state.sendSms.msg[n] = 26;
 			state.sendSms.msg[n + 1] = 0;
 			state.sendSms.flagSend = true;
-			strm->msg(colWHITE, "send sms [%s]", state.sendSms.nrTel);
+			strm->oMsgX(colWHITE, "send sms [%s]", state.sendSms.nrTel);
 		}
 	}
 		break;

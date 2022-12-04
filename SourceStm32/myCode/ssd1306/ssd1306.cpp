@@ -105,22 +105,22 @@ void SSD1306Dev::initHd(void) {
 }
 
 
-void SSD1306Dev::showState(MsgStream *strm) {
-	strm->msgItem("__SSD1306__");
-	strm->msgItem("chipExist: %s", YN(mDevExist));
+void SSD1306Dev::showState(OutStream *strm) {
+	strm->oMsg("__SSD1306__");
+	strm->oMsg("chipExist: %s", YN(mDevExist));
 	if (mDevExist) {
-		strm->msgItem("mError: %s", HAL_getErrStr(mError));
+		strm->oMsg("mError: %s", HAL_getErrStr(mError));
 	}
 }
 
-void SSD1306Dev::execFun(MsgStream *strm, int funNr) {
+void SSD1306Dev::execFun(OutStream *strm, int funNr) {
 	switch (funNr) {
 	case 30:
 		mError = HAL_OK;
 		mState.Initialized = 0;
 		initHd();
-		strm->msgItem("SSD1306 Init st=%s", HAL_getErrStr(mError));
-		strm->msgItem("Initialized=%s", YN(mState.Initialized));
+		strm->oMsg("SSD1306 Init st=%s", HAL_getErrStr(mError));
+		strm->oMsg("Initialized=%s", YN(mState.Initialized));
 		break;
 	case 31:
 		clear();

@@ -8,12 +8,12 @@
 #ifndef UTILS_H_
 #define UTILS_H_
 
+#include <IOStream.h>
 #include "_ansi.h"
 #include "stdint.h"
 #include "stm32f4xx_hal.h"
 
 #include "myDef.h"
-#include "MsgStream.h"
 
 typedef enum {
 	posFREE = 0, posGND, posVCC,

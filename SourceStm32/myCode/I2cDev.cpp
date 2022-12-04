@@ -14,6 +14,7 @@
 #include <Utils.h>
 #include <cpx.h>
 #include "Shell.h"
+#include <ShellItem.h>
 
 extern ShellTask *shellTask;
 
@@ -128,17 +129,17 @@ HAL_StatusTypeDef I2c1Bus::BusRestart() {
 	return st;
 }
 
-void I2c1Bus::ShowBusRegisters(MsgStream *strm) {
-	if (strm->msgOpen(colWHITE)) {
-		strm->msgItem("CR1:0x%08X", hi2c.Instance->CR1);
-		strm->msgItem("CR2:0x%08X", hi2c.Instance->CR2);
-		strm->msgItem("SR1:0x%08X", hi2c.Instance->SR1);
-		strm->msgItem("SR2:0x%08X", hi2c.Instance->SR2);
-		strm->msgItem("CCR  :0x%08X", hi2c.Instance->CCR);
-		strm->msgItem("TRISE:0x%08X", hi2c.Instance->TRISE);
-		strm->msgItem("FLTR :0x%08X", hi2c.Instance->FLTR);
+void I2c1Bus::ShowBusRegisters(OutStream *strm) {
+	if (strm->oOpen(colWHITE)) {
+		strm->oMsg("CR1:0x%08X", hi2c.Instance->CR1);
+		strm->oMsg("CR2:0x%08X", hi2c.Instance->CR2);
+		strm->oMsg("SR1:0x%08X", hi2c.Instance->SR1);
+		strm->oMsg("SR2:0x%08X", hi2c.Instance->SR2);
+		strm->oMsg("CCR  :0x%08X", hi2c.Instance->CCR);
+		strm->oMsg("TRISE:0x%08X", hi2c.Instance->TRISE);
+		strm->oMsg("FLTR :0x%08X", hi2c.Instance->FLTR);
 
-		strm->msgClose();
+		strm->oClose();
 	}
 
 }
@@ -221,43 +222,43 @@ HAL_StatusTypeDef I2c1Bus::checkDevMtx(uint8_t dev_addr) {
 	return st;
 }
 
-void I2c1Bus::ScanBus(MsgStream *strm) {
-	if (strm->msgOpen(colWHITE)) {
+void I2c1Bus::ScanBus(OutStream *strm) {
+	if (strm->oOpen(colWHITE)) {
 		if (openMutex(3, 100)) {
 			int devCnt = 0;
 			for (int i = 0; i < 128; i++) {
 				uint16_t dev_addr = 2 * i;
 				if (HAL_I2C_IsDeviceReady(&hi2c, dev_addr, 2, 50) == HAL_OK) {
-					strm->msgItem("Found adr=0x%02X", dev_addr);
+					strm->oMsg("Found adr=0x%02X", dev_addr);
 					devCnt++;
 				}
 			}
-			strm->msgItem("Found %u devices", devCnt);
+			strm->oMsg("Found %u devices", devCnt);
 			closeMutex();
 		} else {
-			strm->msgItem("I2c mutex error");
+			strm->oMsg("I2c mutex error");
 		}
-		strm->msgClose();
+		strm->oClose();
 	}
 }
 
-void I2c1Bus::showState(MsgStream *strm) {
-	if (strm->msgOpen(colWHITE)) {
-		strm->msgItem("MutextWho=%d (Last=%d)", mMutexWho, mLastMutexWho);
-		strm->msgItem("BusRestartCnt=%u", mBusRestartCnt);
+void I2c1Bus::showState(OutStream *strm) {
+	if (strm->oOpen(colWHITE)) {
+		strm->oMsg("MutextWho=%d (Last=%d)", mMutexWho, mLastMutexWho);
+		strm->oMsg("BusRestartCnt=%u", mBusRestartCnt);
 
 		for (int i = 0; i < mDevCnt; i++) {
 			devTab[i]->showState(strm);
 		}
-		strm->msgClose();
+		strm->oClose();
 	}
 }
-void I2c1Bus::showMeas(MsgStream *strm) {
-	if (strm->msgOpen(colWHITE)) {
+void I2c1Bus::showMeas(OutStream *strm) {
+	if (strm->oOpen(colWHITE)) {
 		for (int i = 0; i < mDevCnt; i++) {
 			devTab[i]->showMeas(strm);
 		}
-		strm->msgClose();
+		strm->oClose();
 	}
 }
 
@@ -275,7 +276,7 @@ void I2c1Bus::tick() {
 			bool busyAf = rdBusyFlag();
 			closeMutex();
 			BusRestart();
-			shellTask->msg(colRED, "I2CBus RESTART: sdaBf=%u, sdaAf=%u, busyAf=%u", sdaBf, sdaAf, busyAf);
+			shellTask->oMsgX(colRED, "I2CBus RESTART: sdaBf=%u, sdaAf=%u, busyAf=%u", sdaBf, sdaAf, busyAf);
 			mBusRestartCnt++;
 		}
 
@@ -294,12 +295,12 @@ bool I2c1Bus::isError() {
 	return q;
 }
 
-void I2c1Bus::execFun(MsgStream *strm, int idx) {
-	if (strm->msgOpen(colWHITE)) {
+void I2c1Bus::execFun(OutStream *strm, int idx) {
+	if (strm->oOpen(colWHITE)) {
 		for (int i = 0; i < mDevCnt; i++) {
 			devTab[i]->execFun(strm, idx);
 		}
-		strm->msgClose();
+		strm->oClose();
 	}
 }
 
@@ -328,7 +329,7 @@ const ShellItem menuI2C[] = { //
 
 				{ NULL, NULL } };
 
-void I2c1Bus::shell(MsgStream *strm, const char *cmd) {
+void I2c1Bus::shell(OutStream *strm, const char *cmd) {
 	char tok[20];
 	int idx = -1;
 
@@ -352,19 +353,19 @@ void I2c1Bus::shell(MsgStream *strm, const char *cmd) {
 		break;
 	case 5:	//busUnlock
 		BusUnlock();
-		strm->msg(colWHITE, "Ok. Wykonaj restart i2c.");
+		strm->oMsgX(colWHITE, "Ok. Wykonaj restart i2c.");
 		break;
 	case 6:  //rdGpio
-		if (strm->msgOpen(colWHITE)) {
+		if (strm->oOpen(colWHITE)) {
 			setAsGpio();
-			strm->msgItem("SDA:%u", getGpioSDA());
-			strm->msgItem("SCL:%u", getGpioSCL());
-			strm->msgClose();
+			strm->oMsg("SDA:%u", getGpioSDA());
+			strm->oMsg("SCL:%u", getGpioSCL());
+			strm->oClose();
 		}
 		break;
 	case 7: //sclWave
 		gpioSCLWave();
-		strm->msg(colWHITE, "SCLWave. Wykonaj restart i2c.");
+		strm->oMsgX(colWHITE, "SCLWave. Wykonaj restart i2c.");
 		break;
 
 	case 8: { //fun{
@@ -396,7 +397,7 @@ void I2c1Bus::shell(MsgStream *strm, const char *cmd) {
 			execFun(strm, 2);
 			break;
 		default:
-			strm->msgItem("parametr: 1|2");
+			strm->oMsg("parametr: 1|2");
 			break;
 		}
 	}
@@ -436,9 +437,9 @@ void I2c1Bus::shell(MsgStream *strm, const char *cmd) {
 //-------------------------------------------------------------------------------------------------------------------------
 // I2c1Dev
 //-------------------------------------------------------------------------------------------------------------------------
-void I2c1Dev::showDevExist(MsgStream *strm) {
+void I2c1Dev::showDevExist(OutStream *strm) {
 	HAL_StatusTypeDef st = I2c1Bus::checkDevMtx(getAdr());
-	strm->msgItem("DevExist=%s", HAL_getErrStr(st));
+	strm->oMsg("DevExist=%s", HAL_getErrStr(st));
 }
 
 //-------------------------------------------------------------------------------------------------------------------------
@@ -546,9 +547,9 @@ private:
 	HAL_StatusTypeDef readAlerts(AlertRec *rec);
 	HAL_StatusTypeDef StartPeriodicMeasurment(etRepeatability repeatability, etFrequency frequency);
 
-	void showSerialNumer(MsgStream *strm);
-	void showStatus(MsgStream *strm);
-	void showMeasData(MsgStream *strm);
+	void showSerialNumer(OutStream *strm);
+	void showStatus(OutStream *strm);
+	void showMeasData(OutStream *strm);
 	struct {
 		float temp;
 		float humi;
@@ -568,9 +569,9 @@ protected:
 public:
 	SHT35Dev(uint8_t adr);
 	virtual HAL_StatusTypeDef getData(float *temperature, float *humidity);
-	virtual void showState(MsgStream *strm);
-	virtual void execFun(MsgStream *strm, int funNr);
-	virtual void showMeas(MsgStream *strm);
+	virtual void showState(OutStream *strm);
+	virtual void execFun(OutStream *strm, int funNr);
+	virtual void showMeas(OutStream *strm);
 	virtual bool isError();
 };
 
@@ -860,7 +861,7 @@ void SHT35Dev::tick() {
 	}
 }
 
-void SHT35Dev::execFun(MsgStream *strm, int funNr) {
+void SHT35Dev::execFun(OutStream *strm, int funNr) {
 	AlertRec alert;
 
 	HAL_StatusTypeDef st;
@@ -868,12 +869,12 @@ void SHT35Dev::execFun(MsgStream *strm, int funNr) {
 	case 0:
 		st = readAlerts(&alert);
 		if (st == HAL_OK) {
-			strm->msgItem("TempHigh: %.0f-%.0f", alert.temperatureHighClear, alert.temperatureHighSet);
-			strm->msgItem("TempLow : %.0f-%.0f", alert.temperatureLowClear, alert.temperatureLowSet);
-			strm->msgItem("HumiHigh: %.0f-%.0f", alert.humidityHighClear, alert.humidityHighSet);
-			strm->msgItem("HumiLow : %.0f-%.0f", alert.humidityLowClear, alert.humidityLowSet);
+			strm->oMsg("TempHigh: %.0f-%.0f", alert.temperatureHighClear, alert.temperatureHighSet);
+			strm->oMsg("TempLow : %.0f-%.0f", alert.temperatureLowClear, alert.temperatureLowSet);
+			strm->oMsg("HumiHigh: %.0f-%.0f", alert.humidityHighClear, alert.humidityHighSet);
+			strm->oMsg("HumiLow : %.0f-%.0f", alert.humidityLowClear, alert.humidityLowSet);
 		} else
-			strm->msgItem("readAlerts error:%s", HAL_getErrStr(st));
+			strm->oMsg("readAlerts error:%s", HAL_getErrStr(st));
 		break;
 	case 1:
 		alert.temperatureHighSet = 30;
@@ -885,7 +886,7 @@ void SHT35Dev::execFun(MsgStream *strm, int funNr) {
 		alert.humidityLowClear = 60;
 		alert.humidityLowSet = 55;
 
-		strm->msgItem("setAlerts st=%s", HAL_getErrStr(setAlerts(&alert)));
+		strm->oMsg("setAlerts st=%s", HAL_getErrStr(setAlerts(&alert)));
 		break;
 	case 2:
 		alert.temperatureHighSet = 33;
@@ -897,26 +898,26 @@ void SHT35Dev::execFun(MsgStream *strm, int funNr) {
 		alert.humidityLowClear = 62;
 		alert.humidityLowSet = 57;
 
-		strm->msgItem("setAlerts st=%s", HAL_getErrStr(setAlerts(&alert)));
+		strm->oMsg("setAlerts st=%s", HAL_getErrStr(setAlerts(&alert)));
 		break;
 	case 3:
-		strm->msgItem("EnableHeater st=%s", HAL_getErrStr(EnableHeater()));
+		strm->oMsg("EnableHeater st=%s", HAL_getErrStr(EnableHeater()));
 		break;
 	case 4:
-		strm->msgItem("DisableHeater st=%s", HAL_getErrStr(DisableHeater()));
+		strm->oMsg("DisableHeater st=%s", HAL_getErrStr(DisableHeater()));
 		break;
 	case 5:
 		showStatus(strm);
 		break;
 	case 6:
-		strm->msgItem("ClearAllAlertFlags st=%s", HAL_getErrStr(ClearAllAlertFlags()));
+		strm->oMsg("ClearAllAlertFlags st=%s", HAL_getErrStr(ClearAllAlertFlags()));
 		break;
 	case 7:
-		strm->msgItem("SoftReset st=%s", HAL_getErrStr(SoftReset()));
+		strm->oMsg("SoftReset st=%s", HAL_getErrStr(SoftReset()));
 		break;
 	case 8:
 		st = StartPeriodicMeasurment(REPEATAB_HIGH, FREQUENCY_4HZ);
-		strm->msgItem("StartPeriodicMeasurment st=%s", HAL_getErrStr(st));
+		strm->oMsg("StartPeriodicMeasurment st=%s", HAL_getErrStr(st));
 		break;
 	case 9:
 		showMeasData(strm);
@@ -931,49 +932,49 @@ void SHT35Dev::execFun(MsgStream *strm, int funNr) {
 	}
 }
 
-void SHT35Dev::showMeasData(MsgStream *strm) {
+void SHT35Dev::showMeasData(OutStream *strm) {
 	float temperature, humidity;
 	HAL_StatusTypeDef st = getData(&temperature, &humidity);
 	if (st == HAL_OK)
-		strm->msgItem("Temper=%.2f[st]  Humi=%.1f[%%]", temperature, humidity);
+		strm->oMsg("Temper=%.2f[st]  Humi=%.1f[%%]", temperature, humidity);
 	else
-		strm->msgItem("Data error:%s", HAL_getErrStr(st));
+		strm->oMsg("Data error:%s", HAL_getErrStr(st));
 }
 
-void SHT35Dev::showStatus(MsgStream *strm) {
+void SHT35Dev::showStatus(OutStream *strm) {
 	uint16_t status;
 	HAL_StatusTypeDef st = ReadStatus(&status);
 	if (st == HAL_OK) {
 		status &= 0xAC13; // maskowanie pól reserved
-		strm->msgItem("Status=0x%04X", status);
+		strm->oMsg("Status=0x%04X", status);
 	} else
-		strm->msgItem("status error:%s", HAL_getErrStr(st));
+		strm->oMsg("status error:%s", HAL_getErrStr(st));
 }
 
-void SHT35Dev::showSerialNumer(MsgStream *strm) {
+void SHT35Dev::showSerialNumer(OutStream *strm) {
 	uint32_t sn;
 	HAL_StatusTypeDef st = ReadSerialNumber(&sn);
 	if (st == HAL_OK)
-		strm->msgItem("SerialNb=0x%08X", sn);
+		strm->oMsg("SerialNb=0x%08X", sn);
 	else
-		strm->msgItem("SerialNb error:%s", HAL_getErrStr(st));
+		strm->oMsg("SerialNb error:%s", HAL_getErrStr(st));
 }
 
-void SHT35Dev::showMeas(MsgStream *strm) {
+void SHT35Dev::showMeas(OutStream *strm) {
 	float temperature, humidity;
 	HAL_StatusTypeDef st = getData(&temperature, &humidity);
 	if (st == HAL_OK)
-		strm->msgItem("SHT35 : Temper=%.2f[st]  Humi=%.1f[%%]", temperature, humidity);
+		strm->oMsg("SHT35 : Temper=%.2f[st]  Humi=%.1f[%%]", temperature, humidity);
 	else
-		strm->msgItem("SHT35 : Data error:%s", HAL_getErrStr(st));
+		strm->oMsg("SHT35 : Data error:%s", HAL_getErrStr(st));
 }
 
-void SHT35Dev::showState(MsgStream *strm) {
-	strm->msgItem("__SHT35Dev__");
-	strm->msgItem("chipExist: %s", YN(mDevExist));
+void SHT35Dev::showState(OutStream *strm) {
+	strm->oMsg("__SHT35Dev__");
+	strm->oMsg("chipExist: %s", YN(mDevExist));
 	if (mDevExist) {
-		strm->msgItem("SerialNb=0x%08X", serialNr);
-		strm->msgItem("MeasStart=%s", HAL_getErrStr(mMeasStart));
+		strm->oMsg("SerialNb=0x%08X", serialNr);
+		strm->oMsg("MeasStart=%s", HAL_getErrStr(mMeasStart));
 		showDevExist(strm);
 		showStatus(strm);
 		showMeasData(strm);
@@ -1021,7 +1022,7 @@ private:
 	double comp_pressure(uint32_t P, double T);
 	HAL_StatusTypeDef reset();
 	HAL_StatusTypeDef measure(double *temp, double *pressure);
-	void showMeasData(MsgStream *strm);
+	void showMeasData(OutStream *strm);
 	HAL_StatusTypeDef Start();
 	DtFilter filterTemper;
 	DtFilter filterPressure;
@@ -1032,9 +1033,9 @@ protected:
 public:
 	Bmp338Dev(uint8_t adr);
 	virtual HAL_StatusTypeDef getData(float *temperature, float *pressure);
-	virtual void showState(MsgStream *strm);
-	virtual void execFun(MsgStream *strm, int funNr);
-	virtual void showMeas(MsgStream *strm);
+	virtual void showState(OutStream *strm);
+	virtual void execFun(OutStream *strm, int funNr);
+	virtual void showMeas(OutStream *strm);
 	virtual bool isError();
 
 };
@@ -1248,41 +1249,41 @@ void Bmp338Dev::tick() {
 	}
 }
 
-void Bmp338Dev::execFun(MsgStream *strm, int funNr) {
+void Bmp338Dev::execFun(OutStream *strm, int funNr) {
 	switch (funNr) {
 	case 20:
-		strm->msgItem("BMP338 Start st=%s", HAL_getErrStr(Start()));
-		strm->msgItem("chipIdOk: %s", OkErr(chipIdOk));
-		strm->msgItem("coefOk: %s", OkErr(coefOk));
+		strm->oMsg("BMP338 Start st=%s", HAL_getErrStr(Start()));
+		strm->oMsg("chipIdOk: %s", OkErr(chipIdOk));
+		strm->oMsg("coefOk: %s", OkErr(coefOk));
 		break;
 	}
 }
 
-void Bmp338Dev::showMeasData(MsgStream *strm) {
+void Bmp338Dev::showMeasData(OutStream *strm) {
 	double temperature, pressure;
 	HAL_StatusTypeDef st = measure(&temperature, &pressure);
 	if (st == HAL_OK)
-		strm->msgItem("Temper=%.2f[st]  Pressure=%.2f[hPa]", temperature, pressure);
+		strm->oMsg("Temper=%.2f[st]  Pressure=%.2f[hPa]", temperature, pressure);
 	else
-		strm->msgItem("Data error:%s", HAL_getErrStr(st));
+		strm->oMsg("Data error:%s", HAL_getErrStr(st));
 }
 
-void Bmp338Dev::showMeas(MsgStream *strm) {
+void Bmp338Dev::showMeas(OutStream *strm) {
 	double temperature, pressure;
 	HAL_StatusTypeDef st = measure(&temperature, &pressure);
 	if (st == HAL_OK)
-		strm->msgItem("BMP338: Temper=%.2f[st]  Pressure=%.2f[hPa]", temperature, pressure);
+		strm->oMsg("BMP338: Temper=%.2f[st]  Pressure=%.2f[hPa]", temperature, pressure);
 	else
-		strm->msgItem("BMP338: Data error:%s", HAL_getErrStr(st));
+		strm->oMsg("BMP338: Data error:%s", HAL_getErrStr(st));
 
 }
 
-void Bmp338Dev::showState(MsgStream *strm) {
-	strm->msgItem("__BMP338__");
-	strm->msgItem("chipExist: %s", YN(mDevExist));
+void Bmp338Dev::showState(OutStream *strm) {
+	strm->oMsg("__BMP338__");
+	strm->oMsg("chipExist: %s", YN(mDevExist));
 	if (mDevExist) {
-		strm->msgItem("chipIdOk: %s", OkErr(chipIdOk));
-		strm->msgItem("coefOk: %s", OkErr(coefOk));
+		strm->oMsg("chipIdOk: %s", OkErr(chipIdOk));
+		strm->oMsg("coefOk: %s", OkErr(coefOk));
 		showMeasData(strm);
 	}
 }

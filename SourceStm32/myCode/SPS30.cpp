@@ -10,6 +10,7 @@
 #include <SPS30.h>
 #include <utils.h>
 #include <shell.h>
+#include <ShellItem.h>
 
 extern ShellTask *shellTask;
 
@@ -194,7 +195,7 @@ SPS30_Status SPS30::execNewFrame() {
 
 	state.devState = frame[2];
 	if (mDebug >= 2)
-		shellTask->msg(colMAGENTA, "rec cmd=0x%02X state=0x%02X L=%d(%d)", cmd, state.devState, dtLen, dtLen1);
+		shellTask->oMsgX(colMAGENTA, "rec cmd=0x%02X state=0x%02X L=%d(%d)", cmd, state.devState, dtLen, dtLen1);
 	if (mDebug >= 3) {
 		char txt[100];
 		int n = snprintf(txt, sizeof(txt), "DT:");
@@ -202,18 +203,18 @@ SPS30_Status SPS30::execNewFrame() {
 		for (int i = 0; i < dtLen; i++) {
 			n += snprintf(&txt[n], sizeof(txt) - n, "0x%02X,", frDt[i]);
 		}
-		shellTask->msg(colMAGENTA, txt);
+		shellTask->oMsgX(colMAGENTA, txt);
 	}
 
 	switch (cmd) {
 	case cmdSTART_MEASURE:
 		if (mDebug >= 1) {
-			shellTask->msg(colMAGENTA, "SP30:StartMeasureAck");
+			shellTask->oMsgX(colMAGENTA, "SP30:StartMeasureAck");
 		}
 		break;
 	case cmdSTOP_MEASURE:
 		if (mDebug >= 1) {
-			shellTask->msg(colMAGENTA, "SP30:StopMeasureAck");
+			shellTask->oMsgX(colMAGENTA, "SP30:StopMeasureAck");
 		}
 		break;
 	case cmdREAD_VAL: {
@@ -247,12 +248,12 @@ SPS30_Status SPS30::execNewFrame() {
 		break;
 	case cmdSTART_FAN_CLEANING:
 		if (mDebug >= 1) {
-			shellTask->msg(colMAGENTA, "CleaningAck");
+			shellTask->oMsgX(colMAGENTA, "CleaningAck");
 		}
 		break;
 	case cmdDEVICE_INFO:
 		if (mDebug >= 1) {
-			shellTask->msg(colMAGENTA, "DevInfo=[%s]", frDt);
+			shellTask->oMsgX(colMAGENTA, "DevInfo=[%s]", frDt);
 		}
 		break;
 	case cmdRESET:
@@ -341,21 +342,21 @@ void SPS30::StopMeas() {
 	state.measStart.startMeasureSended = false;
 }
 
-void SPS30::ShowMesuredRec(MsgStream *strm) {
-	if (strm->msgOpen(colWHITE)) {
-		strm->msgItem("Mass Concentration");
-		strm->msgItem(" PM1.0 : %f[ug/m3]", measSps30.PM_1_0);
-		strm->msgItem(" PM2.5 : %f[ug/m3]", measSps30.PM_2_5);
-		strm->msgItem(" PM4.0 : %f[ug/m3]", measSps30.PM_4_0);
-		strm->msgItem(" PM10  : %f[ug/m3]", measSps30.PM_10);
-		strm->msgItem("Number Concentration");
-		strm->msgItem(" PM0.5 : %f[#/cm3]", measSps30.NUM_0_5);
-		strm->msgItem(" PM1.0 : %f[#/cm3]", measSps30.NUM_1_0);
-		strm->msgItem(" PM2.5 : %f[#/cm3]", measSps30.NUM_2_5);
-		strm->msgItem(" PM4.0 : %f[#/cm3]", measSps30.NUM_4_0);
-		strm->msgItem(" PM10  : %f[#/cm3]", measSps30.NUM_10);
-		strm->msgItem("Typical Particle Size :%f[um]", measSps30.ParticleSize);
-		strm->msgClose();
+void SPS30::ShowMesuredRec(OutStream *strm) {
+	if (strm->oOpen(colWHITE)) {
+		strm->oMsg("Mass Concentration");
+		strm->oMsg(" PM1.0 : %f[ug/m3]", measSps30.PM_1_0);
+		strm->oMsg(" PM2.5 : %f[ug/m3]", measSps30.PM_2_5);
+		strm->oMsg(" PM4.0 : %f[ug/m3]", measSps30.PM_4_0);
+		strm->oMsg(" PM10  : %f[ug/m3]", measSps30.PM_10);
+		strm->oMsg("Number Concentration");
+		strm->oMsg(" PM0.5 : %f[#/cm3]", measSps30.NUM_0_5);
+		strm->oMsg(" PM1.0 : %f[#/cm3]", measSps30.NUM_1_0);
+		strm->oMsg(" PM2.5 : %f[#/cm3]", measSps30.NUM_2_5);
+		strm->oMsg(" PM4.0 : %f[#/cm3]", measSps30.NUM_4_0);
+		strm->oMsg(" PM10  : %f[#/cm3]", measSps30.NUM_10);
+		strm->oMsg("Typical Particle Size :%f[um]", measSps30.ParticleSize);
+		strm->oClose();
 	}
 }
 
@@ -370,7 +371,7 @@ const ShellItem menuDustSPS30[] = { //
 
 				{ NULL, NULL } };
 
-void SPS30::shell(MsgStream *strm, const char *cmd) {
+void SPS30::shell(OutStream *strm, const char *cmd) {
 
 	char tok[20];
 	int idx = -1;
@@ -379,17 +380,17 @@ void SPS30::shell(MsgStream *strm, const char *cmd) {
 		idx = findCmd(menuDustSPS30, tok);
 	switch (idx) {
 	case 0: //s
-		if (strm->msgOpen(colWHITE)) {
-			strm->msgItem("PWR=%u", Hdw::getDustSensorOn());
-			strm->msgItem("PWR_FAULT=%u", Hdw::getDustSensorFlg());
-			strm->msgItem("rxCnt=%u", state.rxCnt);
-			strm->msgItem("txCnt=%u", state.txCmplCnt);
-			strm->msgItem("rxPtr=%u", rxRec.rxPtr);
-			strm->msgItem("recFrameCnt=%u", state.recivedFrameCnt);
-			strm->msgItem("isMeasOn=%u", state.isMeasOn);
-			strm->msgItem("PowerTm=%.2f", (HAL_GetTick() - state.powerOnTick) / 1000.0);
-			strm->msgItem("devState=0x%02X", state.devState);
-			strm->msgClose();
+		if (strm->oOpen(colWHITE)) {
+			strm->oMsg("PWR=%u", Hdw::getDustSensorOn());
+			strm->oMsg("PWR_FAULT=%u", Hdw::getDustSensorFlg());
+			strm->oMsg("rxCnt=%u", state.rxCnt);
+			strm->oMsg("txCnt=%u", state.txCmplCnt);
+			strm->oMsg("rxPtr=%u", rxRec.rxPtr);
+			strm->oMsg("recFrameCnt=%u", state.recivedFrameCnt);
+			strm->oMsg("isMeasOn=%u", state.isMeasOn);
+			strm->oMsg("PowerTm=%.2f", (HAL_GetTick() - state.powerOnTick) / 1000.0);
+			strm->oMsg("devState=0x%02X", state.devState);
+			strm->oClose();
 		}
 
 		break;
@@ -413,7 +414,7 @@ void SPS30::shell(MsgStream *strm, const char *cmd) {
 			}
 		}
 		if (!q) {
-			strm->msg(colGREEN, "Polecenie: getinfo 1 [1..3]");
+			strm->oMsgX(colGREEN, "Polecenie: getinfo 1 [1..3]");
 		}
 
 	}
