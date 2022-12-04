@@ -1,0 +1,1 @@
+Wgrywać bez EEPROM (nie kasować jego zawartości).
