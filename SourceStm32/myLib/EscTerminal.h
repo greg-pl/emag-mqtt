@@ -8,8 +8,15 @@
 #ifndef ESCTERMINAL_H_
 #define ESCTERMINAL_H_
 
-class TermStream {
+class OutHdStream {
+	friend class EscTerminal;
+	friend class EditLine;
+private:
+	int mNoTermSmfCnt;
+
 public:
+	OutHdStream();
+	virtual ~OutHdStream();
 	enum {
 		STD_TIME = 1000,
 	};
@@ -38,6 +45,9 @@ public:
 #define TERM_COLOR_YELLOW   "\e[93m"
 #define TERM_COLOR_RED	    "\e[91m"
 
+typedef enum {
+	colWHITE = 0, colRED, colGREEN, colBLUE, colMAGENTA, colYELLOW, colCYAN,
+} TermColor;
 
 enum {
 	MAX_LINE_SIZE = 120,
@@ -59,7 +69,7 @@ public:
 
 class EditLine {
 private:
-	TermStream *mOut;
+	OutHdStream *mOut;
 	bool insMode;
 	int mPtr;
 	int mCurs; //pozycja kursora
@@ -69,7 +79,7 @@ private:
 	void sendCursPos();
 	void sendCursPosMx();
 public:
-	EditLine(TermStream *outStream);
+	EditLine(OutHdStream *outStream);
 	void sendCLine();
 	void sendCLineMx();
 
@@ -168,7 +178,7 @@ typedef enum {
 
 class EscTerminal {
 private:
-	TermStream *mOut;
+	OutHdStream *mOut;
 	HistCmd *mHistCmd;
 	EditLine *cLine;
 	CsiEng *csi;
@@ -177,10 +187,11 @@ public:
 	char mCmd[MAX_LINE_SIZE + 1];
 	char mAltChar;
 	FunKey mFunKey;
-	EscTerminal(TermStream *outStream);
+	EscTerminal(OutHdStream *outStream);
 	TermAct inpChar(char ch);
 	void showLineNoMx();
 	void showLineMx();
+	static const char* getColorStr(TermColor color);
 
 };
 

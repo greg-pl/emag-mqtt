@@ -95,7 +95,7 @@ public:
 
 //------------------------------------------------------------------------------------------------------------
 
-class ShellTask: public TaskClass, public TermStream, public OutStream {
+class ShellTask: public TaskClass, public OutHdStream, public OutStream {
 public:
 	enum {
 		SIGNAL_CHAR = 0x01, //
@@ -112,20 +112,9 @@ private:
 	int mNoTermSmfCnt; // licznik gdy zajęty semator
 	int mFullTxCnt;  // licznik gdy przepełniony bufor TX
 
-	void execCmdLine(const char *cmd);
+	void execCmdLineEx(const char *cmd);
 	void execAltChar(char altChar);
 	void execFunKey(FunKey funKey);
-	const char* getColorStr(TermColor color);
-
-	void ethMenu(const char *cmd);
-	void timeMenu(const char *cmd);
-	void netMenu(const char *cmd);
-
-	void showHdwState();
-	void showThreadList();
-	void showMemInfo();
-	void showDevState();
-	int Ping(ip4_addr_t addr, int length);
 
 protected:
 	//TermStream

@@ -5,7 +5,6 @@
  *      Author: Grzegorz
  */
 
-
 #include "lwip.h"
 #include "dns.h"
 #include "icmp.h"
@@ -32,7 +31,6 @@
 #include <string.h>
 #include <stdarg.h>
 
-
 extern Bg96Driver *bg96;
 extern DustSensorBase *dustInternSensor;
 extern MdbMasterDustTask *dustExternSensor;
@@ -41,8 +39,6 @@ extern MdbMasterTask *mdbMaster_2;
 extern SHT35DevPub *sht35;
 extern Bmp338DevPub *bmp338;
 extern LedMatrix *ledMatrix;
-
-//-------------------------------------------------------------------------------------------------------------------------
 
 //-------------------------------------------------------------------------------------------------------------------------
 // ShellConnection
@@ -334,7 +330,7 @@ void ShellTask::ThreadFunc() {
 						break;
 					case actLINE:
 						flgSendAny = false;
-						execCmdLine(term->mCmd);
+						execCmdLineEx(term->mCmd);
 						if (!flgSendAny)
 							term->showLineMx();
 						break;
@@ -350,26 +346,6 @@ void ShellTask::ThreadFunc() {
 
 			}
 		}
-	}
-}
-
-const char* ShellTask::getColorStr(TermColor color) {
-	switch (color) {
-	default:
-	case colWHITE:
-		return TERM_COLOR_WHITE;
-	case colRED:
-		return TERM_COLOR_RED;
-	case colGREEN:
-		return TERM_COLOR_GREEN;
-	case colBLUE:
-		return TERM_COLOR_BLUE;
-	case colMAGENTA:
-		return TERM_COLOR_MAGENTA;
-	case colYELLOW:
-		return TERM_COLOR_YELLOW;
-	case colCYAN:
-		return TERM_COLOR_CYAN;
 	}
 }
 
@@ -393,10 +369,10 @@ void ShellTask::oMsgX(TermColor color, const char *pFormat, ...) {
 }
 
 bool ShellTask::oOpen(TermColor color) {
-	bool q = openOutMutex(TermStream::STD_TIME);
+	bool q = openOutMutex(OutHdStream::STD_TIME);
 	if (q) {
 		putOutStr(TERM_CLEAR_LINE);
-		putOutStr(getColorStr(color));
+		putOutStr(term->getColorStr(color));
 	}
 	return q;
 }
@@ -436,253 +412,15 @@ void ShellTask::execAltChar(char altChar) {
 	oMsgX(colRED, buf);
 }
 
-extern "C" void StartMeasureAdc1();
-extern "C" void getTempNtcEx(float *tab);
+extern const ShellItemFx mainMenuFx[];
+static void funShowState(OutStream *strm, const char *cmd);
+static void funShowHardware(OutStream *strm, const char *cmd);
 
+void ShellTask::execCmdLineEx(const char *cmd) {
+	char txt[100];
+	snprintf(txt, sizeof(txt), "AIR-PRO: MainMenu, NS=%s", config->data.P.SerialNr);
 
-
-
-static void funShowState(){
-
-}
-
-
-
-const ShellItem mainMenu[] = { //
-		{ "s", "[F2] status urządzenia" }, //
-				{ "h", "[F3] stan hardware" }, //
-				{ "reboot", "reboot STM" }, //
-				{ "cfg", ">> menu konfiguracji" }, //
-				{ "time", ">> menu czasu" }, //
-				{ "eth", ">> menu etherneta" }, //
-				{ "net", ">> menu tcp/ip" }, //
-				{ "bg", ">> menu BG96" }, //
-				{ "iic", ">> menu układów i2c" }, //
-				{ "dust", ">> menu czujnika pyłów" }, //
-				{ "noise", ">> czujnik hałasu, menu modbus master X7" }, //
-				{ "gas", ">> czujnik  gazów, menu modbus master X6" }, //
-				{ "matrix", ">> menu LedMatrix" }, //
-				{ "ps", "lista wątków" }, //
-				{ "psx", "lista tasków" }, //
-				{ "mem", "informacja o pamięci" }, //
-				{ "glob", "dane globalne" }, //
-				{ "jglob", "dane globalne w postaci json" }, //
-				{ "globdef", "definicja danych globalnych" }, //
-				{ "lcd_scr", "ustawienie numer wyświetlanego ekranu" }, //
-				{ "lcd_time", "ustawienie czasu przełaczania ekranów na lcd" }, //
-				{ "ntc", "pokaż temperaturę z NTC" }, //
-
-				{ NULL, NULL } };
-
-void ShellTask::execCmdLine(const char *cmd) {
-
-	char tok[20];
-	int idx = -1;
-	if (Token::get(&cmd, tok, sizeof(tok)))
-		idx = findCmd(mainMenu, tok);
-	switch (idx) {
-	case 0:
-		showDevState();
-		break;
-	case 1:
-		showHdwState();
-		break;
-	case 2:
-		oMsgX(colRED, "*** R E S E T ***");
-		reboot(1000);
-		break;
-	case 3:
-		config->shell(this, cmd);
-		break;
-	case 4:
-		timeMenu(cmd);
-		break;
-	case 5:
-		ethMenu(cmd);
-		break;
-	case 6:
-		netMenu(cmd);
-		break;
-	case 7:
-		bg96->shell(this, cmd);
-		flgSendAny = true;
-		break;
-	case 8: //iic
-		I2c1Bus::shell(this, cmd);
-		break;
-	case 9: //dust
-		if (config->data.P.dustInpType == dust_Intern) {
-			dustInternSensor->shell(this, cmd);
-		} else {
-			dustExternSensor->shell(this, cmd);
-		}
-		break;
-
-	case 10: //noise - mdb1
-		mdbMaster_1->shell(this, cmd);
-		break;
-	case 11: //gas - mdb2
-		mdbMaster_2->shell(this, cmd);
-		break;
-
-	case 12: //matrix
-		if (ledMatrix != NULL) {
-			ledMatrix->shell(this, cmd);
-		} else {
-			oMsgX(colRED, "Obsluga LedMatrix wylaczona");
-		}
-		break;
-
-//--------------------------
-	case 13: //ps
-		showThreadList();
-		break;
-	case 14: //ps
-		TaskClassList::ShowList(this);
-		break;
-
-	case 15: //mem
-		showMemInfo();
-		break;
-
-	case 16: //glob
-		GlobData::show(this);
-		break;
-	case 17: //jglob
-		GlobData::showJson(this);
-		break;
-	case 18: //globdef
-		GlobData::showDef(this);
-		break;
-
-	case 19: { //lcd_scr
-		int v;
-		Token::getAsInt(&cmd, &v);
-		setLcdScrNr(v);
-	}
-		break;
-	case 20: { //lcd_time
-		int v;
-		Token::getAsInt(&cmd, &v);
-		setLcdTime(v);
-	}
-		break;
-	case 21: { //ntc
-		NTC::StartMeasure();
-		if (NTC::WaitForMeasEnd(500)) {
-			oMsgX(colWHITE, "NTC: U=%.3f[V] R=%.2f[kom] temp=%.1f[deg]", NTC::nap, NTC::rez / 1000, NTC::temp);
-		}
-	}
-		break;
-
-
-	default: {
-		char txt[100];
-		snprintf(txt, sizeof(txt), "AIR-PRO: MainMenu, NS=%s", config->data.P.SerialNr);
-		showHelp(this, txt, mainMenu);
-	}
-		break;
-	};
-
-}
-
-void *mem_try = NULL;
-
-extern uint8_t _end; /* Symbol defined in the linker script */
-extern uint8_t _estack; /* Symbol defined in the linker script */
-extern uint32_t _Min_Stack_Size; /* Symbol defined in the linker script */
-
-void ShellTask::showMemInfo() {
-	if (oOpen(colWHITE)) {
-		if (mem_try == NULL)
-			mem_try = malloc(4);
-
-		const uint32_t stack_start = (uint32_t) &_end;
-		const uint32_t stack_limit = (uint32_t) &_estack - (uint32_t) &_Min_Stack_Size;
-
-		oMsg("heap_begin= %p", stack_start);
-		oMsg("heap_end= %p", stack_limit);
-		oMsg("heap_curr = %p", mem_try);
-
-		int size = stack_limit - stack_start;
-		int used = (int) mem_try - stack_start;
-		int freem = size - used;
-		int stack_sz = (uint32_t) &_Min_Stack_Size;
-
-		oMsg("heap_size = %u (%p)", size, size);
-		oMsg("heap_used = %u (%p)", used, used);
-		oMsg("heap_free = %u (%p)", freem, freem);
-		oMsg("stack_size = %u (%p)", stack_sz, stack_sz);
-
-		oClose();
-	}
-}
-void ShellTask::showThreadList() {
-	if (oOpen(colWHITE)) {
-		char *bigbuf;
-		bigbuf = (char*) malloc(2000);
-		if (bigbuf != NULL) {
-			vTaskList(bigbuf);
-			oMsg("TXT_SIZE=%u (max %u) (p=%08X)", strlen(bigbuf), 2000, (int) bigbuf);
-			oMsg("Name\t\tState\tPrior.\tStackP\tNum");
-			oWr(bigbuf);
-			free(bigbuf);
-		} else
-			oMsg("NoFreeMem for Buffer");
-
-		oClose();
-	}
-}
-
-void ShellTask::showHdwState() {
-	static int showCnt;
-	if (oOpen(colYELLOW)) {
-		oMsg("--- %u ----------", showCnt++);
-		oMsg("CFG0:%s", ST3Str(Hdw::getPinCfg0()));
-		oMsg("CFG1:%s", ST3Str(Hdw::getPinCfg1()));
-		oMsg("CFG2:%s", ST3Str(Hdw::getPinCfg2()));
-		oMsg("CFG3:%s", ST3Str(Hdw::getPinCfg3()));
-		oMsg("DUST_ON:%s", YN(Hdw::getDustSensorOn()));
-		oMsg("DUST_FLG:%s", ErrOk(Hdw::getDustSensorFlg()));
-		oMsg("HEATER_ON:%s", YN(Hdw::getHeaterOn()));
-		oMsg("HEATER_FLG:%s", ErrOk(Hdw::getHeaterFlg()));
-		oClose();
-	}
-
-}
-void ShellTask::showDevState() {
-	static int showCnt;
-	if (oOpen(colWHITE)) {
-		oMsg("--- %u ----------", showCnt++);
-		char buf[20];
-		TimeTools::DtTmStr(buf, &mSoftVer.time);
-		oMsg("Ver             :%u.%03u - %s", mSoftVer.ver, mSoftVer.rev, buf);
-		oMsg("RtcInitStatus   :%s", HAL_getErrStr(Rtc::mRtcStatus));
-		if (config->data.P.dustInpType == dust_Intern) {
-			oMsg("DustInternSensor:%s", ErrOk(dustInternSensor->isError()));
-		} else {
-			oMsg("DustExternSensor:%s", ErrOk(dustExternSensor->isError()));
-		}
-		if (mdbMaster_1->isCfgNoiseOn()) {
-			oMsg("NoiseSensor     :%s", ErrOk(mdbMaster_1->isError()));
-		}
-		if (mdbMaster_2->isAnyConfiguredData()) {
-			oMsg("GasSensor       :%s", ErrOk(mdbMaster_2->isDataError()));
-		}
-		oMsg("Bmp338          :%s", ErrOk(bmp338->isError()));
-		oMsg("Sht35           :%s", ErrOk(sht35->isError()));
-		oMsg("SIM card rdy    :%s", YN(bg96->isSimCardInserted()));
-		oMsg("Network regist. :%s", YN(bg96->isNetworkRegistered()));
-		oMsg("Network IP rdy  :%s", YN(bg96->isIPready()));
-		oMsg("MQTT svr opened :%s", YN(bg96->isMqttSvrOpened()));
-		oMsg("MQTT Send       :%s", YN(bg96->isMqttSendingOk()));
-		oMsg("-----");
-		oMsg("Term no semafor :%u", mNoTermSmfCnt);
-		oMsg("Term full TX buf:%u", mFullTxCnt);
-		oMsg("RestartRxCnt    :%u", myConnection->mReStartCnt);
-
-		oClose();
-	}
+	execMenuCmd(this, mainMenuFx, cmd, txt);
 }
 
 void ShellTask::execFunKey(FunKey funKey) {
@@ -690,30 +428,257 @@ void ShellTask::execFunKey(FunKey funKey) {
 	switch (funKey) {
 	default:
 	case fnF1:
-		showHelp(this, "MainMenu", mainMenu);
+		showHelpFx(this, "MainMenu", mainMenuFx);
 		break;
 	case fnF2:
-		showDevState();
+		funShowState(this, NULL);
 		break;
 	case fnF3:
-		showHdwState();
+		funShowHardware(this, NULL);
 		break;
 
 	}
 }
 
-//--------EthMenu-----------------------------------------------------------------
-const ShellItem menuEth[] = { //
-		{ "s", "status etherneta" }, //
-				{ "reset", "impuls reset do PHY" }, //
-				{ "pwr", "=0 (wyłącz), =1(załącz) zasilanie PHY" }, //
-				{ "reg", "pokaż rejestry PHY" }, //
+//-----------------------------------------------------------------------------------------------------------------------
+// Main Menu
+//-----------------------------------------------------------------------------------------------------------------------
+
+static void funShowState(OutStream *strm, const char *cmd) {
+	static int showCnt;
+	if (strm->oOpen(colWHITE)) {
+		strm->oMsg("--- %u ----------", showCnt++);
+		char buf[20];
+		TimeTools::DtTmStr(buf, &mSoftVer.time);
+		strm->oMsg("Ver             :%u.%03u - %s", mSoftVer.ver, mSoftVer.rev, buf);
+		strm->oMsg("RtcInitStatus   :%s", HAL_getErrStr(Rtc::mRtcStatus));
+		if (config->data.P.dustInpType == dust_Intern) {
+			strm->oMsg("DustInternSensor:%s", ErrOk(dustInternSensor->isError()));
+		} else {
+			strm->oMsg("DustExternSensor:%s", ErrOk(dustExternSensor->isError()));
+		}
+		if (mdbMaster_1->isCfgNoiseOn()) {
+			strm->oMsg("NoiseSensor     :%s", ErrOk(mdbMaster_1->isError()));
+		}
+		if (mdbMaster_2->isAnyConfiguredData()) {
+			strm->oMsg("GasSensor       :%s", ErrOk(mdbMaster_2->isDataError()));
+		}
+		strm->oMsg("Bmp338          :%s", ErrOk(bmp338->isError()));
+		strm->oMsg("Sht35           :%s", ErrOk(sht35->isError()));
+		strm->oMsg("SIM card rdy    :%s", YN(bg96->isSimCardInserted()));
+		strm->oMsg("Network regist. :%s", YN(bg96->isNetworkRegistered()));
+		strm->oMsg("Network IP rdy  :%s", YN(bg96->isIPready()));
+		strm->oMsg("MQTT svr opened :%s", YN(bg96->isMqttSvrOpened()));
+		strm->oMsg("MQTT Send       :%s", YN(bg96->isMqttSendingOk()));
+		strm->oMsg("-----");
+		//strm->oMsg("Term no semafor :%u", mNoTermSmfCnt);
+		//strm->oMsg("Term full TX buf:%u", mFullTxCnt);
+		//strm->oMsg("RestartRxCnt    :%u", myConnection->mReStartCnt);
+
+		strm->oClose();
+	}
+}
+
+static void funShowHardware(OutStream *strm, const char *cmd) {
+	static int showCnt;
+	if (strm->oOpen(colYELLOW)) {
+		strm->oMsg("--- %u ----------", showCnt++);
+		strm->oMsg("CFG0:%s", ST3Str(Hdw::getPinCfg0()));
+		strm->oMsg("CFG1:%s", ST3Str(Hdw::getPinCfg1()));
+		strm->oMsg("CFG2:%s", ST3Str(Hdw::getPinCfg2()));
+		strm->oMsg("CFG3:%s", ST3Str(Hdw::getPinCfg3()));
+		strm->oMsg("DUST_ON:%s", YN(Hdw::getDustSensorOn()));
+		strm->oMsg("DUST_FLG:%s", ErrOk(Hdw::getDustSensorFlg()));
+		strm->oMsg("HEATER_ON:%s", YN(Hdw::getHeaterOn()));
+		strm->oMsg("HEATER_FLG:%s", ErrOk(Hdw::getHeaterFlg()));
+		strm->oClose();
+	}
+
+}
+
+static void funReboot(OutStream *strm, const char *cmd) {
+	strm->oMsgX(colRED, "*** R E S E T ***");
+	reboot(1000);
+}
+
+static void funMenuConfig(OutStream *strm, const char *cmd) {
+	config->shell(strm, cmd);
+}
+
+extern const ShellItemFx menuTimeFx[];
+static void funMenuTime(OutStream *strm, const char *cmd) {
+	execMenuCmd(strm, menuTimeFx, cmd, "Time Menu");
+}
+
+extern const ShellItemFx menuEthFx[];
+static void funMenuEth(OutStream *strm, const char *cmd) {
+	execMenuCmd(strm, menuEthFx, cmd, "Ethernet Menu");
+}
+
+extern const ShellItemFx menuNetFx[];
+static void funMenuIP(OutStream *strm, const char *cmd) {
+	execMenuCmd(strm, menuNetFx, cmd, "Net Menu");
+}
+
+static void funMenuBG96(OutStream *strm, const char *cmd) {
+	bg96->shell(strm, cmd);
+	//flgSendAny = true;
+}
+static void funMenuI2C(OutStream *strm, const char *cmd) {
+	I2c1Bus::shell(strm, cmd);
+}
+static void funMenuDust(OutStream *strm, const char *cmd) {
+	if (config->data.P.dustInpType == dust_Intern) {
+		dustInternSensor->shell(strm, cmd);
+	} else {
+		dustExternSensor->shell(strm, cmd);
+	}
+}
+static void funMenuNoise(OutStream *strm, const char *cmd) {
+	mdbMaster_1->shell(strm, cmd);
+}
+static void funMenuGas(OutStream *strm, const char *cmd) {
+	mdbMaster_2->shell(strm, cmd);
+}
+static void funMenuLedMatrix(OutStream *strm, const char *cmd) {
+	if (ledMatrix != NULL) {
+		ledMatrix->shell(strm, cmd);
+	} else {
+		strm->oMsgX(colRED, "Obsluga LedMatrix wylaczona");
+	}
+}
+
+static void funShowTask(OutStream *strm, const char *cmd) {
+	if (strm->oOpen(colWHITE)) {
+		char *bigbuf;
+		bigbuf = (char*) malloc(2000);
+		if (bigbuf != NULL) {
+			vTaskList(bigbuf);
+			strm->oMsg("TXT_SIZE=%u (max %u) (p=%08X)", strlen(bigbuf), 2000, (int) bigbuf);
+			strm->oMsg("Name\t\tState\tPrior.\tStackP\tNum");
+			strm->oWr(bigbuf);
+			free(bigbuf);
+		} else
+			strm->oMsg("NoFreeMem for Buffer");
+
+		strm->oClose();
+	}
+}
+
+static void funShowTaskEx(OutStream *strm, const char *cmd) {
+	TaskClassList::ShowList(strm);
+}
+
+extern uint8_t _end; /* Symbol defined in the linker script */
+extern uint8_t _estack; /* Symbol defined in the linker script */
+extern uint32_t _Min_Stack_Size; /* Symbol defined in the linker script */
+void *mem_try = NULL;
+
+static void funShowMemUsage(OutStream *strm, const char *cmd) {
+	if (strm->oOpen(colWHITE)) {
+		if (mem_try == NULL)
+			mem_try = malloc(4);
+
+		const uint32_t stack_start = (uint32_t) &_end;
+		const uint32_t stack_limit = (uint32_t) &_estack - (uint32_t) &_Min_Stack_Size;
+
+		strm->oMsg("heap_begin= %p", stack_start);
+		strm->oMsg("heap_end= %p", stack_limit);
+		strm->oMsg("heap_curr = %p", mem_try);
+
+		int size = stack_limit - stack_start;
+		int used = (int) mem_try - stack_start;
+		int freem = size - used;
+		int stack_sz = (uint32_t) &_Min_Stack_Size;
+
+		strm->oMsg("heap_size = %u (%p)", size, size);
+		strm->oMsg("heap_used = %u (%p)", used, used);
+		strm->oMsg("heap_free = %u (%p)", freem, freem);
+		strm->oMsg("stack_size = %u (%p)", stack_sz, stack_sz);
+
+		strm->oClose();
+	}
+
+}
+
+static void funGlobData(OutStream *strm, const char *cmd) {
+	GlobData::show(strm);
+}
+static void funJGlobData(OutStream *strm, const char *cmd) {
+	GlobData::showJson(strm);
+}
+
+static void funJGlobDef(OutStream *strm, const char *cmd) {
+	GlobData::showDef(strm);
+}
+
+static void funLcdScr(OutStream *strm, const char *cmd) {
+	int v;
+	Token::getAsInt(&cmd, &v);
+	setLcdScrNr(v);
+}
+static void funLcdTime(OutStream *strm, const char *cmd) {
+	int v;
+	Token::getAsInt(&cmd, &v);
+	setLcdTime(v);
+}
+static void funNTC(OutStream *strm, const char *cmd) {
+	NTC::StartMeasure();
+	if (NTC::WaitForMeasEnd(500)) {
+		strm->oMsgX(colWHITE, "NTC: U=%.3f[V] R=%.2f[kom] temp=%.1f[deg]", NTC::nap, NTC::rez / 1000, NTC::temp);
+	}
+}
+
+const ShellItemFx mainMenuFx[] = { //
+		{ "s", "[F2] status urządzenia", funShowState }, //
+				{ "h", "[F3] stan hardware", funShowHardware }, //
+				{ "reboot", "reboot STM", funReboot }, //
+				{ "cfg", ">> menu konfiguracji", funMenuConfig }, //
+				{ "time", ">> menu czasu", funMenuTime }, //
+				{ "eth", ">> menu etherneta", funMenuEth }, //
+				{ "net", ">> menu tcp/ip", funMenuIP }, //
+				{ "bg", ">> menu BG96", funMenuBG96 }, //
+				{ "iic", ">> menu układów i2c", funMenuI2C }, //
+				{ "dust", ">> menu czujnika pyłów", funMenuDust }, //
+				{ "noise", ">> czujnik hałasu, menu modbus master X7", funMenuNoise }, //
+				{ "gas", ">> czujnik  gazów, menu modbus master X6", funMenuGas }, //
+				{ "matrix", ">> menu LedMatrix", funMenuLedMatrix }, //
+				{ "ps", "lista wątków", funShowTask }, //
+				{ "psx", "lista tasków", funShowTaskEx }, //
+				{ "mem", "informacja o pamięci", funShowMemUsage }, //
+				{ "glob", "dane globalne", funGlobData }, //
+				{ "jglob", "dane globalne w postaci json", funJGlobData }, //
+				{ "globdef", "definicja danych globalnych", funJGlobDef }, //
+				{ "lcd_scr", "ustawienie numer wyświetlanego ekranu", funLcdScr }, //
+				{ "lcd_time", "ustawienie czasu przełaczania ekranów na lcd", funLcdTime }, //
+				{ "ntc", "pokaż temperaturę z NTC", funNTC }, //
+
 				{ NULL, NULL } };
+
+//--------EthMenu-----------------------------------------------------------------
+
+static void funEthStatus(OutStream *strm, const char *cmd) {
+
+}
+static void funEthResetPhy(OutStream *strm, const char *cmd) {
+	strm->oMsgX(colWHITE, "PHY Reset");
+	Hdw::phyReset(1);
+	osDelay(50);
+	Hdw::phyReset(0);
+}
+static void funEthPhyOnOff(OutStream *strm, const char *cmd) {
+	int val;
+	if (Token::getAsInt(&cmd, &val)) {
+		strm->oMsgX(colWHITE, "PHY power = %d", val);
+		Hdw::phyPower(val != 0);
+	}
+}
 
 typedef struct {
 	const char *name;
 	int adr;
 } PhyRegItemDef;
+
 const PhyRegItemDef phyRegTab[] = { //
 		{ "BCR", 0 }, //
 				{ "BSR", 1 }, //
@@ -733,153 +698,139 @@ const PhyRegItemDef phyRegTab[] = { //
 
 extern "C" void ethGetPhyReg(const uint16_t *adrTab, uint16_t *valTab);
 
-void ShellTask::ethMenu(const char *cmd) {
-	char tok[20];
-	int idx = -1;
-	if (Token::get(&cmd, tok, sizeof(tok)))
-		idx = findCmd(menuEth, tok);
-	switch (idx) {
-	case 0:
-		break;
-	case 1:
-		oMsgX(colWHITE, "PHY Reset");
-		Hdw::phyReset(1);
-		osDelay(50);
-		Hdw::phyReset(0);
-		break;
-
-	case 2: {
-		int val;
-		if (Token::getAsInt(&cmd, &val)) {
-			oMsgX(colWHITE, "PHY power = %d", val);
-			Hdw::phyPower(val != 0);
-		}
+static void funEthShowPhy(OutStream *strm, const char *cmd) {
+	uint16_t adrTab[30];
+	uint16_t valTab[30];
+	int k = 0;
+	while (phyRegTab[k].name != NULL) {
+		adrTab[k] = phyRegTab[k].adr;
+		k++;
 	}
-		break;
-
-	case 3: {
-		uint16_t adrTab[30];
-		uint16_t valTab[30];
+	adrTab[k] = 0xFFFF;
+	ethGetPhyReg(adrTab, valTab);
+	if (strm->oOpen(colWHITE)) {
 		int k = 0;
 		while (phyRegTab[k].name != NULL) {
-			adrTab[k] = phyRegTab[k].adr;
+			strm->oMsg("%2u. %04X %s", phyRegTab[k].adr, valTab[k], phyRegTab[k].name);
 			k++;
 		}
-		adrTab[k] = 0xFFFF;
-		ethGetPhyReg(adrTab, valTab);
-		if (oOpen(colWHITE)) {
-			int k = 0;
-			while (phyRegTab[k].name != NULL) {
-				oMsg("%2u. %04X %s", phyRegTab[k].adr, valTab[k], phyRegTab[k].name);
-				k++;
-			}
-			oClose();
-		}
-
+		strm->oClose();
 	}
-		break;
-
-	default:
-		showHelp(this, "Ethernet Menu", menuEth);
-		break;
-	};
 }
+
+const ShellItemFx menuEthFx[] = { //
+		{ "s", "status etherneta", funEthStatus }, //
+				{ "reset", "impuls reset do PHY", funEthResetPhy }, //
+				{ "pwr", "=0 (wyłącz), =1(załącz) zasilanie PHY", funEthPhyOnOff }, //
+				{ "reg", "pokaż rejestry PHY", funEthShowPhy }, //
+				{ NULL, NULL } };
+
 
 //--------TimeMenu-----------------------------------------------------------------
-const ShellItem menuTime[] = { //
-		{ "s", "pokaż czas" }, //
-				{ "i", "pokaż informacje" }, //
-				{ "settime", "ustaw czas - gg:mm:ss" }, //
-				{ "setdate", "ustaw date - rrrr.mm.dd" }, //
-				{ "init", "init RTC" }, //
-				{ NULL, NULL } };
 
-void ShellTask::timeMenu(const char *cmd) {
-	char tok[20];
-	int idx = -1;
-	if (Token::get(&cmd, tok, sizeof(tok)))
-		idx = findCmd(menuTime, tok);
-	switch (idx) {
-	case 0: //s
-	{
-		TDATE tm;
-		char buf[30];
-		if (Rtc::ReadTime(&tm)) {
-			TimeTools::DtTmStrZZ(buf, &tm);
-			oMsgX(colGREEN, buf);
-		} else {
-			oMsgX(colRED, "Błąd pobrania czasu");
-		}
+static void funShowTime(OutStream *strm, const char *cmd) {
+	TDATE tm;
+	char buf[30];
+	if (Rtc::ReadTime(&tm)) {
+		TimeTools::DtTmStrZZ(buf, &tm);
+		strm->oMsgX(colGREEN, buf);
+	} else {
+		strm->oMsgX(colRED, "Błąd pobrania czasu");
 	}
-		break;
-	case 1: //i
-	{
-		TDATE tm;
-		char buf[30];
-		if (Rtc::ReadTime(&tm)) {
-			TimeTools::DtTmStrZZ(buf, &tm);
-			oMsgX(colGREEN, "Czas:%s", buf);
-		} else {
-			oMsgX(colRED, "Błąd pobrania czasu");
-		}
-		TimeTools::DtTmStrZZ(buf, &config->data.R.rtcSetUpTime);
-		oMsgX(colGREEN, "Czas ustawienia czasu: %s", buf);
-		oMsgX(colGREEN, "Zródło ustawienia czasu: %s", getTmSrcName(config->data.R.rtcSetUpTime.timeSource));
-
-	}
-		break;
-	case 2: //settime
-	{
-		TDATE tm;
-		if (TimeTools::parseTime(&cmd, &tm)) {
-			if (Rtc::SetTime(&tm)) {
-				Rtc::ReadTime(&tm);
-				tm.timeSource = tmSrcNTP;
-				config->data.R.rtcSetUpTime = tm;
-				config->saveRtc();
-				oMsgX(colGREEN, "Ok");
-			} else
-				oMsgX(colRED, "Set time error");
-		} else
-			oMsgX(colRED, "Time format error");
-	}
-		break;
-	case 3: //setdate
-	{
-		TDATE tm;
-		if (TimeTools::parseDate(&cmd, &tm)) {
-			if (Rtc::SetDate(&tm)) {
-				Rtc::ReadTime(&tm);
-				tm.timeSource = tmSrcNTP;
-				config->data.R.rtcSetUpTime = tm;
-				config->saveRtc();
-				oMsgX(colGREEN, "Ok");
-			} else
-				oMsgX(colRED, "Set date error");
-		} else
-			oMsgX(colRED, "Date format error");
-	}
-		break;
-
-	case 4: //init
-	{
-		Rtc::Init();
-		oMsgX(colWHITE, "RtcInitStatus   :%s", HAL_getErrStr(Rtc::mRtcStatus));
-	}
-		break;
-	default:
-		showHelp(this, "Time Menu", menuTime);
-		break;
-	};
 }
 
+static void funShowTimeInfo(OutStream *strm, const char *cmd) {
+	TDATE tm;
+	char buf[30];
+	if (Rtc::ReadTime(&tm)) {
+		TimeTools::DtTmStrZZ(buf, &tm);
+		strm->oMsgX(colGREEN, "Czas:%s", buf);
+	} else {
+		strm->oMsgX(colRED, "Błąd pobrania czasu");
+	}
+	TimeTools::DtTmStrZZ(buf, &config->data.R.rtcSetUpTime);
+	strm->oMsgX(colGREEN, "Czas ustawienia czasu: %s", buf);
+	strm->oMsgX(colGREEN, "Zródło ustawienia czasu: %s", getTmSrcName(config->data.R.rtcSetUpTime.timeSource));
+
+}
+static void funSetTime(OutStream *strm, const char *cmd) {
+	TDATE tm;
+	if (TimeTools::parseTime(&cmd, &tm)) {
+		if (Rtc::SetTime(&tm)) {
+			Rtc::ReadTime(&tm);
+			tm.timeSource = tmSrcNTP;
+			config->data.R.rtcSetUpTime = tm;
+			config->saveRtc();
+			strm->oMsgX(colGREEN, "Ok");
+		} else
+			strm->oMsgX(colRED, "Set time error");
+	} else
+		strm->oMsgX(colRED, "Time format error");
+}
+
+static void funSetDate(OutStream *strm, const char *cmd) {
+	TDATE tm;
+	if (TimeTools::parseDate(&cmd, &tm)) {
+		if (Rtc::SetDate(&tm)) {
+			Rtc::ReadTime(&tm);
+			tm.timeSource = tmSrcNTP;
+			config->data.R.rtcSetUpTime = tm;
+			config->saveRtc();
+			strm->oMsgX(colGREEN, "Ok");
+		} else
+			strm->oMsgX(colRED, "Set date error");
+	} else
+		strm->oMsgX(colRED, "Date format error");
+}
+
+static void funInitRtc(OutStream *strm, const char *cmd) {
+	Rtc::Init();
+	strm->oMsgX(colWHITE, "RtcInitStatus   :%s", HAL_getErrStr(Rtc::mRtcStatus));
+}
+
+const ShellItemFx menuTimeFx[] = { //
+		{ "s", "pokaż czas", funShowTime }, //
+				{ "i", "pokaż informacje", funShowTimeInfo }, //
+				{ "settime", "ustaw czas - gg:mm:ss", funSetTime }, //
+				{ "setdate", "ustaw date - rrrr.mm.dd", funSetDate }, //
+				{ "init", "init RTC", funInitRtc }, //
+				{ NULL, NULL, NULL } };
+
 //--------NetMenu-----------------------------------------------------------------
-const ShellItem menuNet[] = { //
-		{ "s", "pokaż stan" }, //
-				{ "restart", "rekonfiguruj net" }, //
-				{ "getip", "użyj DNS" }, //
-				//{ "ping", "ping" }, //
-				{ NULL, NULL } };
+
+static void funIPStatus(OutStream *strm, const char *cmd) {
+	NetState netState;
+	char txt[20];
+
+	getNetIfState(&netState);
+	if (strm->oOpen(colWHITE)) {
+		strm->oMsg("LinkUp:%s", YN(netState.LinkUp));
+		strm->oMsg("Dhcp:%s", OnOff(netState.DhcpOn));
+		strm->oMsg("DhcpRdy:%s", YN(netState.DhcpRdy));
+		if (netState.ipValid) {
+			ipaddr_ntoa_r(&netState.CurrIP, txt, sizeof(txt));
+			strm->oMsg("IP:%s", txt);
+			ipaddr_ntoa_r(&netState.CurrMask, txt, sizeof(txt));
+			strm->oMsg("Mask:%s", txt);
+			ipaddr_ntoa_r(&netState.CurrGate, txt, sizeof(txt));
+			strm->oMsg("GateWay:%s", txt);
+		}
+		const ip_addr_t *pdns1 = dns_getserver(0);
+		ipaddr_ntoa_r(pdns1, txt, sizeof(txt));
+		strm->oMsg("DNS_1:%s", txt);
+		const ip_addr_t *pdns2 = dns_getserver(1);
+		ipaddr_ntoa_r(pdns2, txt, sizeof(txt));
+		strm->oMsg("DNS_2:%s", txt);
+
+		strm->oClose();
+	}
+}
+
+
+static void funIPRestart(OutStream *strm, const char *cmd) {
+	strm->oMsgX(colWHITE, "Network reconfig");
+	reconfigNet();
+}
 
 ip_addr_t globAddr;
 
@@ -893,96 +844,51 @@ void dns_found_cb(const char *name, const ip_addr_t *ipaddr, void *callback_arg)
 	}
 }
 
-void ShellTask::netMenu(const char *cmd) {
-	char tok[20];
-	int idx = -1;
-
-	if (Token::get(&cmd, tok, sizeof(tok)))
-		idx = findCmd(menuNet, tok);
-	switch (idx) {
-	case 0: //s
+static void funIPUseDns(OutStream *strm, const char *cmd) {
+	Token::trim(&cmd);
+	int err = dns_gethostbyname(cmd, &globAddr, &dns_found_cb, NULL);
+	switch (err) {
+	case ERR_OK: //
 	{
-		NetState netState;
 		char txt[20];
-
-		getNetIfState(&netState);
-		if (oOpen(colWHITE)) {
-			oMsg("LinkUp:%s", YN(netState.LinkUp));
-			oMsg("Dhcp:%s", OnOff(netState.DhcpOn));
-			oMsg("DhcpRdy:%s", YN(netState.DhcpRdy));
-			if (netState.ipValid) {
-				ipaddr_ntoa_r(&netState.CurrIP, txt, sizeof(txt));
-				oMsg("IP:%s", txt);
-				ipaddr_ntoa_r(&netState.CurrMask, txt, sizeof(txt));
-				oMsg("Mask:%s", txt);
-				ipaddr_ntoa_r(&netState.CurrGate, txt, sizeof(txt));
-				oMsg("GateWay:%s", txt);
-			}
-			const ip_addr_t *pdns1 = dns_getserver(0);
-			ipaddr_ntoa_r(pdns1, txt, sizeof(txt));
-			oMsg("DNS_1:%s", txt);
-			const ip_addr_t *pdns2 = dns_getserver(1);
-			ipaddr_ntoa_r(pdns2, txt, sizeof(txt));
-			oMsg("DNS_2:%s", txt);
-
-			oClose();
-		}
-
-	}
-
-		break;
-	case 1: //restart
-		oMsgX(colWHITE, "Network reconfig");
-		reconfigNet();
-
-		break;
-	case 2: //getip
-	{
-		Token::trim(&cmd);
-		int err = dns_gethostbyname(cmd, &globAddr, &dns_found_cb, NULL);
-		switch (err) {
-		case ERR_OK: //
-		{
-			char txt[20];
-			ipaddr_ntoa_r(&globAddr, txt, sizeof(txt));
-			oMsgX(colGREEN, "IME %s -> %s", cmd, txt);
-		}
-			break;
-		case ERR_INPROGRESS:
-			break;
-		default:
-			oMsgX(colRED, "Error :%d", err);
-		}
-
+		ipaddr_ntoa_r(&globAddr, txt, sizeof(txt));
+		strm->oMsgX(colGREEN, "IME %s -> %s", cmd, txt);
 	}
 		break;
-	case 3: //ping
-	{
-		Token::trim(&cmd);
-
-		ip4_addr_t addr;
-		if (ipaddr_aton(cmd, &addr)) {
-			if (oOpen(colWHITE)) {
-				Ping(addr, 32);
-				oClose();
-			}
-		}
-	}
+	case ERR_INPROGRESS:
 		break;
 	default:
-		showHelp(this, "Net Menu", menuNet);
-		break;
-	};
+		strm->oMsgX(colRED, "Error :%d", err);
+	}
 }
+
+int Ping(ip4_addr_t addr, int length);
+static void funIPPing(OutStream *strm, const char *cmd) {
+	Token::trim(&cmd);
+
+	ip4_addr_t addr;
+	if (ipaddr_aton(cmd, &addr)) {
+		if (strm->oOpen(colWHITE)) {
+			Ping(addr, 32);
+			strm->oClose();
+		}
+	}
+}
+
+const ShellItemFx menuNetFx[] = { //
+		{ "s", "pokaż stan", funIPStatus }, //
+				{ "restart", "rekonfiguruj net", funIPRestart}, //
+				{ "getip", "użyj DNS", funIPUseDns}, //
+				{ "ping", "ping", funIPPing}, //
+				{ NULL, NULL } };
+
 
 //-----------------------------------------------------------------------------------
 
 /**
  * return number of milliseconds since boot time (or any other reference)
  */
-u32_t sys_start_tickcount() {
-	return HAL_GetTick();
-}
+#define sys_start_tickcount()  HAL_GetTick()
 
 /**
  * return number of milliseconds since "ref"
@@ -991,9 +897,11 @@ u32_t sys_stop_tickcount(u32_t ref) {
 	return HAL_GetTick() - ref;
 
 }
+
+
 #define PING_TIMEOUT 1000
 /*----------------------------------------------------------------------------*/
-int ShellTask::Ping(ip4_addr_t addr, int length)
+int Ping(ip4_addr_t addr, int length)
 /*----------------------------------------------------------------------------*/
 { /* Variables de travail */
 	int iResult = 0;
@@ -1007,11 +915,12 @@ int ShellTask::Ping(ip4_addr_t addr, int length)
 	struct sockaddr_in saLocal;
 	int fromlen;
 	struct sockaddr_in from;
+	OutStream *strm = getOutStream();
 
 	char txt[20];
 	ipaddr_ntoa_r(&addr, txt, sizeof(txt));
 
-	oMsg("Ping %s : bytes=%i\n", txt, length);
+	strm->oMsg("Ping %s : bytes=%i\n", txt, length);
 
 	if (!(pecho = (struct icmp_echo_hdr*) malloc(sizeof(struct icmp_echo_hdr) + length)))
 		return ENOMEM;
@@ -1062,24 +971,24 @@ int ShellTask::Ping(ip4_addr_t addr, int length)
 				if (err > 0) { /* Affichage dans la console */
 					ipaddr_ntoa_r(&addr, txt, sizeof(txt));
 
-					oMsg("Ping Reply from %s : bytes=%i, delay=%lums\n", txt, (err - sizeof(struct icmp_echo_hdr))/*length*/, ulTickCount);
+					strm->oMsg("Ping Reply from %s : bytes=%i, delay=%lums\n", txt, (err - sizeof(struct icmp_echo_hdr))/*length*/, ulTickCount);
 					iResult = 0;
 				}
 				/* Si on a eu une "non-réception"... */
 				else { /* Affichage dans la console */
-					oMsg("Ping Request timed out...\n");
+					strm->oMsg("Ping Request timed out...\n");
 					iResult = ETIMEDOUT;
 				}
 			} else {
 				iResult = errno;
-				oMsg("Ping sendto=%i\n", iResult);
+				strm->oMsg("Ping sendto=%i\n", iResult);
 			}
 		}
 
 		closesocket(hSocket);
 	} else {
 		iResult = errno;
-		oMsg("Ping socket=%d\n", iResult);
+		strm->oMsg("Ping socket=%d\n", iResult);
 	}
 
 	free(pecho);

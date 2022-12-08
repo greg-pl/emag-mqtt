@@ -41,22 +41,29 @@
 
 #include <EscTerminal.h>
 
-void TermStream::putChar(char ch) {
+OutHdStream::OutHdStream() {
+	mNoTermSmfCnt = 0;
+}
+OutHdStream::~OutHdStream() {
+
+}
+
+void OutHdStream::putChar(char ch) {
 	putOut(&ch, 1);
 }
 
-void TermStream::putStr(const char *txt) {
+void OutHdStream::putStr(const char *txt) {
 	putOut(txt, strlen(txt));
 }
 
-void TermStream::putCharMx(char ch) {
+void OutHdStream::putCharMx(char ch) {
 	if (openOutMutex(STD_TIME)) {
 		putChar(ch);
 		closeOutMutex();
 	}
 }
 
-void TermStream::putStrMx(const char *txt) {
+void OutHdStream::putStrMx(const char *txt) {
 	if (openOutMutex(STD_TIME)) {
 		putStr(txt);
 		closeOutMutex();
@@ -148,7 +155,7 @@ const char* HistCmd::popNext() {
 
 //----------------------------------------------------------------------------------------
 
-EditLine::EditLine(TermStream *outStream) {
+EditLine::EditLine(OutHdStream *outStream) {
 	mOut = outStream;
 	mPtr = 0;
 	mCurs = 0;
@@ -168,7 +175,7 @@ void EditLine::sendCursPos() {
 	mOut->putOut(buf, n);
 }
 void EditLine::sendCursPosMx() {
-	if (mOut->openOutMutex(TermStream::STD_TIME)) {
+	if (mOut->openOutMutex(OutHdStream::STD_TIME)) {
 		sendCursPos();
 		mOut->closeOutMutex();
 	}
@@ -189,7 +196,7 @@ void EditLine::sendCLine() {
 }
 
 void EditLine::sendCLineMx() {
-	if (mOut->openOutMutex(TermStream::STD_TIME)) {
+	if (mOut->openOutMutex(OutHdStream::STD_TIME)) {
 		sendCLine();
 		mOut->closeOutMutex();
 	}
@@ -421,7 +428,7 @@ FunKey CsiEng::getFunKey() {
 
 //----------------------------------------------------------------------------------------
 
-EscTerminal::EscTerminal(TermStream *outStream) {
+EscTerminal::EscTerminal(OutHdStream *outStream) {
 	mOut = outStream;
 	mHistCmd = new HistCmd();
 	cLine = new EditLine(mOut);
@@ -529,6 +536,26 @@ TermAct EscTerminal::inpChar(char ch) {
 
 	}
 	return actNOTHING;
+}
 
+
+const char* EscTerminal::getColorStr(TermColor color) {
+	switch (color) {
+	default:
+	case colWHITE:
+		return TERM_COLOR_WHITE;
+	case colRED:
+		return TERM_COLOR_RED;
+	case colGREEN:
+		return TERM_COLOR_GREEN;
+	case colBLUE:
+		return TERM_COLOR_BLUE;
+	case colMAGENTA:
+		return TERM_COLOR_MAGENTA;
+	case colYELLOW:
+		return TERM_COLOR_YELLOW;
+	case colCYAN:
+		return TERM_COLOR_CYAN;
+	}
 }
 

@@ -9,10 +9,7 @@
 #define IOSTREAM_H_
 
 #include "stdarg.h"
-
-typedef enum {
-	colWHITE = 0, colRED, colGREEN, colBLUE, colMAGENTA, colYELLOW, colCYAN,
-} TermColor;
+#include "EscTerminal.h"
 
 
 class OutStream {
@@ -29,17 +26,13 @@ public:
 
 };
 
+extern "C" OutStream* getOutStream();
+
 class SignaledClass {
 public:
 	virtual void setSignal()=0;
 };
-/*
-typedef struct {
-	const char *cmd;
-	const char *descr;
-} ShellItem;
 
-extern "C" void showHelp(OutStream *strm, const char *caption, const ShellItem *item);
-extern "C" int findCmd(const ShellItem *item, const char *cmd);
-*/
+
+
 #endif /* IOSTREAM_H_ */
