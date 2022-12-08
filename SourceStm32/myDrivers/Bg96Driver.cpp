@@ -22,7 +22,7 @@
 
 #include <Shell.h>
 extern ShellTask *shellTask;
-extern MdbMasterGasTask *mdbMaster_2;
+extern MdbMasterTask *mdbMaster_2;
 
 //-------------------------------------------------------------------------------------------------------------------------
 //
@@ -1466,7 +1466,7 @@ void Bg96Driver::execNewSMS() {
 		Token::get(&ptr, tok, sizeof(tok));
 		if (strcmp(tok, "ZERO-GAS") == 0) {
 			shellTask->oMsgX(colBLUE, "SMS: ZERO-GAS");
-			mdbMaster_2->zeroGasFromSMS(ptr, state.sendSms.msg, sizeof(state.sendSms.msg) - 1);
+			//mdbMaster_2->zeroGasFromSMS(ptr, state.sendSms.msg, sizeof(state.sendSms.msg) - 1);  TODO
 			repl = true;
 		} else if (strcmp(tok, "REBOOT") == 0) {
 			shellTask->oMsgX(colBLUE, "SMS: REBOOT");

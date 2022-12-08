@@ -35,7 +35,7 @@ extern Bg96Driver *bg96;
 extern DustSensorBase *dustInternSensor;
 extern MdbMasterDustTask *dustExternSensor;
 extern MdbMasterNoiseTask *mdbMaster_1;
-extern MdbMasterGasTask *mdbMaster_2;
+extern MdbMasterTask *mdbMaster_2;
 extern SHT35DevPub *sht35;
 extern Bmp338DevPub *bmp338;
 extern LedMatrix *ledMatrix;
@@ -452,9 +452,7 @@ const ShellItem mainMenu[] = { //
 				{ "reboot", "reboot STM" }, //
 				{ "cfg", ">> menu konfiguracji" }, //
 				{ "time", ">> menu czasu" }, //
-#if ETHERNET_EXIST
 				{ "eth", ">> menu etherneta" }, //
-#endif
 				{ "net", ">> menu tcp/ip" }, //
 				{ "bg", ">> menu BG96" }, //
 				{ "iic", ">> menu układów i2c" }, //
@@ -666,8 +664,8 @@ void ShellTask::showDevState() {
 		if (mdbMaster_1->isCfgNoiseOn()) {
 			oMsg("NoiseSensor     :%s", ErrOk(mdbMaster_1->isError()));
 		}
-		if (mdbMaster_2->isCfgAnyGas()) {
-			oMsg("GasSensor       :%s", ErrOk(mdbMaster_2->isError()));
+		if (mdbMaster_2->isAnyConfiguredData()) {
+			oMsg("GasSensor       :%s", ErrOk(mdbMaster_2->isDataError()));
 		}
 		oMsg("Bmp338          :%s", ErrOk(bmp338->isError()));
 		oMsg("Sht35           :%s", ErrOk(sht35->isError()));

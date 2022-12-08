@@ -76,6 +76,9 @@ extern "C" TermColor HAL_getColor(HAL_StatusTypeDef st) {
 		return colRED;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wswitch"
+
 extern "C" const char* HAL_getErrStr(HAL_StatusTypeDef st) {
 	switch (st) {
 	case HAL_OK:
@@ -108,6 +111,8 @@ extern "C" const char* HAL_getErrStr(HAL_StatusTypeDef st) {
 		return "Unknown";
 	}
 }
+#pragma GCC diagnostic pop
+
 
 extern "C" const char* getTmSrcName(uint8_t tmSrc) {
 	switch (tmSrc) {
@@ -598,7 +603,7 @@ void Token::shiftLeft(char *buf, int dist) {
 
 int Token::parseInt(const char *ptr, int len) {
 	char buf[20];
-	if (len < sizeof(buf) - 1) {
+	if (len < (int)sizeof(buf) - 1) {
 		memcpy(buf, ptr, len);
 		buf[len] = 0;
 		return atoi(buf);

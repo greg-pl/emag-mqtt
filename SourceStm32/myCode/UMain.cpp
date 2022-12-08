@@ -25,6 +25,8 @@
 #include "ssd1306/ssd1306.h"
 #include "GlobData.h"
 #include "MdbMasterTask.h"
+#include "GasS873.h"
+
 #include "LedMatrix.h"
 
 extern IWDG_HandleTypeDef hiwdg;
@@ -33,7 +35,7 @@ EventGroupHandle_t sysEvents;
 
 ShellTask *shellTask;
 MdbMasterNoiseTask *mdbMaster_1;
-MdbMasterGasTask *mdbMaster_2;
+MdbMasterTask *mdbMaster_2;
 LedMatrix *ledMatrix;
 
 Config *config;
@@ -497,8 +499,8 @@ bool DefaultTask::getHdwError() {
 	if (mdbMaster_1->isCfgNoiseOn()) {
 		q |= mdbMaster_1->isError();
 	}
-	if (mdbMaster_2->isCfgAnyGas()) {
-		q |= mdbMaster_2->isError();
+	if (mdbMaster_2->isAnyConfiguredData()) {
+		q |= mdbMaster_2->isDataError();
 	}
 	return q;
 }
@@ -761,7 +763,7 @@ void uMainCont() {
 	mdbMaster_1->Start(9600, TUart::parityNONE);
 	mdbMaster_1->setPower(true);
 
-	mdbMaster_2 = new MdbMasterGasTask(MdbMasterTask::MDB_2, TUart::myUART3);
+	mdbMaster_2 = new GasS873(MdbMasterTask::MDB_2, TUart::myUART3);
 	mdbMaster_2->Start(9600, TUart::parityEVEN);
 	mdbMaster_2->setPower(true);
 

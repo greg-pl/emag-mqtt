@@ -244,7 +244,7 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
  		memcpy(pbuf, &speed, 4);
  		pbuf[4] = 0;
  		pbuf[5] = 0;
- 		pbuf[6] = 8;
+ 		pbuf[6] = databits;
  	}
     break;
 

@@ -24,7 +24,7 @@ extern Bmp338DevPub *bmp338;
 extern DustSensorBase *dustInternSensor;
 extern MdbMasterDustTask *dustExternSensor;
 extern MdbMasterNoiseTask *mdbMaster_1;
-extern MdbMasterGasTask *mdbMaster_2;
+extern MdbMasterTask *mdbMaster_2;
 
 GlobDtRec GlobData::dt;
 osMutexId GlobData::mGlobMutex = NULL;
@@ -42,30 +42,10 @@ const char* getFrm1(int idx) {
 }
 
 const char* getItemFormat(int idx) {
-	if (idx >= 0 && idx < SENSOR_CNT) {
-		MeasType mt = GlobData::dt.sensorDt[idx].measType;
-
-		switch (mt) {
-		case ssTEMPERATURE:
-		case ssNO2: //no2
-		case ssO3: //o3
-		case ssCO: //co
-		case ssSO2: //so2
-			return "%.2f";
-		case ssCh2o: //Formalhedyte
-		case ssPRESSURE:
-			return "%.3f";
-		case ssHUMIDITY:
-		case ssPM1_0:
-		case ssPM2_5:
-		case ssPM10:
-		case ssNOISE:
-			return "%.1f";
-		default:
-			return "%.0f";
-		}
-	} else
-		return "%.0f";
+	MeasType mt = ssUNKNOWN;
+	if (idx >= 0 && idx < SENSOR_CNT)
+		mt = GlobData::dt.sensorDt[idx].measType;
+	return GlobData::GetMeasPrecisionStr(mt);
 }
 
 const CpxDef SensorDscr[] = { //
@@ -100,7 +80,62 @@ const CpxDef GlobDataDscr[] = { //
 				{ ctype : cpxTAB, ofs: offsetof(GlobDtRec, sensorDt), Name : "sensors", size:(sizeof(GlobDtRec::sensorDt) / sizeof(SensorDt)), exPtr :&sensorGroupInfo }, //
 				{ ctype : cpxNULL } };
 
-const char *const sensorNameTab[SENSOR_CNT] = { "temperature", "humidity", "pressure", "pm1", "pm2.5", "pm10", "no2", "o3", "co", "so2", "ch2o", "noise" };
+typedef struct {
+	MeasType meas;
+	const char *Name;
+	const char *Unit;
+	const char *Precision;
+} SensorName;
+
+const SensorName sensorNameTab[] = { //
+		{ ssUNKNOWN, "unknown", "??", "%.0f" }, //
+				{ ssTEMPERATURE, "temperature", "*C", "%.2f" }, //
+				{ ssHUMIDITY, "humidity", "%", "%.2f" }, //
+				{ ssPRESSURE, "pressure", "kPa", "%.1f" }, //
+				{ ssPM1_0, "pm1", "ug/m3", "%.1f" }, //
+				{ ssPM2_5, "pm2.5", "ug/m3", "%.1f" }, //
+				{ ssPM10, "pm10", "ug/m3", "%.1f" }, //
+				{ ssNO2, "no2", "xx", "%.2f" }, //
+				{ ssO3, "o3", "xx", "%.2f" }, //
+				{ ssCO, "co", "ppb", "%.0f" }, //
+				{ ssCO2, "co2", "ppm", "%.0f" }, //
+				{ ssSO2, "so2", "xx", "%.2f" }, //
+				{ ssCh2o, "ch2o", "xx", "%.2f" }, //
+				{ ssNOISE, "noise", "dB", "%.1f" } //
+		};
+
+const char* GlobData::GetMeasName(MeasType meas) {
+	const char *p = "sens??";
+	for (int i = 0; i < SENSOR_CNT; i++) {
+		if (sensorNameTab[i].meas == meas) {
+			p = sensorNameTab[i].Name;
+			break;
+		}
+	}
+	return p;
+}
+
+const char* GlobData::GetMeasUnit(MeasType meas) {
+	const char *p = "??";
+	for (int i = 0; i < SENSOR_CNT; i++) {
+		if (sensorNameTab[i].meas == meas) {
+			p = sensorNameTab[i].Unit;
+			break;
+		}
+	}
+	return p;
+}
+
+const char* GlobData::GetMeasPrecisionStr(MeasType meas) {
+	const char *p = "%.1f";
+	for (int i = 0; i < SENSOR_CNT; i++) {
+		if (sensorNameTab[i].meas == meas) {
+			p = sensorNameTab[i].Precision;
+			break;
+		}
+	}
+	return p;
+}
 
 void GlobData::initMutex() {
 	osMutexDef(GlobDt);
@@ -117,10 +152,18 @@ void GlobData::closeMutex() {
 }
 
 void GlobData::FillMeas(float *tab) {
-	float temperature1, humidity;
-	float temperature2, pressure;
-	sht35->getData(&temperature1, &humidity);
-	bmp338->getData(&temperature2, &pressure);
+
+	for (int i = 0; i < SENSOR_CNT; i++) {
+		tab[i] = NAN;
+	}
+
+	float temperature1 = NAN, humidity = NAN;
+	float temperature2 = NAN, pressure = NAN;
+
+	if (sht35 != NULL)
+		sht35->getData(&temperature1, &humidity);
+	if (bmp338 != NULL)
+		bmp338->getData(&temperature2, &pressure);
 
 	tab[ssTEMPERATURE] = temperature1;
 	tab[ssHUMIDITY] = humidity;
@@ -142,19 +185,27 @@ void GlobData::FillMeas(float *tab) {
 		tab[ssCh2o] = NAN;
 	}
 
-	float val;
-	//gas
-	mdbMaster_2->getGasValue(ssNO2, &val);
-	tab[ssNO2] = val;
-	mdbMaster_2->getGasValue(ssO3, &val);
-	tab[ssO3] = val;
-	mdbMaster_2->getGasValue(ssCO, &val);
-	tab[ssCO] = val;
-	mdbMaster_2->getGasValue(ssSO2, &val);
-	tab[ssSO2] = val;
+	if (mdbMaster_2 != NULL) {
+		float val;
+		//gas
+		mdbMaster_2->getMeasValue(ssNO2, &val);
+		tab[ssNO2] = val;
+		mdbMaster_2->getMeasValue(ssO3, &val);
+		tab[ssO3] = val;
+		mdbMaster_2->getMeasValue(ssCO, &val);
+		tab[ssCO] = val;
+		mdbMaster_2->getMeasValue(ssCO2, &val);
+		tab[ssCO2] = val;
+		mdbMaster_2->getMeasValue(ssSO2, &val);
+		tab[ssSO2] = val;
+	}
+
 	//noise
-	mdbMaster_1->getNoiseValue(&val);
-	tab[ssNOISE] = val;
+	if (mdbMaster_1 != NULL) {
+		float val;
+		mdbMaster_1->getNoiseValue(&val);
+		tab[ssNOISE] = val;
+	}
 
 }
 
@@ -188,10 +239,9 @@ void GlobData::Fill() {
 		strncpy(dt.info, config->data.R.DevInfo, sizeof(dt.info));
 		dt.pktNr = bg96->state.mqtt.mSendMsgID;
 		Rtc::ReadTime(&dt.time);
-		mdbMaster_2->getKomoraStatusTxt(dt.komoraSt, sizeof(dt.komoraSt));
+		mdbMaster_2->getDeviceStatusTxt(dt.komoraSt, sizeof(dt.komoraSt));
 		dt.tempNTC = NTC::temp;
 		strncpy(dt.hsn, config->data.P.SerialNr, sizeof(dt.hsn));
-
 
 		//pobranie danych pomiarowych
 		float tab[SENSOR_CNT];
@@ -204,15 +254,16 @@ void GlobData::Fill() {
 			}
 
 			if (exist) {
-				strncpy(dt.sensorDt[k].code, sensorNameTab[i], sizeof(SensorDt::code));
-				dt.sensorDt[k].value = tab[i];
 				dt.sensorDt[k].measType = (MeasType) i;
+				strlcpy(dt.sensorDt[k].code, GetMeasName((MeasType) i), sizeof(SensorDt::code));
+				dt.sensorDt[k].value = tab[i];
 				k++;
 			}
 		}
 		//jesli nie ma żadnego czujnika to dodajemy temperature
 		if (k == 0) {
-			strncpy(dt.sensorDt[0].code, sensorNameTab[ssTEMPERATURE], sizeof(SensorDt::code));
+			dt.sensorDt[k].measType = ssTEMPERATURE;
+			strlcpy(dt.sensorDt[k].code, GetMeasName(ssTEMPERATURE), sizeof(SensorDt::code));
 			dt.sensorDt[0].value = tab[ssTEMPERATURE];
 			k = 1;
 		}
@@ -274,10 +325,6 @@ int GlobData::buildExportJson() {
 		return len;
 	} else
 		return -1;
-}
-
-bool GlobData::isGasMeas(MeasType measTyp) {
-	return (measTyp == ssNO2) || (measTyp == ssO3) || (measTyp == ssCO) || (measTyp == ssSO2);
 }
 
 HAL_StatusTypeDef GlobData::getDustMeas(DustMeasRec *dustMeas) {

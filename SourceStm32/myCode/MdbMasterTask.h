@@ -14,6 +14,7 @@
 #include "GlobData.h"
 #include "DustSensorBase.h"
 #include "ShellItem.h"
+#include "Filters.h"
 
 typedef enum {
 	reqEMPTY = 0, //
@@ -155,40 +156,31 @@ public:
 	void setPower(bool pwr);
 	bool getPower();
 	bool getPowerFlt();
-
-};
-
-class FiltrIR {
-private:
-	bool firstDt;
-	float state;
-	float mK;
 public:
-	FiltrIR(float k);
-	void inp(float x);
-	float out();
-	void setK(float K) {
-		mK = K;
+	virtual bool isAnyConfiguredData(){
+		return false;
 	}
+	virtual bool isDataError(){
+		return false;
+	}
+	virtual bool getMeasValue(MeasType measType, float *val){
+		return false;
+	}
+	virtual bool getMeasValue(MeasType measType, int filtrType, float *val){
+		return false;
+	}
+	virtual void getDeviceStatusTxt(char *txt, int max){
+
+	}
+
+
+
 };
 
-class FiltrFIR {
-private:
-	enum {
-		MAX_LEN = 120, //
-	};
-	float tab[MAX_LEN];
-	bool mOverride; // czy pamięc filtru już się przewinęła
-	int mPtr;
-	int mLen; // długość filtru
-public:
-	FiltrFIR(int len);
-	void inp(float x);
-	float out();
-};
+
 
 typedef struct {
-	int Typ;
+	int SensorType;
 	int VerTyp;
 	int Status;
 	int valueHd; //[ppb]
@@ -260,10 +252,11 @@ public:
 	MdbMasterGasTask(int mdbNr, int portNr);
 	bool getGasValue(MeasType measType, float *val);
 	bool getGasValue(MeasType measType, int filtrType, float *val);
-	void getKomoraStatusTxt(char *txt, int max);
 	bool isCfgAnyGas();
 	bool isError();
 	bool zeroGasFromSMS(const char *ptr, char *resText, int maxLen);
+public:
+	virtual void getDeviceStatusTxt(char *txt, int max);
 };
 
 class MdbMasterNoiseTask: public MdbMasterTask {

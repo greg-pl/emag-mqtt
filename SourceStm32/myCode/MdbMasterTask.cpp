@@ -582,68 +582,6 @@ bool MdbMasterTask::execMenuItem(OutStream *strm, int idx, const char *cmd) {
 	return true;
 }
 
-//-----------------------------------------------------------------------------------------
-// FiltrIR
-//-----------------------------------------------------------------------------------------
-FiltrIR::FiltrIR(float k) {
-	firstDt = true;
-	state = 0;
-	mK = k;
-}
-
-void FiltrIR::inp(float x) {
-	if (firstDt) {
-		firstDt = false;
-		state = x;
-	} else {
-		state = (1 - mK) * state + mK * x;
-	}
-}
-
-float FiltrIR::out() {
-	return state;
-}
-
-//-----------------------------------------------------------------------------------------
-// FiltrFIR
-//-----------------------------------------------------------------------------------------
-
-FiltrFIR::FiltrFIR(int len) {
-	memset(tab, 0, sizeof(tab));
-	mOverride = false;
-	mPtr = 0;
-	mLen = len;
-	if (mLen > MAX_LEN || mLen < 1)
-		mLen = MAX_LEN;
-}
-void FiltrFIR::inp(float x) {
-	tab[mPtr] = x;
-	if (++mPtr >= MAX_LEN) {
-		mPtr = 0;
-		mOverride = true;
-	}
-}
-
-float FiltrFIR::out() {
-	float sum = 0;
-	int k = 0;
-	int ptr = mPtr;
-	while (k < mLen) {
-		if (ptr == 0) {
-			if (!mOverride) {
-				break;
-			}
-			ptr = MAX_LEN;
-		}
-		ptr--;
-		sum += tab[ptr];
-		k++;
-	}
-	if (k > 0)
-		return sum / k;
-	else
-		return NAN;
-}
 
 //-----------------------------------------------------------------------------------------
 // MdbMasterGasTask
@@ -696,8 +634,52 @@ float MdbMasterGasTask::getGasFactor(int id) {
 		return 1.25 * k / 1000;
 	case 4: //"SO2"
 		return 2.859 * k;
+	case 5: //"CO2"
+		return 1;
+	case 6: //"TEMP"
+		return 1;
+	case 7: //"HUMI"
+		return 1;
+	case 8: //"PRES"
+		return 1;
 	}
 	return 0;
+}
+
+const char* MdbMasterGasTask::getSenName(int typ, int verTyp) {
+	static char txt[20];
+	switch (typ) {
+	case 1:
+		strcpy(txt, "NO2 ");
+		break;
+	case 2:
+		strcpy(txt, "O3  ");
+		break;
+	case 3:
+		strcpy(txt, "CO  ");
+		break;
+	case 4:
+		strcpy(txt, "SO2 ");
+		break;
+	case 5:
+		strcpy(txt, "CO2 ");
+		break;
+	case 6:
+		strcpy(txt, "TEMP");
+		break;
+	case 7:
+		strcpy(txt, "HUMI");
+		break;
+	case 8:
+		strcpy(txt, "PRES");
+		break;
+	default:
+		strcpy(txt, "??");
+		break;
+	}
+	int n = strlen(txt);
+	sprintf(&txt[n], "(v%d)", verTyp);
+	return txt;
 }
 
 void MdbMasterGasTask::onReciveData(bool replOK, uint8_t mdbFun, const uint8_t *tab, int regCnt) {
@@ -727,14 +709,14 @@ void MdbMasterGasTask::onReciveData(bool replOK, uint8_t mdbFun, const uint8_t *
 
 					SensorData *sensor = &gasData.sensorTab[i];
 
-					sensor->Typ = id >> 8;
+					sensor->SensorType = id >> 8;
 					sensor->VerTyp = id & 0xff;
 					sensor->Status = GetWord(&tab[base + 2]);
 					int v = GetWord(&tab[base + 4]);
 					int vh = GetWord(&tab[base + 6]);
 					v = v | (vh << 16);
 					sensor->valueHd = v;
-					float factor = getGasFactor(sensor->Typ);
+					float factor = getGasFactor(sensor->SensorType);
 					sensor->valueFiz = factor * v;
 					if (sensor->filtrIR == NULL)
 						sensor->filtrIR = new FiltrIR(config->data.R.exDev.filtrIRConst);
@@ -847,7 +829,7 @@ void MdbMasterGasTask::loopFunc() {
 				case 1:
 					autoRd.reqCnt++;
 					autoRd.phase = 2;
-					sendMdbFun4(reqSYS, config->data.R.rest.gasDevMdbNr, 1, 5);
+					sendMdbFun4(reqSYS, config->data.R.rest.gasDevMdbNr, 1, 4); //todo było 1,5
 					break;
 				case 3:
 					sendMdbFun4(reqSYS, config->data.R.rest.gasDevMdbNr, 1001, 4 * gasData.devCntTh);
@@ -910,29 +892,7 @@ void MdbMasterGasTask::showState(OutStream *strm) {
 	}
 }
 
-const char* MdbMasterGasTask::getSenName(int typ, int verTyp) {
-	static char txt[20];
-	switch (typ) {
-	case 1:
-		strcpy(txt, "NO2");
-		break;
-	case 2:
-		strcpy(txt, "O3 ");
-		break;
-	case 3:
-		strcpy(txt, "CO ");
-		break;
-	case 4:
-		strcpy(txt, "SO2");
-		break;
-	default:
-		strcpy(txt, "??");
-		break;
-	}
-	int n = strlen(txt);
-	sprintf(&txt[n], "(v%d)", verTyp);
-	return txt;
-}
+
 
 bool MdbMasterGasTask::isMeasValid(uint16_t status) {
 	return ((status & 0x07) == 0);
@@ -951,7 +911,7 @@ void MdbMasterGasTask::showMeas(OutStream *strm) {
 	if (strm->oOpen(colWHITE)) {
 		strm->oMsg("RedCnt=%d", autoRd.redCnt);
 		strm->oMsg("TmRd=%.2f[s]", (HAL_GetTick() - autoRd.redTick) / 1000.0);
-		strm->oMsg("DevCnt=%d (%d)", gasData.devCnt, gasData.devCntTh);
+		strm->oMsg("MeasCnt=%d (%d)", gasData.devCnt, gasData.devCntTh);
 		strm->oMsg("serialNum=%d", gasData.serialNum);
 		strm->oMsg("ProdYear=%d", gasData.ProdYear);
 		strm->oMsg("FirmwareVer=%d.%03d", gasData.FirmwareVer >> 8, gasData.FirmwareVer & 0xff);
@@ -960,7 +920,7 @@ void MdbMasterGasTask::showMeas(OutStream *strm) {
 		SensorData *pD = gasData.sensorTab;
 		for (int i = 0; i < gasData.devCntTh; i++) {
 			int n = snprintf(gtxt, sizeof(gtxt), "%u. %s %s Status=0x%04X ", i + 1, //
-			getSenName(pD->Typ, pD->VerTyp), getSensValidStr(pD->Status), pD->Status);
+			getSenName(pD->SensorType, pD->VerTyp), getSensValidStr(pD->Status), pD->Status);
 
 			if (isMeasValid(pD->Status)) {
 				n += snprintf(&gtxt[n], sizeof(gtxt) - n, "v=%d[ppb]  %.3f[ug/m3]", pD->valueHd, pD->valueFiz);
@@ -1012,7 +972,7 @@ bool MdbMasterGasTask::getGasValue(MeasType measType, int filtrType, float *val)
 	}
 
 	for (int i = 0; i < gasData.devCntTh; i++) {
-		int code = gasData.sensorTab[i].Typ;
+		int code = gasData.sensorTab[i].SensorType;
 		if (code == gasCode) {
 			if (isMeasValid(gasData.sensorTab[i].Status)) {
 				float v = gasData.sensorTab[i].valueFiz;
@@ -1119,7 +1079,7 @@ const char* MdbMasterGasTask::getMenuName() {
 	return "GAS sensor Menu";
 }
 
-void MdbMasterGasTask::getKomoraStatusTxt(char *txt, int max) {
+void MdbMasterGasTask::getDeviceStatusTxt(char *txt, int max) {
 	snprintf(txt, max, "ReqCnt=%u RdCnt=%u TimeOutCnt=%u ST=%s", autoRd.reqCnt, autoRd.redCnt, state.timeOutCnt, autoRd.statusTxt);
 }
 

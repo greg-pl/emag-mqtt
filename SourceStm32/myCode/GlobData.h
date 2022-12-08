@@ -60,6 +60,9 @@ public:
 
 	static GlobDtRec dt;
 	static char *jsonbuf;
+	static const char *GetMeasName(MeasType meas);
+	static const char *GetMeasUnit(MeasType meas);
+	static const char* GetMeasPrecisionStr(MeasType meas);
 	static void Fill();
 	static void FillMeas(float *tab);
 	static void showDef(OutStream *strm);
@@ -67,7 +70,6 @@ public:
 	static void showJson(OutStream *strm);
 	static int buildExportJson();
 	static bool getData(float *data);
-	static bool isGasMeas(MeasType measTyp);
 	static HAL_StatusTypeDef getDustMeas(DustMeasRec *dustMeas);
 
 

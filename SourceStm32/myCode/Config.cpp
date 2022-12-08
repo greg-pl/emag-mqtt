@@ -108,6 +108,7 @@ const CpxDef ConfigDscr[] = { //
 				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.exDev.sensExist[ssNO2]), Name : "existSensNO2", size: sizeof(bool) }, //
 				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.exDev.sensExist[ssO3]), Name : "existSensO3", size: sizeof(bool) }, //
 				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.exDev.sensExist[ssCO]), Name : "existSensCO", size: sizeof(bool) }, //
+				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.exDev.sensExist[ssCO2]), Name : "existSensCO2", size: sizeof(bool) }, //
 				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.exDev.sensExist[ssSO2]), Name : "existSensSO2", size: sizeof(bool) }, //
 				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.exDev.sensExist[ssCh2o]), Name : "existSensCH2O", size: sizeof(bool) }, //
 				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.exDev.sensExist[ssNOISE]), Name : "existSensNoise", size: sizeof(bool) }, //
@@ -366,6 +367,11 @@ bool Config::Korekt() {
 		r = true;
 	}
 
+	if (data.R.exDev.sensExist[ssUNKNOWN]) {
+		data.R.exDev.sensExist[ssUNKNOWN] = 0;
+		r = true;
+	}
+
 	return r;
 }
 
@@ -435,7 +441,6 @@ void Config::Default() {
 	data.R.exDev.sensExist[ssNO2] = 0;
 	data.R.exDev.sensExist[ssO3] = 0;
 
-
 	data.R.rest.faceLimitTab[0] = 13;
 	data.R.rest.faceLimitTab[1] = 35;
 	data.R.rest.faceLimitTab[2] = 55;
@@ -443,7 +448,7 @@ void Config::Default() {
 	data.R.rest.faceLimitTab[4] = 110;
 
 	data.R.rest.ledMatrixRun = true;
-	data.R.rest.faceAutoSend= true;
+	data.R.rest.faceAutoSend = true;
 	data.R.rest.faceHistereza = 2;
 
 	saveRtc();

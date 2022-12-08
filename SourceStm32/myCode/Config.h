@@ -34,23 +34,22 @@ typedef enum {
 } DustSensorType;
 
 typedef enum {
-   dust_Intern=0,
-   dust_Extern,
+	dust_Intern = 0, dust_Extern,
 } DustInpType;
-
 
 typedef enum {
 	gpsOFF = 0, gpsONE_TIME, gpsRUN
 } GpsMode;
 
 /*
-enum {
-	SENSOR_CNT= 10,
-};
-*/
+ enum {
+ SENSOR_CNT= 10,
+ };
+ */
 
 typedef enum {
-	ssTEMPERATURE = 0, //
+	ssUNKNOWN = 0, //
+	ssTEMPERATURE, //
 	ssHUMIDITY, //
 	ssPRESSURE, //
 	ssPM1_0, //
@@ -59,12 +58,12 @@ typedef enum {
 	ssNO2, //
 	ssO3, //
 	ssCO, //8
+	ssCO2, //8
 	ssSO2, //9
 	ssCh2o, //10
 	ssNOISE, //11
 	SENSOR_CNT
-}MeasType;
-
+} MeasType;
 
 typedef union __PACKED {
 	uint8_t tab_b[CFG_REC_SIZE];
@@ -170,10 +169,8 @@ typedef union __PACKED {
 						float faceLimitTab[FACE_LIMIT_TAB_LEN]; // progi do sterownia kodami dla tablicy led
 						float faceHistereza; //histereza dla sterowania programi tablicy led
 						int faceLevel; //pozion jasności świecenia panelu
-
-
 					};
-				}rest;
+				} rest;
 				union {
 					char restBuf[0x40];
 					struct {
@@ -190,15 +187,15 @@ typedef union __PACKED {
 							float tempOFF;
 							float humidityON;
 							float humidityOFF;
-						}heater;
+						} heater;
 						int noiseFiltrType; // 0-OFF, 1-FIR,  2-IR
 						int noiseFiltrFIRLength;
 						float noiseFiltrIRConst;
-						struct{
+						struct {
 							bool humidityEnab;
-						}heater2;
+						} heater2;
 					};
-				}exDev;
+				} exDev;
 			} R;
 		};
 	};
