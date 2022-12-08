@@ -30,22 +30,18 @@ typedef enum {
 	dustT_HPMA,  	//Honeywell
 	dustT_PMSA,  	//Chińczyk
 	dustT_PMS5003ST,  	//Chińczyk z Formaldehyde
-
 } DustSensorType;
 
 typedef enum {
-	dust_Intern = 0, dust_Extern,
+	dust_Intern = 0, //
+	dust_Extern, //
 } DustInpType;
 
 typedef enum {
-	gpsOFF = 0, gpsONE_TIME, gpsRUN
+	gpsOFF = 0, //
+	gpsONE_TIME, //
+	gpsRUN
 } GpsMode;
-
-/*
- enum {
- SENSOR_CNT= 10,
- };
- */
 
 typedef enum {
 	ssUNKNOWN = 0, //
