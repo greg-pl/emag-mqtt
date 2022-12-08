@@ -11,6 +11,7 @@
 #include <utils.h>
 #include <shell.h>
 #include <ShellItem.h>
+#include "Hal.h"
 
 extern ShellTask *shellTask;
 

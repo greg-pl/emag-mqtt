@@ -5,30 +5,32 @@
  *      Author: Grzegorz
  */
 
-#include "stdlib.h"
-#include "stdio.h"
-#include "string.h"
-#include "stdarg.h"
 
-#include <lwip.h>
-#include <dns.h>
-#include <icmp.h>
-#include <sockets.h>
-#include <inet_chksum.h>
+#include "lwip.h"
+#include "dns.h"
+#include "icmp.h"
+#include "sockets.h"
+#include "inet_chksum.h"
 
-#include <shell.h>
-#include <EscTerminal.h>
-#include <utils.h>
-#include <ethernetif.h>
-#include <Bg96Driver.h>
-#include <DustSensorBase.h>
-#include <GlobData.h>
-#include <I2cDev.h>
-#include <UMain.h>
-#include <MdbMasterTask.h>
-#include <LedMatrix.h>
+#include "shell.h"
+#include "EscTerminal.h"
+#include "utils.h"
+#include "ethernetif.h"
+#include "Bg96Driver.h"
+#include "DustSensorBase.h"
+#include "GlobData.h"
+#include "I2cDev.h"
+#include "UMain.h"
+#include "MdbMasterTask.h"
+#include "LedMatrix.h"
 
-#include <ProjectConfig.h>
+#include "ProjectConfig.h"
+#include "Hal.h"
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdarg.h>
 
 
 extern Bg96Driver *bg96;

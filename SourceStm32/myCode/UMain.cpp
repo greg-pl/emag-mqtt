@@ -26,8 +26,8 @@
 #include "GlobData.h"
 #include "MdbMasterTask.h"
 #include "GasS873.h"
-
 #include "LedMatrix.h"
+#include "Hal.h"
 
 extern IWDG_HandleTypeDef hiwdg;
 
