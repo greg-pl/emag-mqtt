@@ -17,13 +17,15 @@
 #include <DustSensorBase.h>
 #include <I2cDev.h>
 #include <MdbMasterTask.h>
+#include "MdbDustSensor.h"
+#include <NoiseDetector.h>
 
 extern Bg96Driver *bg96;
 extern SHT35DevPub *sht35;
 extern Bmp338DevPub *bmp338;
 extern DustSensorBase *dustInternSensor;
 extern MdbMasterDustTask *dustExternSensor;
-extern MdbMasterNoiseTask *mdbMaster_1;
+extern NoiseDetector *mdbMaster_1;
 extern MdbMasterTask *mdbMaster_2;
 
 GlobDtRec GlobData::dt;

@@ -76,6 +76,7 @@ HAL_StatusTypeDef I2c1Bus::BusUnlock() {
 		CLEAR_BIT(hi2c.Instance->CR1, I2C_CR1_SWRST);
 		closeMutex();
 	}
+	return HAL_OK;
 }
 
 //PB6     ------> I2C1_SCL

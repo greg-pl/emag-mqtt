@@ -22,10 +22,10 @@
 #include "I2cDev.h"
 #include "UMain.h"
 #include "MdbMasterTask.h"
-#include "LedMatrix.h"
-
 #include "ProjectConfig.h"
 #include "Hal.h"
+
+#include "_SensorDrivers.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -36,7 +36,7 @@
 extern Bg96Driver *bg96;
 extern DustSensorBase *dustInternSensor;
 extern MdbMasterDustTask *dustExternSensor;
-extern MdbMasterNoiseTask *mdbMaster_1;
+extern NoiseDetector *mdbMaster_1;
 extern MdbMasterTask *mdbMaster_2;
 extern SHT35DevPub *sht35;
 extern Bmp338DevPub *bmp338;

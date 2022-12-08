@@ -5,9 +5,7 @@
  *      Author: Grzegorz
  */
 
-#include <string.h>
-#include <stdio.h>
-#include <math.h>
+#include "AirDetRs.h"
 
 #include "utils.h"
 #include "main.h"
@@ -17,7 +15,10 @@
 #include "i2cDev.h"
 #include "Hal.h"
 
-#include "AirDetRs.h"
+#include <string.h>
+#include <stdio.h>
+#include <math.h>
+
 
 
 extern SHT35DevPub *sht35;

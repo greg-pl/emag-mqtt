@@ -5,13 +5,14 @@
  *      Author: Grzegorz
  */
 
-#include <string.h>
 
-#include <SPS30.h>
-#include <utils.h>
-#include <shell.h>
-#include <ShellItem.h>
+#include "SPS30.h"
+#include "utils.h"
+#include "shell.h"
+#include "ShellItem.h"
 #include "Hal.h"
+
+#include <string.h>
 
 extern ShellTask *shellTask;
 

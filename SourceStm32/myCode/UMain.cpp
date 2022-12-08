@@ -20,21 +20,21 @@
 #include "Bg96Driver.h"
 #include <I2cDev.h>
 #include <IOStream.h>
-#include "DustPMSA.h"
-#include "SPS30.h"
-#include "ssd1306/ssd1306.h"
 #include "GlobData.h"
 #include "MdbMasterTask.h"
-#include "GasS873.h"
-#include "LedMatrix.h"
 #include "Hal.h"
+#include "ssd1306/ssd1306.h"
+
+#include "_SensorDrivers.h"
+
+
 
 extern IWDG_HandleTypeDef hiwdg;
 
 EventGroupHandle_t sysEvents;
 
 ShellTask *shellTask;
-MdbMasterNoiseTask *mdbMaster_1;
+NoiseDetector *mdbMaster_1;
 MdbMasterTask *mdbMaster_2;
 LedMatrix *ledMatrix;
 
@@ -759,7 +759,7 @@ void uMainCont() {
 	shellTask = new ShellTask();
 	shellTask->Start();
 
-	mdbMaster_1 = new MdbMasterNoiseTask(MdbMasterTask::MDB_1, TUart::myUART1);
+	mdbMaster_1 = new NoiseDetector(MdbMasterTask::MDB_1, TUart::myUART1);
 	mdbMaster_1->Start(9600, TUart::parityNONE);
 	mdbMaster_1->setPower(true);
 
