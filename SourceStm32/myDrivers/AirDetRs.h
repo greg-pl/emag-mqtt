@@ -57,7 +57,6 @@ private:
 	} zeroOfs;
 
 	float getGasFactor(int id);
-	bool execMyMenuItem(OutStream *strm, int idx, const char *cmd);
 	char gtxt[200]; //używane przez "showMeas"
 	void showMeas(OutStream *strm);
 	void sendZeroOfs_FrameZero(uint16_t *tab);
@@ -71,9 +70,9 @@ protected:
 
 	virtual void onReciveData(bool replOK, uint8_t mdbFun, const uint8_t *tab, int regCnt);
 	virtual void showState(OutStream *strm);
-	virtual bool execMenuItem(OutStream *strm, int idx, const char *cmd);
-	virtual const ShellItem* getMenu();
 	virtual const char* getMenuName();
+	virtual const char* getDevName();
+	virtual const ShellItemFx* getMenuFx();
 
 	const char* getSenName(int typ, int verTyp);
 	const char* getSensValidStr(uint16_t status);
@@ -81,6 +80,9 @@ protected:
 
 public:
 	AirDetRs(int mdbNr, int portNr);
+	static void funShowMeasure(OutStream *strm, const char *cmd, void *arg);
+	static void funSetZero(OutStream *strm, const char *cmd, void *arg);
+
 	bool getGasValue(MeasType measType, float *val);
 	bool getGasValue(MeasType measType, int filtrType, float *val);
 	bool isCfgAnyGas();

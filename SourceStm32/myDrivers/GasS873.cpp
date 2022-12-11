@@ -11,7 +11,6 @@
 #include "TaskClass.h"
 #include "uart.h"
 #include "GlobData.h"
-//#include "DustSensorBase.h"
 #include "ShellItem.h"
 #include "Config.h"
 #include "shell.h"
@@ -26,8 +25,8 @@ extern Config *config;
 //-----------------------------------------------------------------------------------------
 // GasS873
 //-----------------------------------------------------------------------------------------
-GasS873::GasS873(int mdbNr, int portNr) :
-		MdbMasterTask::MdbMasterTask(mdbNr, portNr) {
+GasS873::GasS873(MdbMasterTask *mdbTask, uint8_t mdbAdr, const char *name) :
+		MdbDev::MdbDev(mdbTask,mdbAdr,name){
 	memset(&autoRd, 0, sizeof(autoRd));
 	memset(&gasData, 0, sizeof(gasData));
 	strcpy(autoRd.statusTxt, "Start");
@@ -136,10 +135,10 @@ void GasS873::onReciveData(bool replOK, uint8_t mdbFun, const uint8_t *tab, int 
 	}
 }
 
-void GasS873::doOnTimeOut() {
+void GasS873::onTimeOut() {
 	if (autoRd.phase > 0) {
 		autoRd.phase = 0;
-		shellTask->oMsgX(colRED, "MDB%u: read measure TIMEOUT", mMdbNr);
+		shellTask->oMsgX(colRED, "MDB%u: read measure TIMEOUT", mMdb->MdbNr);
 		strcpy(autoRd.statusTxt, "TimeOut");
 	} else {
 		shellTask->oMsgX(colRED, "MDB%u: TIMEOUT", mMdbNr);
@@ -153,7 +152,7 @@ void GasS873::loopFunc() {
 			autoRd.phase = 1;
 		}
 		if (autoRd.phase != 0) {
-			if (state.sent.currReq == reqEMPTY) {
+			if (isCurrenReqEmpty()) {
 				switch (autoRd.phase) {
 				case 1:
 					autoRd.reqCnt++;
@@ -176,7 +175,7 @@ void GasS873::loopFunc() {
 }
 
 void GasS873::showState(OutStream *strm) {
-	MdbMasterTask::showState(strm);
+	MdbDev::showState(strm);
 	if (strm->oOpen(colWHITE)) {
 		strm->oMsg("RedCnt=%d", autoRd.redCnt);
 		strm->oMsg("TmRd=%.2f[s]", (HAL_GetTick() - autoRd.redTick) / 1000.0);
@@ -198,39 +197,7 @@ const char* GasS873::getSensValidStr(uint16_t status) {
 		return "OK";
 }
 
-void GasS873::showMeas(OutStream *strm) {
-	if (strm->oOpen(colWHITE)) {
-		strm->oMsg("RedCnt=%d", autoRd.redCnt);
-		strm->oMsg("TmRd=%.2f[s]", (HAL_GetTick() - autoRd.redTick) / 1000.0);
-		strm->oMsg("MeasCnt=%d (%d)", gasData.devCnt, gasData.devCntTh);
-		strm->oMsg("serialNum=%d", gasData.serialNum);
-		strm->oMsg("ProdYear=%d", gasData.ProdYear);
-		strm->oMsg("FirmwareVer=%d.%03d", gasData.FirmwareVer >> 8, gasData.FirmwareVer & 0xff);
-		strm->oMsg("FailureCode=%d", gasData.FailureCode);
 
-		for (int i = 0; i < gasData.devCntTh; i++) {
-			S873Data *pD = &gasData.sensorTab[i];
-			MeasType mt = pD->measType;
-
-			int n = snprintf(gtxt, sizeof(gtxt), "%u. %12s %3s Status=0x%04X ", i + 1, //
-			GlobData::GetMeasName(mt), getSensValidStr(pD->Status), pD->Status);
-
-			if (isMeasValid(pD->Status)) {
-				n += snprintf(&gtxt[n], sizeof(gtxt) - n, "v=%5d  ", pD->valueHd);
-				n += snprintf(&gtxt[n], sizeof(gtxt) - n, GlobData::GetMeasPrecisionStr(mt), pD->valueFiz);
-				n += snprintf(&gtxt[n], sizeof(gtxt) - n, "[%s]", GlobData::GetMeasUnit(mt));
-
-				if (pD->filtrFIR != NULL) {
-					n += snprintf(&gtxt[n], sizeof(gtxt) - n, " (FIR:%.3f) (IR:%.3f)", pD->filtrFIR->out(), pD->filtrIR->out());
-				}
-			}
-			strm->oMsg(gtxt);
-
-		}
-
-		strm->oClose();
-	}
-}
 
 bool GasS873::getMeasValue(MeasType measType, float *val) {
 	return getMeasValue(measType, config->data.R.exDev.gasFiltrType, val);
@@ -268,16 +235,52 @@ bool GasS873::getMeasValue(MeasType measType, int filtrType, float *val) {
 	return false;
 }
 
-const ShellItem menuGas[] = { //
-		{ "m", "pomiary" }, //
+void GasS873::showMeas(OutStream *strm) {
+	if (strm->oOpen(colWHITE)) {
+		strm->oMsg("RedCnt=%d", autoRd.redCnt);
+		strm->oMsg("TmRd=%.2f[s]", (HAL_GetTick() - autoRd.redTick) / 1000.0);
+		strm->oMsg("MeasCnt=%d (%d)", gasData.devCnt, gasData.devCntTh);
+		strm->oMsg("serialNum=%d", gasData.serialNum);
+		strm->oMsg("ProdYear=%d", gasData.ProdYear);
+		strm->oMsg("FirmwareVer=%d.%03d", gasData.FirmwareVer >> 8, gasData.FirmwareVer & 0xff);
+		strm->oMsg("FailureCode=%d", gasData.FailureCode);
 
+		for (int i = 0; i < gasData.devCntTh; i++) {
+			S873Data *pD = &gasData.sensorTab[i];
+			MeasType mt = pD->measType;
+
+			int n = snprintf(gtxt, sizeof(gtxt), "%u. %12s %3s Status=0x%04X ", i + 1, //
+			GlobData::GetMeasName(mt), getSensValidStr(pD->Status), pD->Status);
+
+			if (isMeasValid(pD->Status)) {
+				n += snprintf(&gtxt[n], sizeof(gtxt) - n, "v=%5d  ", pD->valueHd);
+				n += snprintf(&gtxt[n], sizeof(gtxt) - n, GlobData::GetMeasPrecisionStr(mt), pD->valueFiz);
+				n += snprintf(&gtxt[n], sizeof(gtxt) - n, "[%s]", GlobData::GetMeasUnit(mt));
+
+				if (pD->filtrFIR != NULL) {
+					n += snprintf(&gtxt[n], sizeof(gtxt) - n, " (FIR:%.3f) (IR:%.3f)", pD->filtrFIR->out(), pD->filtrIR->out());
+				}
+			}
+			strm->oMsg(gtxt);
+
+		}
+
+		strm->oClose();
+	}
+}
+
+void GasS873::funShowMeasure(OutStream *strm, const char *cmd, void *arg) {
+	GasS873 *gas = (GasS873*) arg;
+	gas->showMeas(strm);
+}
+
+const ShellItemFx menuGasFx[] = { //
+		{ "m", "pomiary", GasS873::funShowMeasure }, //
 				{ NULL, NULL } };
 
-const ShellItem* GasS873::getMenu() {
-	if (menu.tab == NULL) {
-		buildMenu(menuGas);
-	}
-	return menu.tab;
+
+const ShellItemFx* GasS873::getMenuFx() {
+	return menuGasFx;
 }
 
 bool GasS873::execMyMenuItem(OutStream *strm, int idx, const char *cmd) {
@@ -291,19 +294,15 @@ bool GasS873::execMyMenuItem(OutStream *strm, int idx, const char *cmd) {
 	return true;
 }
 
-bool GasS873::execMenuItem(OutStream *strm, int idx, const char *cmd) {
-	bool q = MdbMasterTask::execMenuItem(strm, idx, cmd);
-	if (!q) {
-		q = execMyMenuItem(strm, idx - menu.baseCnt, cmd);
-	}
-	return q;
+const char* GasS873::getMenuName() {
+	return "Menu S873(gas)";
 }
 
-const char* GasS873::getMenuName() {
-	return "GasS873 sensor Menu";
+const char* GasS873::getDevName() {
+	return "gas";
 }
 
 void GasS873::getDeviceStatusTxt(char *txt, int max) {
-	snprintf(txt, max, "ReqCnt=%u RdCnt=%u TimeOutCnt=%u ST=%s", autoRd.reqCnt, autoRd.redCnt, state.timeOutCnt, autoRd.statusTxt);
+	snprintf(txt, max, "ReqCnt=%u RdCnt=%u TimeOutCnt=%u ST=%s", autoRd.reqCnt, autoRd.redCnt, mMdb->getTimeOutCnt(), autoRd.statusTxt);
 }
 

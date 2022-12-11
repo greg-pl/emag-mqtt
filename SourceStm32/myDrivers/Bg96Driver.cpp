@@ -1552,7 +1552,6 @@ SSL_Cfg mySslCfg = { //
 void Bg96Driver::runLoop() {
 	asynch.doStop = false;
 
-
 	while (asynch.mRunning) {
 
 		powerUp();
@@ -1758,6 +1757,24 @@ extern "C" const char* getPhaseName(BgPhase ph) {
 	}
 }
 
+bool Bg96Driver::setEchoMode(const char *cmd) {
+	if (strlen(cmd) >= 3) {
+		mEcho.rx = (cmd[0] == '1');
+		mEcho.tx = (cmd[1] == '1');
+		mEcho.timeMode = cmd[2] - '0';
+		mEcho.logV = cmd[3] - '0';
+		if (mEcho.timeMode < 0 || mEcho.timeMode > 3)
+			mEcho.timeMode = 0;
+		if (mEcho.logV < 0 || mEcho.logV > vvTEXT)
+			mEcho.logV = 0;
+
+		return true;
+	} else {
+		return false;
+	}
+}
+
+
 //-------------------------------------------------------------------------------------------------------------
 void Bg96Driver::showState(OutStream *strm) {
 	if (strm->oOpen(colWHITE)) {
@@ -1847,176 +1864,197 @@ void Bg96Driver::showGpsInformation(OutStream *strm) {
 	}
 }
 
-const ShellItem menuBG96[] = { //
-		{ "s", "stan" }, //
-				{ "h", "hardware state" }, //
-				{ "i", "informacje" }, //
-				{ "gps", "informacje gps" }, //
-				{ "3V8", "załącz zasilanie 3.8V" }, //
-				{ "RstLine", "poziom linii Reset" }, //
-				{ "PowerKey", "poziom linii PowerKey" }, //
-				{ "DTR", "poziom linii DTR" }, //
-				{ "stop", "zatrzymanie obsługi" }, //
-				{ "start", "start obsługi" }, //
-				{ "restart", "restart obsługi modemu" }, //
-				{ "PowerUp", "sekwencja włączania" }, //
-				{ "w", "wysłanie komendy do modemu" }, //
-				{ "echo", "echo: rx,tx,time_mode:off,from_send,from_start. Np. 112" }, //
-				{ "sslcfg", "pokaż parametry kontekstu ssl" }, //
-				{ "setsslcfg", "ustaw konfigurację SSL" }, //
-				{ "get_ntp", "pobierz czas NTP" }, //
-				{ "get_gps", "pobierz dane GPS" }, //
-				{ "send_mqtt", "send mqtt" }, //
-				{ "open_mqtt", "open mqtt" }, //
-				{ "close_mqtt", "close mqtt" }, //
-				{ "sms", "wyślij sms: numer_dst, treść" }, //
-				{ NULL, NULL } };
+void Bg96Driver::funShowState(OutStream *strm, const char *cmd, void *arg) {
+	Bg96Driver *dev = (Bg96Driver*) arg;
+	dev->showState(strm);
+}
 
-bool Bg96Driver::setEchoMode(const char *cmd) {
-	if (strlen(cmd) >= 3) {
-		mEcho.rx = (cmd[0] == '1');
-		mEcho.tx = (cmd[1] == '1');
-		mEcho.timeMode = cmd[2] - '0';
-		mEcho.logV = cmd[3] - '0';
-		if (mEcho.timeMode < 0 || mEcho.timeMode > 3)
-			mEcho.timeMode = 0;
-		if (mEcho.logV < 0 || mEcho.logV > vvTEXT)
-			mEcho.logV = 0;
+void Bg96Driver::funShowHdwState(OutStream *strm, const char *cmd, void *arg) {
+	Bg96Driver *dev = (Bg96Driver*) arg;
+	dev->showHdwState(strm);
+}
+void Bg96Driver::funInfo(OutStream *strm, const char *cmd, void *arg) {
+	Bg96Driver *dev = (Bg96Driver*) arg;
+	dev->showInformation(strm);
+}
+void Bg96Driver::funGpsInfo(OutStream *strm, const char *cmd, void *arg) {
+	Bg96Driver *dev = (Bg96Driver*) arg;
+	dev->showGpsInformation(strm);
+}
 
-		return true;
+void Bg96Driver::funOnOff3_8(OutStream *strm, const char *cmd, void *arg) {
+	Bg96Driver *dev = (Bg96Driver*) arg;
+	bool q;
+	Token::getAsBool(&cmd, &q);
+	dev->set3_8V(q);
+}
+
+void Bg96Driver::funSetResetLine(OutStream *strm, const char *cmd, void *arg) {
+	Bg96Driver *dev = (Bg96Driver*) arg;
+	bool q;
+	Token::getAsBool(&cmd, &q);
+	dev->setReset(q);
+}
+
+void Bg96Driver::funsetPowerKey(OutStream *strm, const char *cmd, void *arg) {
+	Bg96Driver *dev = (Bg96Driver*) arg;
+	bool q;
+	Token::getAsBool(&cmd, &q);
+	dev->setPowerKey(q);
+}
+
+void Bg96Driver::funSetDtr(OutStream *strm, const char *cmd, void *arg) {
+	Bg96Driver *dev = (Bg96Driver*) arg;
+	bool q;
+	Token::getAsBool(&cmd, &q);
+	dev->setDTR(q);
+}
+
+void Bg96Driver::funStop(OutStream *strm, const char *cmd, void *arg) {
+	Bg96Driver *dev = (Bg96Driver*) arg;
+
+	if (dev->asynch.mRunning) {
+		dev->asynch.doStop = true;
+		osSignalSet(dev->getThreadId(), Bg96Driver::SIGNAL_BREAK);
+		strm->oMsgX(colWHITE, "BG Stop");
 	} else {
-		return false;
+		strm->oMsgX(colRED, "No in running mode");
 	}
 }
 
-void Bg96Driver::setEchoMode(OutStream *strm, const char *cmd) {
-	if (setEchoMode(cmd)) {
-		strm->oMsgX(colWHITE, "rx:%u tx=%u timeMode=%u logLevel=%u", mEcho.rx, mEcho.tx, mEcho.timeMode, mEcho.logV);
+void Bg96Driver::funStart(OutStream *strm, const char *cmd, void *arg) {
+	Bg96Driver *dev = (Bg96Driver*) arg;
+	if (!dev->asynch.mRunning) {
+		osSignalSet(dev->getThreadId(), Bg96Driver::SIGNAL_BREAK);
+		dev->asynch.doStart = true;
+		strm->oMsgX(colWHITE, "BG Start");
+	} else
+		strm->oMsgX(colRED, "No in idle mode");
+}
+
+void Bg96Driver::funRestart(OutStream *strm, const char *cmd, void *arg) {
+	Bg96Driver *dev = (Bg96Driver*) arg;
+	if (dev->asynch.mRunning) {
+		dev->asynch.doRestart = true;
+	} else
+		strm->oMsgX(colRED, "No in running mode");
+}
+
+void Bg96Driver::funSetPowerUp(OutStream *strm, const char *cmd, void *arg) {
+	Bg96Driver *dev = (Bg96Driver*) arg;
+	if (!dev->asynch.mRunning) {
+		dev->asynch.doPowerUp = true;
+	} else
+		strm->oMsgX(colRED, "No in idle mode");
+}
+
+void Bg96Driver::funSendCmd(OutStream *strm, const char *cmd, void *arg) {
+	Bg96Driver *dev = (Bg96Driver*) arg;
+	Token::trim(&cmd);
+	dev->writeCmd(cmd);
+}
+
+void Bg96Driver::funSetEcho(OutStream *strm, const char *cmd, void *arg) {
+	Bg96Driver *dev = (Bg96Driver*) arg;
+	Token::trim(&cmd);
+
+	if (dev->setEchoMode(cmd)) {
+		strm->oMsgX(colWHITE, "rx:%u tx=%u timeMode=%u logLevel=%u", dev->mEcho.rx, dev->mEcho.tx, dev->mEcho.timeMode, dev->mEcho.logV);
 	} else {
 		strm->oMsgX(colRED, "format: xxxx");
 	}
 }
 
-void Bg96Driver::shell(OutStream *strm, const char *cmd) {
-	char tok[20];
-	int idx = -1;
-	bool q;
-
-	if (Token::get(&cmd, tok, sizeof(tok)))
-		idx = findCmd(menuBG96, tok);
-	switch (idx) {
-	case 0: //s
-		showState(strm);
-		break;
-	case 1: //h
-		showHdwState(strm);
-		break;
-	case 2: //i
-		showInformation(strm);
-		break;
-	case 3: //gps
-		showGpsInformation(strm);
-		break;
-	case 4: // 3V8
-		Token::getAsBool(&cmd, &q);
-		set3_8V(q);
-		break;
-	case 5: // RstLine
-		Token::getAsBool(&cmd, &q);
-		setReset(q);
-		break;
-	case 6: // PowerKey
-		Token::getAsBool(&cmd, &q);
-		setPowerKey(q);
-		break;
-	case 7: // DTR
-		Token::getAsBool(&cmd, &q);
-		setDTR(q);
-		break;
-	case 8: // Stop
-		if (asynch.mRunning) {
-			asynch.doStop = true;
-			osSignalSet(getThreadId(), Bg96Driver::SIGNAL_BREAK);
-			strm->oMsgX(colWHITE, "BG Stop");
-		} else {
-			strm->oMsgX(colRED, "No in running mode");
-		}
-		break;
-	case 9: // Start
-		if (!asynch.mRunning) {
-			osSignalSet(getThreadId(), Bg96Driver::SIGNAL_BREAK);
-			asynch.doStart = true;
-			strm->oMsgX(colWHITE, "BG Start");
-		} else
-			strm->oMsgX(colRED, "No in idle mode");
-		break;
-	case 10: // restart
-		if (asynch.mRunning) {
-			asynch.doRestart = true;
-		} else
-			strm->oMsgX(colRED, "No in running mode");
-		break;
-	case 11: // PowerUp
-		if (!asynch.mRunning) {
-			asynch.doPowerUp = true;
-		} else
-			strm->oMsgX(colRED, "No in idle mode");
-		break;
-	case 12: // w
-		Token::trim(&cmd);
-		writeCmd(cmd);
-		break;
-	case 13: // echo
-		Token::trim(&cmd);
-		setEchoMode(strm, cmd);
-		break;
-	case 14: //sslcfg
-		Token::getAsInt(&cmd, &asynch.sslContext);
-		asynch.doShowSSlContext = true;
-		break;
-	case 15: //setsslcfg
-		Token::getAsInt(&cmd, &asynch.sslContext);
-		asynch.doSetSSlContext = true;
-		break;
-	case 16: //get_ntp
-		asynch.doGetNtpTime = true;
-		break;
-	case 17: //get_gps
-		asynch.doGetGps = true;
-		break;
-	case 18: //send_mqtt
-		if (Token::getAsInt(&cmd, &asynch.sendMqqtVal)) {
-			//jest parametr -> wysłanie MqttSendVar2Name
-			asynch.sendMqqtIdx = 1;
-		} else {
-			//brak parametru -> wysłanie MqttSendVarName
-			asynch.sendMqqtIdx = 0;
-			asynch.sendMqqtVal = 0;
-		}
-		asynch.doSendMqtt = true;
-		break;
-	case 19: // open_mqtt
-		asynch.doOpenMqtt = true;
-		break;
-	case 20: // close_mqtt
-		asynch.doCloseMqtt = true;
-		break;
-
-	case 21: { // sms
-		if (Token::get(&cmd, state.sendSms.nrTel, sizeof(state.sendSms.nrTel))) {
-			Token::get(&cmd, state.sendSms.msg, sizeof(state.sendSms.msg) - 2);
-			Token::remooveQuota(state.sendSms.msg);
-			int n = strlen(state.sendSms.msg);
-			state.sendSms.msg[n] = 26;
-			state.sendSms.msg[n + 1] = 0;
-			state.sendSms.flagSend = true;
-			strm->oMsgX(colWHITE, "send sms [%s]", state.sendSms.nrTel);
-		}
-	}
-		break;
-
-	default:
-		showHelp(strm, "BG96 Menu", menuBG96);
-		break;
-	}
+void Bg96Driver::funShowSslCfg(OutStream *strm, const char *cmd, void *arg) {
+	Bg96Driver *dev = (Bg96Driver*) arg;
+	Token::getAsInt(&cmd, &dev->asynch.sslContext);
+	dev->asynch.doShowSSlContext = true;
 }
+
+void Bg96Driver::funSetSslCfg(OutStream *strm, const char *cmd, void *arg) {
+	Bg96Driver *dev = (Bg96Driver*) arg;
+	Token::getAsInt(&cmd, &dev->asynch.sslContext);
+	dev->asynch.doSetSSlContext = true;
+}
+
+void Bg96Driver::funGetNtp(OutStream *strm, const char *cmd, void *arg) {
+	Bg96Driver *dev = (Bg96Driver*) arg;
+	dev->asynch.doGetNtpTime = true;
+}
+
+void Bg96Driver::funGetGps(OutStream *strm, const char *cmd, void *arg) {
+	Bg96Driver *dev = (Bg96Driver*) arg;
+	dev->asynch.doGetGps = true;
+}
+
+void Bg96Driver::funSendMqtt(OutStream *strm, const char *cmd, void *arg) {
+	Bg96Driver *dev = (Bg96Driver*) arg;
+
+	if (Token::getAsInt(&cmd, &dev->asynch.sendMqqtVal)) {
+		//jest parametr -> wysłanie MqttSendVar2Name
+		dev->asynch.sendMqqtIdx = 1;
+	} else {
+		//brak parametru -> wysłanie MqttSendVarName
+		dev->asynch.sendMqqtIdx = 0;
+		dev->asynch.sendMqqtVal = 0;
+	}
+	dev->asynch.doSendMqtt = true;
+}
+
+void Bg96Driver::funOpenMqtt(OutStream *strm, const char *cmd, void *arg) {
+	Bg96Driver *dev = (Bg96Driver*) arg;
+	dev->asynch.doOpenMqtt = true;
+}
+
+void Bg96Driver::funCloseMqtt(OutStream *strm, const char *cmd, void *arg) {
+	Bg96Driver *dev = (Bg96Driver*) arg;
+	dev->asynch.doCloseMqtt = true;
+
+}
+
+void Bg96Driver::funSendSms(OutStream *strm, const char *cmd, void *arg) {
+	Bg96Driver *dev = (Bg96Driver*) arg;
+	SendSmsRec *sms = &dev->state.sendSms;
+
+	if (Token::get(&cmd, sms->nrTel, sizeof(sms->nrTel))) {
+		Token::get(&cmd, sms->msg, sizeof(sms->msg) - 2);
+		Token::remooveQuota(sms->msg);
+		int n = strlen(sms->msg);
+		sms->msg[n] = 26;
+		sms->msg[n + 1] = 0;
+		sms->flagSend = true;
+		strm->oMsgX(colWHITE, "send sms [%s]", dev->state.sendSms.nrTel);
+	}
+
+}
+
+const ShellItemFx menuBG96Fx[] = { //
+		{ "s", "stan", Bg96Driver::funShowState }, //
+				{ "h", "hardware state", Bg96Driver::funShowHdwState }, //
+				{ "i", "informacje", Bg96Driver::funInfo }, //
+				{ "gps", "informacje gps", Bg96Driver::funGpsInfo }, //
+				{ "3V8", "załącz zasilanie 3.8V", Bg96Driver::funOnOff3_8 }, //
+				{ "RstLine", "poziom linii Reset", Bg96Driver::funSetResetLine }, //
+				{ "PowerKey", "poziom linii PowerKey", Bg96Driver::funsetPowerKey }, //
+				{ "DTR", "poziom linii DTR", Bg96Driver::funSetDtr }, //
+				{ "stop", "zatrzymanie obsługi", Bg96Driver::funStop }, //
+				{ "start", "start obsługi", Bg96Driver::funStart }, //
+				{ "restart", "restart obsługi modemu", Bg96Driver::funRestart }, //
+				{ "PowerUp", "sekwencja włączania", Bg96Driver::funSetPowerUp }, //
+				{ "w", "wysłanie komendy do modemu", Bg96Driver::funSendCmd }, //
+				{ "echo", "echo: rx,tx,time_mode:off,from_send,from_start. Np. 112", Bg96Driver::funSetEcho }, //
+				{ "sslcfg", "pokaż parametry kontekstu ssl", Bg96Driver::funShowSslCfg }, //
+				{ "setsslcfg", "ustaw konfigurację SSL", Bg96Driver::funSetSslCfg }, //
+				{ "get_ntp", "pobierz czas NTP", Bg96Driver::funGetNtp }, //
+				{ "get_gps", "pobierz dane GPS", Bg96Driver::funGetGps }, //
+				{ "send_mqtt", "send mqtt", Bg96Driver::funSendMqtt }, //
+				{ "open_mqtt", "open mqtt", Bg96Driver::funOpenMqtt }, //
+				{ "close_mqtt", "close mqtt", Bg96Driver::funCloseMqtt }, //
+				{ "sms", "wyślij sms: numer_dst, treść", Bg96Driver::funSendSms }, //
+				{ NULL, NULL } };
+
+void Bg96Driver::shell(OutStream *strm, const char *cmd) {
+
+	execMenuCmd(strm, menuBG96Fx, cmd, this, "BG96 Menu");
+}
+

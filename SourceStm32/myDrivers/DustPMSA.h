@@ -12,7 +12,6 @@
 #include <uart.h>
 #include "cmsis_os.h"
 
-
 //rekord danych odczytywany z PMSA
 typedef struct {
 	float PM_1_0;  // Mass Concentration PM1.0
@@ -97,6 +96,8 @@ private:
 
 	void SendCmd(uint8_t cmd, uint16_t arg);
 	void showState(OutStream *strm);
+	void clrState();
+
 	void sendGetMeasure();
 	void sendGoSleep();
 	void sendWakeUp();
@@ -113,6 +114,18 @@ protected:
 	virtual void ErrorCallback();
 public:
 	DustPMSA(bool formal_exist);
+
+	static void funShowState(OutStream *strm, const char *cmd, void *arg);
+	static void funSetPower(OutStream *strm, const char *cmd, void *arg);
+	static void funGetMeas(OutStream *strm, const char *cmd, void *arg);
+	static void funWakeup(OutStream *strm, const char *cmd, void *arg);
+	static void funGoSleep(OutStream *strm, const char *cmd, void *arg);
+	static void funSetActiveMode(OutStream *strm, const char *cmd, void *arg);
+	static void funSetPassiveMode(OutStream *strm, const char *cmd, void *arg);
+	static void funSetHdSleep(OutStream *strm, const char *cmd, void *arg);
+	static void funShowNmMeas(OutStream *strm, const char *cmd, void *arg);
+	static void funClrStat(OutStream *strm, const char *cmd, void *arg);
+
 	virtual void StartMeas();
 	virtual void StopMeas();
 	virtual void shell(OutStream *strm, const char *cmd);

@@ -9,6 +9,8 @@
 #include "MdbDustSensor.h"
 #include <NoiseDetector.h>
 #include "SPS30.h"
+#include "Bmp338Device.h"
+#include "Sht35Device.h"
 
 
 #endif

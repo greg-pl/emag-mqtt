@@ -5,7 +5,6 @@
  *      Author: Grzegorz
  */
 
-
 #include "SPS30.h"
 #include "utils.h"
 #include "shell.h"
@@ -362,79 +361,77 @@ void SPS30::ShowMesuredRec(OutStream *strm) {
 	}
 }
 
-const ShellItem menuDustSPS30[] = { //
-		{ "s", "stan" }, //
-				{ "dbg", "poziom logów" }, //
-				{ "pwr", "0|1 - włącz/wyłącz zasilanie czujnika" }, //
-				{ "getinfo", "1|2|3 -  pobierz informacje z SPS30" }, //
-				{ "clean", "FAN clean" }, //
-				{ "run", "0|1 - odczytuj pomiary" }, //
-				{ "m", "pomiary" }, //
-
-				{ NULL, NULL } };
-
-void SPS30::shell(OutStream *strm, const char *cmd) {
-
-	char tok[20];
-	int idx = -1;
-
-	if (Token::get(&cmd, tok, sizeof(tok)))
-		idx = findCmd(menuDustSPS30, tok);
-	switch (idx) {
-	case 0: //s
-		if (strm->oOpen(colWHITE)) {
-			strm->oMsg("PWR=%u", Hdw::getDustSensorOn());
-			strm->oMsg("PWR_FAULT=%u", Hdw::getDustSensorFlg());
-			strm->oMsg("rxCnt=%u", state.rxCnt);
-			strm->oMsg("txCnt=%u", state.txCmplCnt);
-			strm->oMsg("rxPtr=%u", rxRec.rxPtr);
-			strm->oMsg("recFrameCnt=%u", state.recivedFrameCnt);
-			strm->oMsg("isMeasOn=%u", state.isMeasOn);
-			strm->oMsg("PowerTm=%.2f", (HAL_GetTick() - state.powerOnTick) / 1000.0);
-			strm->oMsg("devState=0x%02X", state.devState);
-			strm->oClose();
-		}
-
-		break;
-	case 1: //dbg
-		Token::getAsInt(&cmd, &mDebug);
-		break;
-	case 2: { //pwr
-		bool q = false;
-		Token::getAsBool(&cmd, &q);
-		Hdw::dustSensorOn(q);
+void SPS30::showState(OutStream *strm) {
+	if (strm->oOpen(colWHITE)) {
+		strm->oMsg("PWR=%u", Hdw::getDustSensorOn());
+		strm->oMsg("PWR_FAULT=%u", Hdw::getDustSensorFlg());
+		strm->oMsg("rxCnt=%u", state.rxCnt);
+		strm->oMsg("txCnt=%u", state.txCmplCnt);
+		strm->oMsg("rxPtr=%u", rxRec.rxPtr);
+		strm->oMsg("recFrameCnt=%u", state.recivedFrameCnt);
+		strm->oMsg("isMeasOn=%u", state.isMeasOn);
+		strm->oMsg("PowerTm=%.2f", (HAL_GetTick() - state.powerOnTick) / 1000.0);
+		strm->oMsg("devState=0x%02X", state.devState);
+		strm->oClose();
 	}
-		break;
-
-	case 3: { //getinfo
-		int nr;
-		bool q = false;
-		if (Token::getAsInt(&cmd, &nr)) {
-			if (nr >= 1 && nr <= 3) {
-				sendGetDevInfo(nr);
-				q = true;
-			}
-		}
-		if (!q) {
-			strm->oMsgX(colGREEN, "Polecenie: getinfo 1 [1..3]");
-		}
-
-	}
-		break;
-	case 4:  //clean
-		sendRunCleaning();
-		break;
-	case 5:  //run
-		Token::getAsBool(&cmd, &state.isMeasOn);
-		break;
-	case 6: //m
-		ShowMesuredRec(strm);
-		break;
-
-	default:
-		showHelp(strm, "SPS30 Menu", menuDustSPS30);
-		break;
-	}
-
 }
 
+void SPS30::funShowState(OutStream *strm, const char *cmd, void *arg) {
+	SPS30 *dev = (SPS30*) arg;
+	dev->showState(strm);
+}
+
+void SPS30::funDbgLevel(OutStream *strm, const char *cmd, void *arg) {
+	SPS30 *dev = (SPS30*) arg;
+	Token::getAsInt(&cmd, &dev->mDebug);
+}
+
+void SPS30::funSetPower(OutStream *strm, const char *cmd, void *arg) {
+	bool q = false;
+	Token::getAsBool(&cmd, &q);
+	Hdw::dustSensorOn(q);
+}
+
+void SPS30::funGetInfo(OutStream *strm, const char *cmd, void *arg) {
+	SPS30 *dev = (SPS30*) arg;
+	int nr;
+	bool q = false;
+	if (Token::getAsInt(&cmd, &nr)) {
+		if (nr >= 1 && nr <= 3) {
+			dev->sendGetDevInfo(nr);
+			q = true;
+		}
+	}
+	if (!q)
+		strm->oMsgX(colGREEN, "Polecenie: getinfo 1 [1..3]");
+}
+
+void SPS30::funFanClean(OutStream *strm, const char *cmd, void *arg) {
+	SPS30 *dev = (SPS30*) arg;
+	dev->sendRunCleaning();
+}
+void SPS30::funRunMeasure(OutStream *strm, const char *cmd, void *arg) {
+	SPS30 *dev = (SPS30*) arg;
+	Token::getAsBool(&cmd, &dev->state.isMeasOn);
+
+}
+void SPS30::funSowMeasure(OutStream *strm, const char *cmd, void *arg) {
+	SPS30 *dev = (SPS30*) arg;
+	dev->ShowMesuredRec(strm);
+}
+
+const ShellItemFx menuDustSPS30Fx[] = { //
+		{ "s", "stan", SPS30::funShowState }, //
+				{ "dbg", "poziom logów", SPS30::funDbgLevel }, //
+				{ "pwr", "0|1 - włącz/wyłącz zasilanie czujnika", SPS30::funSetPower }, //
+				{ "getinfo", "1|2|3 -  pobierz informacje z SPS30", SPS30::funGetInfo }, //
+				{ "clean", "FAN clean", SPS30::funFanClean }, //
+				{ "run", "0|1 - odczytuj pomiary", SPS30::funRunMeasure }, //
+				{ "m", "pomiary", SPS30::funSowMeasure }, //
+
+				{ NULL, NULL, NULL } //
+		};
+
+void SPS30::shell(OutStream *strm, const char *cmd) {
+	execMenuCmd(strm, menuDustSPS30Fx, cmd, this, "Dust sensor SPS30 Menu");
+}

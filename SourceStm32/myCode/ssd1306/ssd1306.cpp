@@ -4,8 +4,8 @@
 #include "ssd1306_fonts.h"
 #include "utils.h"
 
-SSD1306Dev::SSD1306Dev(uint8_t adr) {
-	mDevAdr = adr;
+SSD1306Dev::SSD1306Dev(I2cBus *bus, uint8_t adr, const char *name) :
+		I2cDev::I2cDev(bus, adr, name) {
 	init();
 }
 
@@ -20,11 +20,11 @@ void SSD1306Dev::init() {
 }
 
 void SSD1306Dev::initHd(void) {
-	mDevExist = (I2c1Bus::checkDevMtx(mDevAdr) == HAL_OK);
+	mDevExist = (checkDevMtx() == HAL_OK);
 	if (!mDevExist)
 		return;
 
-	if (I2c1Bus::openMutex(50, 100)) {
+	if (openMutex(50, 100)) {
 
 		// initHd OLED
 
@@ -100,10 +100,9 @@ void SSD1306Dev::initHd(void) {
 		setFont(fn7x10);
 		setColor(colWhite);
 
-		I2c1Bus::closeMutex();
+		closeMutex();
 	}
 }
-
 
 void SSD1306Dev::showState(OutStream *strm) {
 	strm->oMsg("__SSD1306__");
@@ -113,35 +112,48 @@ void SSD1306Dev::showState(OutStream *strm) {
 	}
 }
 
-void SSD1306Dev::execFun(OutStream *strm, int funNr) {
-	switch (funNr) {
-	case 30:
-		mError = HAL_OK;
-		mState.Initialized = 0;
-		initHd();
-		strm->oMsg("SSD1306 Init st=%s", HAL_getErrStr(mError));
-		strm->oMsg("Initialized=%s", YN(mState.Initialized));
-		break;
-	case 31:
-		clear();
-		prn("Temp:%.2f[%%]\nPres:%.1f[kPa]", 23.45, 987.23);
-		updateScr();
-		break;
-	}
+
+void SSD1306Dev::funInit(OutStream *strm, const char *cmd, void *arg) {
+	SSD1306Dev *dev = (SSD1306Dev*) arg;
+
+	dev->mError = HAL_OK;
+	dev->mState.Initialized = 0;
+	dev->initHd();
+	strm->oMsg("SSD1306 Init st=%s", HAL_getErrStr(dev->mError));
+	strm->oMsg("Initialized=%s", YN(dev->mState.Initialized));
+
+
+}
+void SSD1306Dev::funTest(OutStream *strm, const char *cmd, void *arg) {
+	SSD1306Dev *dev = (SSD1306Dev*) arg;
+	dev->clear();
+	dev->prn("Temp:%.2f[%%]\nPres:%.1f[kPa]", 23.45, 987.23);
+	dev->updateScr();
 }
 
+
+const ShellItemFx menuSsd1306Fx[] = { //
+		 { "init", "inicjuj SSD1306", SSD1306Dev::funInit }, //
+		 { "test", "test screen", SSD1306Dev::funTest }, //
+				{ NULL, NULL } };
+
+
+void SSD1306Dev::shell(OutStream *strm, const char *cmd){
+	execMenuCmd(strm, menuSsd1306Fx, cmd, this, "SSD1306 Menu");
+}
+
+
 void SSD1306Dev::_WriteCmd(uint8_t cmd) {
-	HAL_StatusTypeDef st = I2c1Bus::writeByte(mDevAdr, 0x00, cmd);
+	HAL_StatusTypeDef st = writeByte(0x00, cmd);
 	if (st != HAL_OK)
 		mError = st;
 }
 
 void SSD1306Dev::_WriteData(uint8_t *buffer, size_t buff_size) {
-	HAL_StatusTypeDef st = I2c1Bus::writeBytes(mDevAdr, 0x40, buff_size, buffer);
+	HAL_StatusTypeDef st = writeBytes(0x40, buff_size, buffer);
 	if (st != HAL_OK)
 		mError = st;
 }
-
 
 void SSD1306Dev::Fill(SSD1306_COLOR color) {
 	int v = (color == colBlack) ? 0x00 : 0xFF;
@@ -155,7 +167,7 @@ void SSD1306Dev::setCursor(uint8_t x, uint8_t y) {
 
 void SSD1306Dev::updateScr(void) {
 	if (mDevExist) {
-		if (I2c1Bus::openMutex(51, 100)) {
+		if (openMutex(51, 100)) {
 
 			for (int i = 0; i < 8; i++) {
 				_WriteCmd(0xB0 + i);
@@ -163,7 +175,7 @@ void SSD1306Dev::updateScr(void) {
 				_WriteCmd(0x10);
 				_WriteData(&mBuffer[WIDTH * i], WIDTH);
 			}
-			I2c1Bus::closeMutex();
+			closeMutex();
 		}
 	}
 }

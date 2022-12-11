@@ -489,113 +489,114 @@ HAL_StatusTypeDef Config::Init(OutStream *strm) {
 	return HAL_ERROR;
 }
 
-const ShellItem menuCfg[] = { //
-		{ "list", "pokaż ustawienia, parametr [ |rtc|flash]" }, //
-				{ "set", "ustaw wartość" }, //
-				{ "default", "wartości domyślne" }, //
-				{ "save", "save to Rtc RAM" }, //
-				{ "saveflash", "save to Flash" }, //
-				{ "init", "reload cfg from RtcRAM" }, //
-				{ "initflash", "reload cfg from Flash" }, //
-				{ "def", "pokaż definicje" }, //
-				{ "help", "znaczenie nirktórych nastaw" }, //
+/*
+
+
+ }
+
+ */
+void Config::funList(OutStream *strm, const char *cmd, void *arg) {
+	Config *cfg = (Config*) arg;
+	char tok[20];
+
+	Cpx cpx;
+	cpx.init(ConfigDscr, &cfg->data);
+
+	if (Token::get(&cmd, tok, sizeof(tok))) {
+		if (strcmp(tok, "rtc") == 0) {
+			cpx.init(ConfigDscr, (void*) CFG_ADDR_RTCRAM);
+			strm->oMsgX(colYELLOW, "RTC");
+		} else if (strcmp(tok, "flash") == 0) {
+			cpx.init(ConfigDscr, (void*) CFG_ADDR_FLASH);
+			strm->oMsgX(colYELLOW, "FLASH");
+		}
+	}
+	cpx.list(strm);
+}
+
+void Config::funSet(OutStream *strm, const char *cmd, void *arg) {
+	Config *cfg = (Config*) arg;
+	char tok[20];
+
+	if (Token::get(&cmd, tok, sizeof(tok))) {
+		char valB[60];
+		valB[0] = 0;
+		Token::get(&cmd, valB, sizeof(valB));
+		Cpx cpx;
+		cpx.init(ConfigDscr, &cfg->data);
+		if (cpx.set(tok, valB)) {
+			strm->oMsgX(colGREEN, "[%s]=(%s) OK", tok, valB);
+		} else {
+			strm->oMsgX(colRED, "[%s]=(%s) Error", tok, valB);
+		}
+	}
+}
+
+void Config::funDefault(OutStream *strm, const char *cmd, void *arg) {
+	Config *cfg = (Config*) arg;
+	strm->oMsgX(colWHITE, "Ustawienia domyślne");
+	cfg->Default();
+}
+
+void Config::funSave(OutStream *strm, const char *cmd, void *arg) {
+	Config *cfg = (Config*) arg;
+	if (cfg->saveRtc())
+		strm->oMsgX(colWHITE, "Saved to RTCRam");
+	else
+		strm->oMsgX(colRED, "Cfg Corrected");
+}
+
+void Config::funSaveFlash(OutStream *strm, const char *cmd, void *arg) {
+	Config *cfg = (Config*) arg;
+	HAL_StatusTypeDef st = cfg->saveFlash();
+	strm->oMsgX(HAL_getColor(st), "Save to Flash & RTCRam : %s", HAL_getErrStr(st));
+}
+
+void Config::funInit(OutStream *strm, const char *cmd, void *arg) {
+	Config *cfg = (Config*) arg;
+	HAL_StatusTypeDef st = cfg->LoadIntern(CFG_ADDR_RTCRAM);
+	strm->oMsgX(HAL_getColor(st), "Load from RTCRam : %s", HAL_getErrStr(st));
+}
+
+void Config::funInitFlash(OutStream *strm, const char *cmd, void *arg) {
+	Config *cfg = (Config*) arg;
+	HAL_StatusTypeDef st = cfg->LoadIntern(CFG_ADDR_FLASH);
+	strm->oMsgX(HAL_getColor(st), "Load from Flash: %s", HAL_getErrStr(st));
+}
+
+void Config::funShowDef(OutStream *strm, const char *cmd, void *arg) {
+	Config *cfg = (Config*) arg;
+
+	Cpx cpx;
+	cpx.init(ConfigDscr, &cfg->data);
+	cpx.showDef(strm);
+}
+
+void Config::funHelp(OutStream *strm, const char *cmd, void *arg) {
+	if (strm->oOpen(colWHITE)) {
+		strm->oMsg("Cfg Help");
+		strm->oMsg("--------------------");
+		strm->oMsg("DustSensorType: 0-SPS30(Sensirion), 1-HPMA(Honeywel), 2-PMSA003, 3-PMS5003ST");
+		strm->oMsg("GasFiltrType: 0-OFF, 1-FIR, 2-IR");
+
+		strm->oClose();
+	}
+
+}
+
+const ShellItemFx menuCfgFx[] = { //
+		{ "list", "pokaż ustawienia, parametr [ |rtc|flash]", Config::funList }, //
+				{ "set", "ustaw wartość", Config::funSet }, //
+				{ "default", "wartości domyślne", Config::funDefault }, //
+				{ "save", "save to Rtc RAM", Config::funSave }, //
+				{ "saveflash", "save to Flash", Config::funSaveFlash }, //
+				{ "init", "reload cfg from RtcRAM", Config::funInit }, //
+				{ "initflash", "reload cfg from Flash", Config::funInitFlash }, //
+				{ "def", "pokaż definicje", Config::funShowDef }, //
+				{ "help", "znaczenie nirktórych nastaw", Config::funHelp }, //
 				{ NULL, NULL } };
 
 void Config::shell(OutStream *strm, const char *cmd) {
-	char tok[20];
-	int idx = -1;
-	if (Token::get(&cmd, tok, sizeof(tok)))
-		idx = findCmd(menuCfg, tok);
-	switch (idx) {
-	case 0: //list
-	{
-		Cpx cpx;
-
-		cpx.init(ConfigDscr, &data);
-
-		if (Token::get(&cmd, tok, sizeof(tok))) {
-			if (strcmp(tok, "rtc") == 0) {
-				cpx.init(ConfigDscr, (void*) CFG_ADDR_RTCRAM);
-				strm->oMsgX(colYELLOW, "RTC");
-			} else if (strcmp(tok, "flash") == 0) {
-				cpx.init(ConfigDscr, (void*) CFG_ADDR_FLASH);
-				strm->oMsgX(colYELLOW, "FLASH");
-			}
-		}
-		cpx.list(strm);
-	}
-		break;
-	case 1: //set
-	{
-		if (Token::get(&cmd, tok, sizeof(tok))) {
-			char valB[60];
-			valB[0] = 0;
-			Token::get(&cmd, valB, sizeof(valB));
-			Cpx cpx;
-			cpx.init(ConfigDscr, &data);
-			if (cpx.set(tok, valB)) {
-				strm->oMsgX(colGREEN, "[%s]=(%s) OK", tok, valB);
-			} else {
-				strm->oMsgX(colRED, "[%s]=(%s) Error", tok, valB);
-			}
-		}
-	}
-		break;
-	case 2: //default
-		strm->oMsgX(colWHITE, "Ustawienia domyślne");
-		Default();
-		break;
-	case 3: //save
-		if (saveRtc())
-			strm->oMsgX(colWHITE, "Saved to RTCRam");
-		else
-			strm->oMsgX(colRED, "Cfg Corrected");
-		break;
-
-	case 4: //saveFlash
-	{
-		HAL_StatusTypeDef st = saveFlash();
-		strm->oMsgX(HAL_getColor(st), "Save to Flash & RTCRam : %s", HAL_getErrStr(st));
-	}
-		break;
-	case 5: //init
-	{
-		HAL_StatusTypeDef st = LoadIntern(CFG_ADDR_RTCRAM);
-		strm->oMsgX(HAL_getColor(st), "Load from RTCRam : %s", HAL_getErrStr(st));
-	}
-		break;
-	case 6: //initflash
-	{
-		HAL_StatusTypeDef st = LoadIntern(CFG_ADDR_FLASH);
-		strm->oMsgX(HAL_getColor(st), "Load from Flash: %s", HAL_getErrStr(st));
-	}
-		break;
-
-	case 7: //def
-	{
-		Cpx cpx;
-
-		cpx.init(ConfigDscr, &data);
-		cpx.showDef(strm);
-	}
-		break;
-	case 8: //help
-	{
-		if (strm->oOpen(colWHITE)) {
-			strm->oMsg("Cfg Help");
-			strm->oMsg("--------------------");
-			strm->oMsg("DustSensorType: 0-SPS30(Sensirion), 1-HPMA(Honeywel), 2-PMSA003, 3-PMS5003ST");
-			strm->oMsg("GasFiltrType: 0-OFF, 1-FIR, 2-IR");
-
-			strm->oClose();
-		}
-
-	}
-		break;
-
-	default:
-		showHelp(strm, "Config Menu", menuCfg);
-		break;
-	};
-
+	execMenuCmd(strm, menuCfgFx, cmd, this, "Config Menu");
 }
+

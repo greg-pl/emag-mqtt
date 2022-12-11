@@ -12,7 +12,7 @@
 #include <_ansi.h>
 #include "I2cDev.h"
 
-class SSD1306Dev: public I2c1Dev {
+class SSD1306Dev: public I2cDev {
 public:
 	typedef enum {
 		colBlack = 0x00, colWhite = 0x01
@@ -48,13 +48,15 @@ private:
 protected:
 	virtual void init();
 	virtual void showState(OutStream *strm);
-	virtual bool isError(){
+	virtual bool isError() {
 		return 0;
 	}
+	virtual void shell(OutStream *strm, const char *cmd);
 
 public:
-	SSD1306Dev(uint8_t adr);
-	virtual void execFun(OutStream *strm, int funNr);
+	SSD1306Dev(I2cBus *bus, uint8_t adr, const char *name);
+	static void funInit(OutStream *strm, const char *cmd, void *arg);
+	static void funTest(OutStream *strm, const char *cmd, void *arg);
 
 	void initHd(void);
 	void updateScr(void);

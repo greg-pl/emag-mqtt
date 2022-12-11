@@ -249,9 +249,15 @@ void LedMatrix::tick() {
 		}
 
 	}
-
 }
-
+void LedMatrix::ClrState() {
+	state.loopCnt = 0;
+	mIrqCnt = 0;
+	state.txCmplCnt = 0;
+	state.rxCnt = 0;
+	state.recFrameCnt = 0;
+	state.recFrameOkCnt = 0;
+}
 void LedMatrix::showState(OutStream *strm) {
 	if (strm->oOpen(colWHITE)) {
 		strm->oMsg("___LedMatrix Status___");
@@ -269,70 +275,63 @@ void LedMatrix::showState(OutStream *strm) {
 	}
 }
 
-const ShellItem menuLedMatrix[] = { //
-		{ "s", "stan" }, //
-				{ "clrCnt", "zeruj liczniki statystyki" }, //
-				{ "getInfo", "Pobranie info z panelu" }, //
-				{ "setLevel", "ustawienie jasności" }, //
-				{ "setGraph", "ustawienie grafiki" }, //
-				{ "testFace", "testuj pobranie numeru buźki: testFace prev_lev pm_val" }, //
+void LedMatrix::funShowState(OutStream *strm, const char *cmd, void *arg) {
+	LedMatrix *dev = (LedMatrix*) arg;
+	dev->showState(strm);
+}
+
+void LedMatrix::funClearState(OutStream *strm, const char *cmd, void *arg) {
+	LedMatrix *dev = (LedMatrix*) arg;
+	dev->ClrState();
+}
+
+void LedMatrix::funGetInfo(OutStream *strm, const char *cmd, void *arg) {
+	strm->oMsgX(colWHITE, "sendGetInfo");
+	LedMatrix *dev = (LedMatrix*) arg;
+	dev->sendCommand(CMD_GET_INFO);
+}
+
+void LedMatrix::funSetLight(OutStream *strm, const char *cmd, void *arg) {
+	LedMatrix *dev = (LedMatrix*) arg;
+	int lev;
+	if (Token::getAsInt(&cmd, &lev)) {
+		dev->sendCommand(CMD_SET_LIGHT_LEVEL, lev);
+		strm->oMsgX(colWHITE, "sendLight %u", lev);
+	}
+}
+
+void LedMatrix::funSetGraf(OutStream *strm, const char *cmd, void *arg) {
+	LedMatrix *dev = (LedMatrix*) arg;
+
+	int graph;
+	if (Token::getAsInt(&cmd, &graph)) {
+		dev->sendCommand(CMD_SELECT_GRAPHIC, graph);
+		strm->oMsgX(colWHITE, "setGraph %u", graph);
+	}
+}
+
+void LedMatrix::funTestFace(OutStream *strm, const char *cmd, void *arg) {
+	LedMatrix *dev = (LedMatrix*) arg;
+	float pm;
+	int prev;
+	if (Token::getAsInt(&cmd, &prev)) {
+		if (Token::getAsFloat(&cmd, &pm)) {
+			int faceNr = dev->getFaceNr(prev, pm);
+			strm->oMsgX(colWHITE, "prev=%u  pm=%.2f[%%] faceNr=%u", prev, pm, faceNr);
+		}
+	}
+}
+
+const ShellItemFx menuLedMatrixFx[] = { //
+		{ "s", "stan", LedMatrix::funShowState }, //
+				{ "clrCnt", "zeruj liczniki statystyki", LedMatrix::funClearState }, //
+				{ "getInfo", "Pobranie info z panelu", LedMatrix::funGetInfo }, //
+				{ "setLevel", "ustawienie jasności", LedMatrix::funSetLight }, //
+				{ "setGraph", "ustawienie grafiki", LedMatrix::funSetGraf }, //
+				{ "testFace", "testuj pobranie numeru buźki: testFace prev_lev pm_val", LedMatrix::funTestFace }, //
 
 				{ NULL, NULL } };
 
 void LedMatrix::shell(OutStream *strm, const char *cmd) {
-	char tok[20];
-	int idx = -1;
-
-	if (Token::get(&cmd, tok, sizeof(tok)))
-		idx = findCmd(menuLedMatrix, tok);
-	switch (idx) {
-	case 0: //s
-		showState(strm);
-		break;
-	case 1: //clrCnt
-		state.loopCnt = 0;
-		mIrqCnt = 0;
-		state.txCmplCnt = 0;
-		state.rxCnt = 0;
-		state.recFrameCnt = 0;
-		state.recFrameOkCnt = 0;
-		break;
-	case 2: //getInfo
-		strm->oMsgX(colWHITE, "sendGetInfo");
-		sendCommand(CMD_GET_INFO);
-		break;
-
-	case 3: { //setLevel
-		int lev;
-		if (Token::getAsInt(&cmd, &lev)) {
-			sendCommand(CMD_SET_LIGHT_LEVEL, lev);
-			strm->oMsgX(colWHITE, "sendLight %u", lev);
-		}
-	}
-		break;
-	case 4: { //setGraph
-		int graph;
-		if (Token::getAsInt(&cmd, &graph)) {
-			sendCommand(CMD_SELECT_GRAPHIC, graph);
-			strm->oMsgX(colWHITE, "setGraph %u", graph);
-		}
-	}
-		break;
-	case 5: { //testFace
-		float pm;
-		int prev;
-		if (Token::getAsInt(&cmd, &prev)) {
-			if (Token::getAsFloat(&cmd, &pm)) {
-				int faceNr = getFaceNr(prev, pm);
-				strm->oMsgX(colWHITE, "prev=%u  pm=%.2f[%%] faceNr=%u", prev, pm, faceNr);
-			}
-		}
-	}
-		break;
-
-	default:
-		showHelp(strm, "LedMatrix Menu", menuLedMatrix);
-		break;
-	}
-
+	execMenuCmd(strm, menuLedMatrixFx, cmd, this, "LedMatrix Menu");
 }

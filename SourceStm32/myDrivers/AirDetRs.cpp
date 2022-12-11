@@ -14,18 +14,17 @@
 #include "Config.h"
 #include "i2cDev.h"
 #include "Hal.h"
+#include "Bmp338Device.h"
+#include "Sht35Device.h"
 
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
 
-
-
-extern SHT35DevPub *sht35;
-extern Bmp338DevPub *bmp338;
+extern SHT35Device *sht35;
+extern Bmp338Device *bmp338;
 extern ShellTask *shellTask;
 extern Config *config;
-
 
 //-----------------------------------------------------------------------------------------
 // MdbMasterGasTask
@@ -336,8 +335,6 @@ void AirDetRs::showState(OutStream *strm) {
 	}
 }
 
-
-
 bool AirDetRs::isMeasValid(uint16_t status) {
 	return ((status & 0x07) == 0);
 }
@@ -441,19 +438,6 @@ bool AirDetRs::getGasValue(MeasType measType, int filtrType, float *val) {
 	return false;
 }
 
-const ShellItem menuGas[] = { //
-		{ "m", "pomiary" }, //
-				{ "zero", "ustawienie zera" }, //
-
-				{ NULL, NULL } };
-
-const ShellItem* AirDetRs::getMenu() {
-	if (menu.tab == NULL) {
-		buildMenu(menuGas);
-	}
-	return menu.tab;
-}
-
 bool AirDetRs::zeroGasFromSMS(const char *ptr, char *resText, int maxLen) {
 	zeroOfs.cnt = 0;
 	while (zeroOfs.cnt < MAX_DEV_CNT) {
@@ -482,45 +466,46 @@ bool AirDetRs::zeroGasFromSMS(const char *ptr, char *resText, int maxLen) {
 	}
 }
 
-bool AirDetRs::execMyMenuItem(OutStream *strm, int idx, const char *cmd) {
-	switch (idx) {
-	case 0:  //m
-		showMeas(strm);
-		break;
-	case 1: {  //zero
-		strm->oMsgX(colWHITE, "Zero offset");
-		zeroOfs.cnt = 0;
-		while (zeroOfs.cnt < MAX_DEV_CNT) {
-			int a;
-			if (Token::getAsInt(&cmd, &a)) {
-				zeroOfs.tab[zeroOfs.cnt++] = a;
-			} else
-				break;
-		}
-		if (zeroOfs.cnt == gasData.devCntTh) {
-			zeroOfs.flag = true;
-		} else {
-			strm->oMsgX(colYELLOW, "Błąd. Ilość parametrów powinna być %u", gasData.devCntTh);
-		}
+void AirDetRs::funShowMeasure(OutStream *strm, const char *cmd, void *arg) {
+	AirDetRs *gas = (AirDetRs*) arg;
+	gas->showMeas(strm);
+}
+void AirDetRs::funSetZero(OutStream *strm, const char *cmd, void *arg) {
+	AirDetRs *gas = (AirDetRs*) arg;
 
+	strm->oMsgX(colWHITE, "Zero offset");
+	gas->zeroOfs.cnt = 0;
+	while (gas->zeroOfs.cnt < MAX_DEV_CNT) {
+		int a;
+		if (Token::getAsInt(&cmd, &a)) {
+			gas->zeroOfs.tab[gas->zeroOfs.cnt++] = a;
+		} else
+			break;
 	}
-		break;
-	default:
-		return false;
+	if (gas->zeroOfs.cnt == gas->gasData.devCntTh) {
+		gas->zeroOfs.flag = true;
+	} else {
+		strm->oMsgX(colYELLOW, "Błąd. Ilość parametrów powinna być %u", gas->gasData.devCntTh);
 	}
-	return true;
+
 }
 
-bool AirDetRs::execMenuItem(OutStream *strm, int idx, const char *cmd) {
-	bool q = MdbMasterTask::execMenuItem(strm, idx, cmd);
-	if (!q) {
-		q = execMyMenuItem(strm, idx - menu.baseCnt, cmd);
-	}
-	return q;
+const ShellItemFx menuGasFx[] = { //
+		{ "m", "pomiary", AirDetRs::funShowMeasure }, //
+				{ "zero", "ustawienie zera", AirDetRs::funSetZero }, //
+
+				{ NULL, NULL } };
+
+const ShellItemFx* AirDetRs::getMenuFx() {
+	return menuGasFx;
 }
 
 const char* AirDetRs::getMenuName() {
 	return "GAS sensor Menu";
+}
+
+const char* AirDetRs::getDevName() {
+	return "gas";
 }
 
 void AirDetRs::getDeviceStatusTxt(char *txt, int max) {

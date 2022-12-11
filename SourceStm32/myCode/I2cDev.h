@@ -11,111 +11,140 @@
 #include <IOStream.h>
 #include "cmsis_os.h"
 #include "stm32f4xx_hal.h"
+#include "shellItem.h"
 
-class I2c1Dev {
-	friend class I2c1Bus;
+#define FILTR_FACTOR    0.8
+#define TIME_DT_RD      2000
+#define TIME_DT_VALID   5000
+
+class I2cBus;
+
+class I2cDev {
+	friend class I2cBus;
+
 protected:
+	I2cBus *mBus;
 	uint8_t mDevAdr;
 	bool mDevExist;
+	char mName[16];
 	void showDevExist(OutStream *strm);
 	virtual void tick() {
 	}
 	virtual void init() {
 	}
+protected:
+	bool openMutex(int who, int tm);
+	void closeMutex();
+
+	HAL_StatusTypeDef checkDev();
+	HAL_StatusTypeDef checkDevMtx();
+	HAL_StatusTypeDef Transmit(uint16_t len, uint8_t *data);
+
+	HAL_StatusTypeDef readByte(uint8_t regAddr, uint8_t *data);
+	HAL_StatusTypeDef readWord(uint8_t regAddr, uint16_t *data);
+	HAL_StatusTypeDef readBytes(uint8_t regAddr, uint8_t length, uint8_t *data);
+	HAL_StatusTypeDef readBytes16bit(uint16_t reg_addr, uint16_t len, uint8_t *data);
+
+	HAL_StatusTypeDef writeByte(uint8_t regAddr, uint8_t data);
+	HAL_StatusTypeDef writeWord(uint8_t regAddr, uint16_t data);
+	HAL_StatusTypeDef writeBytes(uint8_t regAddr, uint8_t length, const uint8_t *data);
+	HAL_StatusTypeDef writeBytes16bit(uint8_t reg_addr, uint16_t len, const uint8_t *data);
+
+	virtual void shell(OutStream *strm, const char *cmd);
+
 public:
+	I2cDev(I2cBus *bus, uint8_t adr, const char *name);
 	virtual void showState(OutStream *strm)=0;
 	virtual void showMeas(OutStream *strm) {
-	}
-	virtual void execFun(OutStream *strm, int funNr) {
-	}
-	uint8_t getAdr() {
-		return mDevAdr;
-	}
-	bool isDevExist() {
-		return mDevExist;
 	}
 	virtual bool isError()=0;
 };
 
-class SHT35DevPub: public I2c1Dev {
-public:
-	uint32_t serialNr;
-	HAL_StatusTypeDef mMeasStart;
-	virtual HAL_StatusTypeDef getData(float *temperature, float *humidity)=0;
-	static SHT35DevPub* createDev(uint8_t devAdr);
-};
-
-class Bmp338DevPub: public I2c1Dev {
-public:
-	bool chipIdOk;
-	bool coefOk;
-	virtual HAL_StatusTypeDef getData(float *temperature, float *pressure)=0;
-	static Bmp338DevPub* createDev(uint8_t devAdr);
-};
-
-class I2c1Bus {
-	friend class SHT35Dev;
-	friend class Bmp338Dev;
-	friend class I2c1Dev;
-	friend class SSD1306Dev;
-protected:
+class I2cBus {
+	friend class I2cDev;
+private:
 	enum {
 		MAX_DEV_CNT = 4,
 	};
-	static I2C_HandleTypeDef hi2c;
-	static osMutexId mBusMutex;
-	static int mDevCnt;
-	static I2c1Dev *devTab[MAX_DEV_CNT];
-	static int mBusRestartCnt;
+	struct {
+		int lastWho;
+		int who;
+		osMutexId mutex;
+	} mMuRec;
 
-	static bool openMutex(int who, int tm);
-	static void closeMutex();
+	struct {
+		int cnt;
+		I2cDev *tab[MAX_DEV_CNT];
+	} devs;
+
+	struct{
+		ShellItemFx *menuTab;
+		void **argTab;
+	}menuExp;
+
+	I2C_TypeDef *mI2cDef;
+	I2C_HandleTypeDef hi2c;
+	int mBusRestartCnt;
+
+	bool openMutex(int who, int tm);
+	void closeMutex();
 
 	void swap(uint16_t *p);
 	static uint16_t swapD(uint16_t d);
 	void putSwap(uint8_t *p, uint16_t d);
-
-	static HAL_StatusTypeDef checkDev(uint8_t dev_addr);
-	static HAL_StatusTypeDef checkDevMtx(uint8_t dev_addr);
-
-	static HAL_StatusTypeDef readByte(uint8_t devAddr, uint8_t regAddr, uint8_t *data);
-	static HAL_StatusTypeDef readWord(uint8_t devAddr, uint8_t regAddr, uint16_t *data);
-	static HAL_StatusTypeDef readBytes(uint8_t devAddr, uint8_t regAddr, uint8_t length, uint8_t *data);
-
-	static HAL_StatusTypeDef writeByte(uint8_t devAddr, uint8_t regAddr, uint8_t data);
-	static HAL_StatusTypeDef writeWord(uint8_t devAddr, uint8_t regAddr, uint16_t data);
-	static HAL_StatusTypeDef writeBytes(uint8_t devAddr, uint8_t regAddr, uint8_t length, const uint8_t *data);
 private:
-	static int mLastMutexWho;
-	static int mMutexWho;
-	static void ScanBus(OutStream *strm);
-	static void showState(OutStream *strm);
-	static void showMeas(OutStream *strm);
-	static void ShowBusRegisters(OutStream *strm);
+	HAL_StatusTypeDef checkDev(uint8_t dev_addr);
+	HAL_StatusTypeDef checkDevMtx(uint8_t dev_addr);
+	HAL_StatusTypeDef Transmit(uint8_t dev_addr, uint16_t len, uint8_t *data);
 
-	static void execFun(OutStream *strm, int idx);
-	static HAL_StatusTypeDef _InitHd();
-	static HAL_StatusTypeDef InitHd();
-	static void setAsGpio();
-	static void setGpioSDA(GPIO_PinState PinState);
-	static void setGpioSCL(GPIO_PinState PinState);
-	static bool getGpioSDA();
-	static bool getGpioSCL();
-	static void gpioSCLWave();
-	static bool rdBusyFlag();
+	HAL_StatusTypeDef readByte(uint8_t devAddr, uint8_t regAddr, uint8_t *data);
+	HAL_StatusTypeDef readWord(uint8_t devAddr, uint8_t regAddr, uint16_t *data);
+	HAL_StatusTypeDef readBytes(uint8_t devAddr, uint8_t regAddr, uint8_t length, uint8_t *data);
+	HAL_StatusTypeDef readBytes16bit(uint8_t dev_addr, uint16_t reg_addr, uint16_t len, uint8_t *data);
+
+	HAL_StatusTypeDef writeByte(uint8_t devAddr, uint8_t regAddr, uint8_t data);
+	HAL_StatusTypeDef writeWord(uint8_t devAddr, uint8_t regAddr, uint16_t data);
+	HAL_StatusTypeDef writeBytes(uint8_t devAddr, uint8_t regAddr, uint8_t length, const uint8_t *data);
+	HAL_StatusTypeDef writeBytes16bit(uint8_t dev_addr, uint8_t reg_addr, uint16_t len, const uint8_t *data);
+
+	void ScanBus(OutStream *strm);
+	void showState(OutStream *strm);
+	void showMeas(OutStream *strm);
+	void ShowBusRegisters(OutStream *strm);
+
+	HAL_StatusTypeDef _InitHd();
+	HAL_StatusTypeDef InitHd();
+	void setAsGpio();
+	void setGpioSDA(GPIO_PinState PinState);
+	void setGpioSCL(GPIO_PinState PinState);
+	bool getGpioSDA();
+	bool getGpioSCL();
+	void gpioSCLWave();
+	bool rdBusyFlag();
 
 public:
-	static HAL_StatusTypeDef BusInit();
-	static HAL_StatusTypeDef BusRestart();
-	static HAL_StatusTypeDef BusUnlock();
+	static void funShowState(OutStream *strm, const char *cmd, void *arg);
+	static void funShowMeasure(OutStream *strm, const char *cmd, void *arg);
+	static void funScan(OutStream *strm, const char *cmd, void *arg);
+	static void funRestart(OutStream *strm, const char *cmd, void *arg);
+	static void funShowReg(OutStream *strm, const char *cmd, void *arg);
+	static void funUnblock(OutStream *strm, const char *cmd, void *arg);
+	static void funRdGpio(OutStream *strm, const char *cmd, void *arg);
+	static void funMakeWave(OutStream *strm, const char *cmd, void *arg);
+	static void funForChild(OutStream *strm, const char *cmd, void *arg);
 
-	static void shell(OutStream *strm, const char *cmd);
-	static void addDev(I2c1Dev *dev);
-	static void tick();
-	static int getBusRestartCnt() {
+public:
+	I2cBus(I2C_TypeDef *i2cDef);
+	HAL_StatusTypeDef BusRestart();
+	HAL_StatusTypeDef BusUnlock();
+
+	void shell(OutStream *strm, const char *cmd);
+	void addDev(I2cDev *dev);
+	void tick();
+	int getBusRestartCnt() {
 		return mBusRestartCnt;
 	}
-	static bool isError();
+	bool isError();
 };
 
 #endif /* I2CDEV_H_ */

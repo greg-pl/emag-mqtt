@@ -32,7 +32,6 @@ private:
 		STATUS_CMD_UKOWN = 0x81, //
 		STATUS_CMD_NOT_COMPLETE = 0x82, //
 
-
 		TM_AUTO_SEND = 2000, //
 		TM_AUTO_TRY = 500, // czas pomiędzy kolejnymi próbami wysłania
 		TM_MAX_REP = 200, // czas na przysłanie odpowiedzi
@@ -79,6 +78,7 @@ private:
 	int getFaceNr(int prevNr, float pm2);
 	void setState(int newState);
 	int getStateTm();
+	void ClrState();
 
 protected:
 	virtual void TxCpltCallback();
@@ -87,6 +87,13 @@ protected:
 
 public:
 	LedMatrix(int PortNr);
+	static void funShowState(OutStream *strm, const char *cmd, void *arg);
+	static void funClearState(OutStream *strm, const char *cmd, void *arg);
+	static void funGetInfo(OutStream *strm, const char *cmd, void *arg);
+	static void funSetLight(OutStream *strm, const char *cmd, void *arg);
+	static void funSetGraf(OutStream *strm, const char *cmd, void *arg);
+	static void funTestFace(OutStream *strm, const char *cmd, void *arg);
+
 	HAL_StatusTypeDef Init();
 
 	void tick();

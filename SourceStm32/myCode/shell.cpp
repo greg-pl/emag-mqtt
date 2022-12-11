@@ -36,9 +36,11 @@ extern DustSensorBase *dustInternSensor;
 extern MdbMasterDustTask *dustExternSensor;
 extern NoiseDetector *mdbMaster_1;
 extern MdbMasterTask *mdbMaster_2;
-extern SHT35DevPub *sht35;
-extern Bmp338DevPub *bmp338;
+extern SHT35Device *sht35;
+extern Bmp338Device *bmp338;
 extern LedMatrix *ledMatrix;
+extern I2cBus *i2cBus1;
+extern GasS873 *gasS873;
 
 //-------------------------------------------------------------------------------------------------------------------------
 // ShellConnection
@@ -413,14 +415,14 @@ void ShellTask::execAltChar(char altChar) {
 }
 
 extern const ShellItemFx mainMenuFx[];
-static void funShowState(OutStream *strm, const char *cmd);
-static void funShowHardware(OutStream *strm, const char *cmd);
+static void funShowState(OutStream *strm, const char *cmd, void *arg);
+static void funShowHardware(OutStream *strm, const char *cmd, void *arg);
 
 void ShellTask::execCmdLineEx(const char *cmd) {
 	char txt[100];
 	snprintf(txt, sizeof(txt), "AIR-PRO: MainMenu, NS=%s", config->data.P.SerialNr);
 
-	execMenuCmd(this, mainMenuFx, cmd, txt);
+	execMenuCmd(this, mainMenuFx, cmd, this, txt);
 }
 
 void ShellTask::execFunKey(FunKey funKey) {
@@ -431,10 +433,10 @@ void ShellTask::execFunKey(FunKey funKey) {
 		showHelpFx(this, "MainMenu", mainMenuFx);
 		break;
 	case fnF2:
-		funShowState(this, NULL);
+		funShowState(this, NULL, NULL);
 		break;
 	case fnF3:
-		funShowHardware(this, NULL);
+		funShowHardware(this, NULL, NULL);
 		break;
 
 	}
@@ -444,7 +446,7 @@ void ShellTask::execFunKey(FunKey funKey) {
 // Main Menu
 //-----------------------------------------------------------------------------------------------------------------------
 
-static void funShowState(OutStream *strm, const char *cmd) {
+static void funShowState(OutStream *strm, const char *cmd, void *arg) {
 	static int showCnt;
 	if (strm->oOpen(colWHITE)) {
 		strm->oMsg("--- %u ----------", showCnt++);
@@ -460,8 +462,8 @@ static void funShowState(OutStream *strm, const char *cmd) {
 		if (mdbMaster_1->isCfgNoiseOn()) {
 			strm->oMsg("NoiseSensor     :%s", ErrOk(mdbMaster_1->isError()));
 		}
-		if (mdbMaster_2->isAnyConfiguredData()) {
-			strm->oMsg("GasSensor       :%s", ErrOk(mdbMaster_2->isDataError()));
+		if (gasS873->isAnyConfiguredData()) {
+			strm->oMsg("GasSensor       :%s", ErrOk(gasS873->isDataError()));
 		}
 		strm->oMsg("Bmp338          :%s", ErrOk(bmp338->isError()));
 		strm->oMsg("Sht35           :%s", ErrOk(sht35->isError()));
@@ -479,7 +481,7 @@ static void funShowState(OutStream *strm, const char *cmd) {
 	}
 }
 
-static void funShowHardware(OutStream *strm, const char *cmd) {
+static void funShowHardware(OutStream *strm, const char *cmd, void *arg) {
 	static int showCnt;
 	if (strm->oOpen(colYELLOW)) {
 		strm->oMsg("--- %u ----------", showCnt++);
@@ -496,51 +498,51 @@ static void funShowHardware(OutStream *strm, const char *cmd) {
 
 }
 
-static void funReboot(OutStream *strm, const char *cmd) {
+static void funReboot(OutStream *strm, const char *cmd, void *arg) {
 	strm->oMsgX(colRED, "*** R E S E T ***");
 	reboot(1000);
 }
 
-static void funMenuConfig(OutStream *strm, const char *cmd) {
+static void funMenuConfig(OutStream *strm, const char *cmd, void *arg) {
 	config->shell(strm, cmd);
 }
 
 extern const ShellItemFx menuTimeFx[];
-static void funMenuTime(OutStream *strm, const char *cmd) {
-	execMenuCmd(strm, menuTimeFx, cmd, "Time Menu");
+static void funMenuTime(OutStream *strm, const char *cmd, void *arg) {
+	execMenuCmd(strm, menuTimeFx, cmd, arg, "Time Menu");
 }
 
 extern const ShellItemFx menuEthFx[];
-static void funMenuEth(OutStream *strm, const char *cmd) {
-	execMenuCmd(strm, menuEthFx, cmd, "Ethernet Menu");
+static void funMenuEth(OutStream *strm, const char *cmd, void *arg) {
+	execMenuCmd(strm, menuEthFx, cmd, arg, "Ethernet Menu");
 }
 
 extern const ShellItemFx menuNetFx[];
-static void funMenuIP(OutStream *strm, const char *cmd) {
-	execMenuCmd(strm, menuNetFx, cmd, "Net Menu");
+static void funMenuIP(OutStream *strm, const char *cmd, void *arg) {
+	execMenuCmd(strm, menuNetFx, cmd, arg, "Net Menu");
 }
 
-static void funMenuBG96(OutStream *strm, const char *cmd) {
+static void funMenuBG96(OutStream *strm, const char *cmd, void *arg) {
 	bg96->shell(strm, cmd);
 	//flgSendAny = true;
 }
-static void funMenuI2C(OutStream *strm, const char *cmd) {
-	I2c1Bus::shell(strm, cmd);
+static void funMenuI2C(OutStream *strm, const char *cmd, void *arg) {
+	i2cBus1->shell(strm, cmd);
 }
-static void funMenuDust(OutStream *strm, const char *cmd) {
+static void funMenuDust(OutStream *strm, const char *cmd, void *arg) {
 	if (config->data.P.dustInpType == dust_Intern) {
 		dustInternSensor->shell(strm, cmd);
 	} else {
 		dustExternSensor->shell(strm, cmd);
 	}
 }
-static void funMenuNoise(OutStream *strm, const char *cmd) {
+static void funMenuMdb1(OutStream *strm, const char *cmd, void *arg) {
 	mdbMaster_1->shell(strm, cmd);
 }
-static void funMenuGas(OutStream *strm, const char *cmd) {
+static void funMenuMdb2(OutStream *strm, const char *cmd, void *arg) {
 	mdbMaster_2->shell(strm, cmd);
 }
-static void funMenuLedMatrix(OutStream *strm, const char *cmd) {
+static void funMenuLedMatrix(OutStream *strm, const char *cmd, void *arg) {
 	if (ledMatrix != NULL) {
 		ledMatrix->shell(strm, cmd);
 	} else {
@@ -548,7 +550,7 @@ static void funMenuLedMatrix(OutStream *strm, const char *cmd) {
 	}
 }
 
-static void funShowTask(OutStream *strm, const char *cmd) {
+static void funShowTask(OutStream *strm, const char *cmd, void *arg) {
 	if (strm->oOpen(colWHITE)) {
 		char *bigbuf;
 		bigbuf = (char*) malloc(2000);
@@ -565,7 +567,7 @@ static void funShowTask(OutStream *strm, const char *cmd) {
 	}
 }
 
-static void funShowTaskEx(OutStream *strm, const char *cmd) {
+static void funShowTaskEx(OutStream *strm, const char *cmd, void *arg) {
 	TaskClassList::ShowList(strm);
 }
 
@@ -574,7 +576,7 @@ extern uint8_t _estack; /* Symbol defined in the linker script */
 extern uint32_t _Min_Stack_Size; /* Symbol defined in the linker script */
 void *mem_try = NULL;
 
-static void funShowMemUsage(OutStream *strm, const char *cmd) {
+static void funShowMemUsage(OutStream *strm, const char *cmd, void *arg) {
 	if (strm->oOpen(colWHITE)) {
 		if (mem_try == NULL)
 			mem_try = malloc(4);
@@ -601,28 +603,28 @@ static void funShowMemUsage(OutStream *strm, const char *cmd) {
 
 }
 
-static void funGlobData(OutStream *strm, const char *cmd) {
+static void funGlobData(OutStream *strm, const char *cmd, void *arg) {
 	GlobData::show(strm);
 }
-static void funJGlobData(OutStream *strm, const char *cmd) {
+static void funJGlobData(OutStream *strm, const char *cmd, void *arg) {
 	GlobData::showJson(strm);
 }
 
-static void funJGlobDef(OutStream *strm, const char *cmd) {
+static void funJGlobDef(OutStream *strm, const char *cmd, void *arg) {
 	GlobData::showDef(strm);
 }
 
-static void funLcdScr(OutStream *strm, const char *cmd) {
+static void funLcdScr(OutStream *strm, const char *cmd, void *arg) {
 	int v;
 	Token::getAsInt(&cmd, &v);
 	setLcdScrNr(v);
 }
-static void funLcdTime(OutStream *strm, const char *cmd) {
+static void funLcdTime(OutStream *strm, const char *cmd, void *arg) {
 	int v;
 	Token::getAsInt(&cmd, &v);
 	setLcdTime(v);
 }
-static void funNTC(OutStream *strm, const char *cmd) {
+static void funNTC(OutStream *strm, const char *cmd, void *arg) {
 	NTC::StartMeasure();
 	if (NTC::WaitForMeasEnd(500)) {
 		strm->oMsgX(colWHITE, "NTC: U=%.3f[V] R=%.2f[kom] temp=%.1f[deg]", NTC::nap, NTC::rez / 1000, NTC::temp);
@@ -640,8 +642,8 @@ const ShellItemFx mainMenuFx[] = { //
 				{ "bg", ">> menu BG96", funMenuBG96 }, //
 				{ "iic", ">> menu układów i2c", funMenuI2C }, //
 				{ "dust", ">> menu czujnika pyłów", funMenuDust }, //
-				{ "noise", ">> czujnik hałasu, menu modbus master X7", funMenuNoise }, //
-				{ "gas", ">> czujnik  gazów, menu modbus master X6", funMenuGas }, //
+				{ "noise", ">> czujnik hałasu, menu modbus master X7", funMenuMdb1 }, //
+				{ "gas", ">> czujnik  gazów, menu modbus master X6", funMenuMdb2 }, //
 				{ "matrix", ">> menu LedMatrix", funMenuLedMatrix }, //
 				{ "ps", "lista wątków", funShowTask }, //
 				{ "psx", "lista tasków", funShowTaskEx }, //
@@ -657,16 +659,16 @@ const ShellItemFx mainMenuFx[] = { //
 
 //--------EthMenu-----------------------------------------------------------------
 
-static void funEthStatus(OutStream *strm, const char *cmd) {
+static void funEthStatus(OutStream *strm, const char *cmd, void *arg) {
 
 }
-static void funEthResetPhy(OutStream *strm, const char *cmd) {
+static void funEthResetPhy(OutStream *strm, const char *cmd, void *arg) {
 	strm->oMsgX(colWHITE, "PHY Reset");
 	Hdw::phyReset(1);
 	osDelay(50);
 	Hdw::phyReset(0);
 }
-static void funEthPhyOnOff(OutStream *strm, const char *cmd) {
+static void funEthPhyOnOff(OutStream *strm, const char *cmd, void *arg) {
 	int val;
 	if (Token::getAsInt(&cmd, &val)) {
 		strm->oMsgX(colWHITE, "PHY power = %d", val);
@@ -698,7 +700,7 @@ const PhyRegItemDef phyRegTab[] = { //
 
 extern "C" void ethGetPhyReg(const uint16_t *adrTab, uint16_t *valTab);
 
-static void funEthShowPhy(OutStream *strm, const char *cmd) {
+static void funEthShowPhy(OutStream *strm, const char *cmd, void *arg) {
 	uint16_t adrTab[30];
 	uint16_t valTab[30];
 	int k = 0;
@@ -725,10 +727,9 @@ const ShellItemFx menuEthFx[] = { //
 				{ "reg", "pokaż rejestry PHY", funEthShowPhy }, //
 				{ NULL, NULL } };
 
-
 //--------TimeMenu-----------------------------------------------------------------
 
-static void funShowTime(OutStream *strm, const char *cmd) {
+static void funShowTime(OutStream *strm, const char *cmd, void *arg) {
 	TDATE tm;
 	char buf[30];
 	if (Rtc::ReadTime(&tm)) {
@@ -739,7 +740,7 @@ static void funShowTime(OutStream *strm, const char *cmd) {
 	}
 }
 
-static void funShowTimeInfo(OutStream *strm, const char *cmd) {
+static void funShowTimeInfo(OutStream *strm, const char *cmd, void *arg) {
 	TDATE tm;
 	char buf[30];
 	if (Rtc::ReadTime(&tm)) {
@@ -753,7 +754,7 @@ static void funShowTimeInfo(OutStream *strm, const char *cmd) {
 	strm->oMsgX(colGREEN, "Zródło ustawienia czasu: %s", getTmSrcName(config->data.R.rtcSetUpTime.timeSource));
 
 }
-static void funSetTime(OutStream *strm, const char *cmd) {
+static void funSetTime(OutStream *strm, const char *cmd, void *arg) {
 	TDATE tm;
 	if (TimeTools::parseTime(&cmd, &tm)) {
 		if (Rtc::SetTime(&tm)) {
@@ -768,7 +769,7 @@ static void funSetTime(OutStream *strm, const char *cmd) {
 		strm->oMsgX(colRED, "Time format error");
 }
 
-static void funSetDate(OutStream *strm, const char *cmd) {
+static void funSetDate(OutStream *strm, const char *cmd, void *arg) {
 	TDATE tm;
 	if (TimeTools::parseDate(&cmd, &tm)) {
 		if (Rtc::SetDate(&tm)) {
@@ -783,7 +784,7 @@ static void funSetDate(OutStream *strm, const char *cmd) {
 		strm->oMsgX(colRED, "Date format error");
 }
 
-static void funInitRtc(OutStream *strm, const char *cmd) {
+static void funInitRtc(OutStream *strm, const char *cmd, void *arg) {
 	Rtc::Init();
 	strm->oMsgX(colWHITE, "RtcInitStatus   :%s", HAL_getErrStr(Rtc::mRtcStatus));
 }
@@ -798,7 +799,7 @@ const ShellItemFx menuTimeFx[] = { //
 
 //--------NetMenu-----------------------------------------------------------------
 
-static void funIPStatus(OutStream *strm, const char *cmd) {
+static void funIPStatus(OutStream *strm, const char *cmd, void *arg) {
 	NetState netState;
 	char txt[20];
 
@@ -826,8 +827,7 @@ static void funIPStatus(OutStream *strm, const char *cmd) {
 	}
 }
 
-
-static void funIPRestart(OutStream *strm, const char *cmd) {
+static void funIPRestart(OutStream *strm, const char *cmd, void *arg) {
 	strm->oMsgX(colWHITE, "Network reconfig");
 	reconfigNet();
 }
@@ -844,7 +844,7 @@ void dns_found_cb(const char *name, const ip_addr_t *ipaddr, void *callback_arg)
 	}
 }
 
-static void funIPUseDns(OutStream *strm, const char *cmd) {
+static void funIPUseDns(OutStream *strm, const char *cmd, void *arg) {
 	Token::trim(&cmd);
 	int err = dns_gethostbyname(cmd, &globAddr, &dns_found_cb, NULL);
 	switch (err) {
@@ -863,7 +863,7 @@ static void funIPUseDns(OutStream *strm, const char *cmd) {
 }
 
 int Ping(ip4_addr_t addr, int length);
-static void funIPPing(OutStream *strm, const char *cmd) {
+static void funIPPing(OutStream *strm, const char *cmd, void *arg) {
 	Token::trim(&cmd);
 
 	ip4_addr_t addr;
@@ -877,11 +877,10 @@ static void funIPPing(OutStream *strm, const char *cmd) {
 
 const ShellItemFx menuNetFx[] = { //
 		{ "s", "pokaż stan", funIPStatus }, //
-				{ "restart", "rekonfiguruj net", funIPRestart}, //
-				{ "getip", "użyj DNS", funIPUseDns}, //
-				{ "ping", "ping", funIPPing}, //
+				{ "restart", "rekonfiguruj net", funIPRestart }, //
+				{ "getip", "użyj DNS", funIPUseDns }, //
+				{ "ping", "ping", funIPPing }, //
 				{ NULL, NULL } };
-
 
 //-----------------------------------------------------------------------------------
 
@@ -897,7 +896,6 @@ u32_t sys_stop_tickcount(u32_t ref) {
 	return HAL_GetTick() - ref;
 
 }
-
 
 #define PING_TIMEOUT 1000
 /*----------------------------------------------------------------------------*/
@@ -964,7 +962,7 @@ int Ping(ip4_addr_t addr, int length)
 					osDelay(5);
 					err = recvfrom(hSocket, reply, sizeof(reply), 0, (struct sockaddr* ) &from, (socklen_t* ) &fromlen);
 
-				} while ((err > 0) && ((pechoreply->id != pecho->id) || (pechoreply->seqno != pecho->seqno)) && (sys_stop_tickcount(ulTickCount) <= timeout));
+				} while ((err > 0) && ((pechoreply->id != pecho->id) || (pechoreply->seqno != pecho->seqno)) && (sys_stop_tickcount(ulTickCount) <= (u32_t)timeout));
 				ulTickCount = sys_stop_tickcount(ulTickCount);
 
 				/* Si le "ping" est bien reçu... */

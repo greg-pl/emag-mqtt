@@ -35,7 +35,6 @@ private:
 		FiltrIR *filtrIR;
 	} noiseData;
 
-	bool execMyMenuItem(OutStream *strm, int idx, const char *cmd);
 	char gtxt[200]; //używane przez "showMeas"
 	void showMeas(OutStream *strm);
 
@@ -45,12 +44,14 @@ protected:
 
 	virtual void onReciveData(bool replOK, uint8_t mdbFun, const uint8_t *tab, int regCnt);
 	virtual void showState(OutStream *strm);
-	virtual bool execMenuItem(OutStream *strm, int idx, const char *cmd);
-	virtual const ShellItem* getMenu();
 	virtual const char* getMenuName();
+	virtual const char* getDevName();
+	virtual const ShellItemFx* getMenuFx();
 
 public:
 	NoiseDetector(int mdbNr, int portNr);
+	static void funShowMeasure(OutStream *strm, const char *cmd, void *arg);
+
 	bool getNoiseValue(float *val);
 	bool getNoiseValue(int filtrType, float *val);
 	bool isCfgNoiseOn();

@@ -207,6 +207,16 @@ private:
 public:
 	CfgRec data;
 	Config();
+	static void funList(OutStream *strm, const char *cmd, void *arg);
+	static void funSet(OutStream *strm, const char *cmd, void *arg);
+	static void funDefault(OutStream *strm, const char *cmd, void *arg);
+	static void funSave(OutStream *strm, const char *cmd, void *arg);
+	static void funSaveFlash(OutStream *strm, const char *cmd, void *arg);
+	static void funInit(OutStream *strm, const char *cmd, void *arg);
+	static void funInitFlash(OutStream *strm, const char *cmd, void *arg);
+	static void funShowDef(OutStream *strm, const char *cmd, void *arg);
+	static void funHelp(OutStream *strm, const char *cmd, void *arg);
+
 	HAL_StatusTypeDef Init(OutStream *strm);
 	void Zero();
 	void Default();

@@ -17,16 +17,18 @@
 #include <DustSensorBase.h>
 #include <I2cDev.h>
 #include <MdbMasterTask.h>
-#include "MdbDustSensor.h"
-#include <NoiseDetector.h>
+#include "_SensorDrivers.h"
+
 
 extern Bg96Driver *bg96;
-extern SHT35DevPub *sht35;
-extern Bmp338DevPub *bmp338;
+extern SHT35Device *sht35;
+extern Bmp338Device *bmp338;
 extern DustSensorBase *dustInternSensor;
 extern MdbMasterDustTask *dustExternSensor;
 extern NoiseDetector *mdbMaster_1;
 extern MdbMasterTask *mdbMaster_2;
+extern GasS873 *gasS873;
+
 
 GlobDtRec GlobData::dt;
 osMutexId GlobData::mGlobMutex = NULL;
@@ -190,15 +192,15 @@ void GlobData::FillMeas(float *tab) {
 	if (mdbMaster_2 != NULL) {
 		float val;
 		//gas
-		mdbMaster_2->getMeasValue(ssNO2, &val);
+		gasS873->getMeasValue(ssNO2, &val);
 		tab[ssNO2] = val;
-		mdbMaster_2->getMeasValue(ssO3, &val);
+		gasS873->getMeasValue(ssO3, &val);
 		tab[ssO3] = val;
-		mdbMaster_2->getMeasValue(ssCO, &val);
+		gasS873->getMeasValue(ssCO, &val);
 		tab[ssCO] = val;
-		mdbMaster_2->getMeasValue(ssCO2, &val);
+		gasS873->getMeasValue(ssCO2, &val);
 		tab[ssCO2] = val;
-		mdbMaster_2->getMeasValue(ssSO2, &val);
+		gasS873->getMeasValue(ssSO2, &val);
 		tab[ssSO2] = val;
 	}
 
@@ -241,7 +243,7 @@ void GlobData::Fill() {
 		strncpy(dt.info, config->data.R.DevInfo, sizeof(dt.info));
 		dt.pktNr = bg96->state.mqtt.mSendMsgID;
 		Rtc::ReadTime(&dt.time);
-		mdbMaster_2->getDeviceStatusTxt(dt.komoraSt, sizeof(dt.komoraSt));
+		gasS873->getDeviceStatusTxt(dt.komoraSt, sizeof(dt.komoraSt));
 		dt.tempNTC = NTC::temp;
 		strncpy(dt.hsn, config->data.P.SerialNr, sizeof(dt.hsn));
 

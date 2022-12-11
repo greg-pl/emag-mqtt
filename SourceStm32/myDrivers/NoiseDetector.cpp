@@ -31,8 +31,6 @@ NoiseDetector::NoiseDetector(int mdbNr, int portNr) :
 	memset(&noiseData, 0, sizeof(noiseData));
 
 	strcpy(autoRd.statusTxt, "Start");
-	menu.tab = NULL;
-	menu.baseCnt = 0;
 }
 
 bool NoiseDetector::isCfgNoiseOn() {
@@ -165,41 +163,26 @@ bool NoiseDetector::getNoiseValue(int filtrType, float *val) {
 	}
 	*val = v;
 	return true;
-
 }
 
-const ShellItem menuNoise[] = { //
-		{ "m", "pomiary" }, //
+void NoiseDetector::funShowMeasure(OutStream *strm, const char *cmd, void *arg) {
+	NoiseDetector *dev = (NoiseDetector*) arg;
+	dev->showMeas(strm);
+}
 
+const ShellItemFx menuNoiseFx[] = { //
+		{ "m", "pomiary", NoiseDetector::funShowMeasure }, //
 				{ NULL, NULL } };
 
-const ShellItem* NoiseDetector::getMenu() {
-	if (menu.tab == NULL) {
-		buildMenu(menuNoise);
-	}
-	return menu.tab;
-}
-
-bool NoiseDetector::execMyMenuItem(OutStream *strm, int idx, const char *cmd) {
-	switch (idx) {
-	case 0:  //m
-		showMeas(strm);
-		break;
-	default:
-		return false;
-	}
-	return true;
-}
-
-bool NoiseDetector::execMenuItem(OutStream *strm, int idx, const char *cmd) {
-	bool q = MdbMasterTask::execMenuItem(strm, idx, cmd);
-	if (!q) {
-		q = execMyMenuItem(strm, idx - menu.baseCnt, cmd);
-	}
-	return q;
+const ShellItemFx* NoiseDetector::getMenuFx() {
+	return menuNoiseFx;
 }
 
 const char* NoiseDetector::getMenuName() {
 	return "Noise sensor Menu";
+}
+const char* NoiseDetector::getDevName() {
+	return "noise";
+
 }
 

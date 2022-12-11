@@ -27,8 +27,6 @@
 
 #include "_SensorDrivers.h"
 
-
-
 extern IWDG_HandleTypeDef hiwdg;
 
 EventGroupHandle_t sysEvents;
@@ -37,14 +35,16 @@ ShellTask *shellTask;
 NoiseDetector *mdbMaster_1;
 MdbMasterTask *mdbMaster_2;
 LedMatrix *ledMatrix;
+GasS873 *gasS873;
+GasS873 *gasS873X;
 
 Config *config;
 Bg96Driver *bg96;
-SHT35DevPub *sht35;
-Bmp338DevPub *bmp338;
+SHT35Device *sht35;
+Bmp338Device *bmp338;
 DustSensorBase *dustInternSensor;
 MdbMasterDustTask *dustExternSensor;
-
+I2cBus *i2cBus1;
 SSD1306Dev *lcd;
 VerInfo mSoftVer;
 
@@ -494,7 +494,7 @@ bool DefaultTask::getHdwError() {
 	} else {
 		q |= dustExternSensor->isError();
 	}
-	q |= I2c1Bus::isError();
+	q |= i2cBus1->isError();
 
 	if (mdbMaster_1->isCfgNoiseOn()) {
 		q |= mdbMaster_1->isError();
@@ -548,16 +548,15 @@ void DefaultTask::ThreadFunc() {
 	xEventGroupWaitBits(sysEvents, EVENT_TERM_RDY, false, false, 1000000);
 	HAL_IWDG_Refresh(&hiwdg);
 
-	I2c1Bus::BusInit();
+	i2cBus1 = new I2cBus(I2C1);
 
-	bmp338 = Bmp338DevPub::createDev(0xEC);
-	sht35 = SHT35DevPub::createDev(0x88);
-	lcd = new SSD1306Dev(0x78);
 	HAL_IWDG_Refresh(&hiwdg);
 
-	I2c1Bus::addDev(bmp338);
-	I2c1Bus::addDev(sht35);
-	I2c1Bus::addDev(lcd);
+	sht35 = new SHT35Device(i2cBus1, 0x88, "sht");
+	bmp338 = new Bmp338Device(i2cBus1, 0xEC, "bmp");
+	lcd = new SSD1306Dev(i2cBus1, 0x78, "ssd");
+
+	HAL_IWDG_Refresh(&hiwdg);
 
 	config = new Config();
 	config->Init(shellTask);
@@ -614,7 +613,6 @@ void DefaultTask::ThreadFunc() {
 	memset(&lcdState, 0, sizeof(lcdState));
 	memset(&heater, 0, sizeof(heater));
 
-
 	lcdState.cfgSwitchTime = 2000;
 	lcdState.cfgScrNr = 1;
 	lcdState.scrNr = lcdState.cfgScrNr;
@@ -636,7 +634,7 @@ void DefaultTask::ThreadFunc() {
 			doNetStatusChg();
 
 		}
-		I2c1Bus::tick();
+		i2cBus1->tick();
 		if (config->data.P.dustInpType == dust_Intern) {
 			dustInternSensor->tick();
 		}
@@ -763,9 +761,12 @@ void uMainCont() {
 	mdbMaster_1->Start(9600, TUart::parityNONE);
 	mdbMaster_1->setPower(true);
 
-	mdbMaster_2 = new GasS873(MdbMasterTask::MDB_2, TUart::myUART3);
+	mdbMaster_2 = new MdbMasterTask(MdbMasterTask::MDB_2, TUart::myUART3);
 	mdbMaster_2->Start(9600, TUart::parityEVEN);
 	mdbMaster_2->setPower(true);
+
+	gasS873 = new GasS873(mdbMaster_2, config->data.R.rest.gasDevMdbNr, "gas");
+	gasS873X = new GasS873(mdbMaster_2, config->data.R.rest.gasDevMdbNr, "g2");
 
 	HAL_IWDG_Refresh(&hiwdg);
 

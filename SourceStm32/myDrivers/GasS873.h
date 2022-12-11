@@ -25,7 +25,7 @@ typedef struct {
 
 
 
-class GasS873: public MdbMasterTask {
+class GasS873: public MdbDev {
 private:
 
 	enum {
@@ -68,19 +68,21 @@ private:
 	MeasType  getMeasType(uint8_t sensorType, uint8_t verTyp);
 protected:
 	virtual void loopFunc();
-	virtual void doOnTimeOut();
+	virtual void onTimeOut();
 
 	virtual void onReciveData(bool replOK, uint8_t mdbFun, const uint8_t *tab, int regCnt);
 	virtual void showState(OutStream *strm);
-	virtual bool execMenuItem(OutStream *strm, int idx, const char *cmd);
-	virtual const ShellItem* getMenu();
 	virtual const char* getMenuName();
+	virtual const char* getDevName();
+	virtual const ShellItemFx* getMenuFx();
+
 
 	const char* getSensValidStr(uint16_t status);
 	bool isMeasValid(uint16_t status);
 
 public:
-	GasS873(int mdbNr, int portNr);
+	GasS873(MdbMasterTask *mdbTask, uint8_t mdbAdr, const char *name);
+	static void funShowMeasure(OutStream *strm, const char *cmd, void *arg);
 public:
 	virtual bool getMeasValue(MeasType measType, float *val);
 	virtual bool getMeasValue(MeasType measType, int filtrType, float *val);

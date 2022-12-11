@@ -12,7 +12,7 @@
 
 class MdbMasterDustTask: public MdbMasterTask {
 private:
-	enum{
+	enum {
 		TM_AUTO_RD = 2000, // czas automatycznego odczytu czujnika hałasu
 		MAX_TIME_REPL = 1500, // maksymalny czas odpowiedzi
 		TIME_MEAS_VALID = 5000, //
@@ -20,12 +20,12 @@ private:
 	};
 	struct {
 		uint16_t devID; // ilość odczytana
-		int  serialNumer; //ilośc odczytana ograniczona do MAX_DEV_CNT
-		int  productYear;
-		struct{
+		int serialNumer; //ilośc odczytana ograniczona do MAX_DEV_CNT
+		int productYear;
+		struct {
 			int ver;
 			int rev;
-		}firmware;
+		} firmware;
 		int failureCode;
 		float temperature;
 		bool heaterOn;
@@ -52,10 +52,7 @@ private:
 		uint32_t heaterOrderLastSendTick;
 	} autoRd;
 
-
-
 	void showMeas(OutStream *strm);
-	bool execMyMenuItem(OutStream *strm, int idx, const char *cmd);
 	bool isMeasValid();
 
 protected:
@@ -64,12 +61,16 @@ protected:
 
 	virtual void onReciveData(bool replOK, uint8_t mdbFun, const uint8_t *tab, int regCnt);
 	virtual void showState(OutStream *strm);
-	virtual bool execMenuItem(OutStream *strm, int idx, const char *cmd);
-	virtual const ShellItem* getMenu();
 	virtual const char* getMenuName();
+	virtual const char* getDevName();
+	virtual const ShellItemFx* getMenuFx();
 
 public:
 	MdbMasterDustTask(int mdbNr, int portNr);
+	static void funShowMeasure(OutStream *strm, const char *cmd, void *arg);
+	static void funHeaterOn(OutStream *strm, const char *cmd, void *arg);
+	static void funHeaterOff(OutStream *strm, const char *cmd, void *arg);
+
 	HAL_StatusTypeDef getMeas(DustMeasRec *meas);
 	void setHeater(ReqSrc reqSrc, bool heaterOn);
 	bool isCfgDustOn();

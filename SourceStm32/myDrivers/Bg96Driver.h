@@ -146,8 +146,8 @@ enum {
 	nnFOpen = (1 << ixFOpen),
 	nnCMTI = (1 << ixCMTI),
 	nnCMGR = (1 << ixCMGR),
-	nnQSimStat = (1<<xQSimStat),
-	nnCtze = (1<<xCtze),
+	nnQSimStat = (1 << xQSimStat),
+	nnCtze = (1 << xCtze),
 	nnNoURC = (1 << ixNoURC),
 };
 
@@ -170,6 +170,16 @@ typedef struct {
 	} sslCfg;
 	int smsIdx;
 } ReciveRec;
+
+typedef struct {
+	volatile bool flagSend;
+	volatile bool flagSendText;
+	char nrTel[20];
+	char msg[200];
+	uint32_t reciveTick;
+} SendSmsRec;
+
+
 
 class Bg96Driver: public TaskClass {
 private:
@@ -267,7 +277,6 @@ private:
 	bool getDTR();
 private:
 	bool setEchoMode(const char *cmd);
-	void setEchoMode(OutStream *strm, const char *cmd);
 	void showRxEcho(int idx, const char *txt);
 	void zeroState();
 	void clearRecDt();
@@ -308,7 +317,6 @@ private:
 	int closeBGFile(int fileHandle);
 	void execNewSMS();
 
-
 	void parseCreg(const char *ptr);
 	void parseNtpTime(const char *ptr);
 	bool parseTimeStr(const char *ptr, TDATE *tm);
@@ -336,7 +344,6 @@ private:
 	void mqttLoopFun();
 	void smsLoopFun();
 	void smsSendLoopFun();
-
 
 protected:
 	//TaskClass
@@ -422,23 +429,40 @@ public:
 			uint32_t reciveTick;
 		} sms;
 
-		struct {
-			volatile bool flagSend;
-			volatile bool flagSendText;
-			char nrTel[20];
-			char msg[200];
-			uint32_t reciveTick;
-		} sendSms;
+		SendSmsRec sendSms;
 
 		struct {
 			int errorCnt;
 			int uartRestartCnt;
-		}uart;
+		} uart;
 
 	} state;
 
 	Bg96Driver();
 	void shell(OutStream *strem, const char *cmd);
+	static void funShowState(OutStream *strm, const char *cmd, void *arg);
+	static void funShowHdwState(OutStream *strm, const char *cmd, void *arg);
+	static void funInfo(OutStream *strm, const char *cmd, void *arg);
+	static void funGpsInfo(OutStream *strm, const char *cmd, void *arg);
+	static void funOnOff3_8(OutStream *strm, const char *cmd, void *arg);
+	static void funSetResetLine(OutStream *strm, const char *cmd, void *arg);
+	static void funsetPowerKey(OutStream *strm, const char *cmd, void *arg);
+	static void funSetDtr(OutStream *strm, const char *cmd, void *arg);
+	static void funStop(OutStream *strm, const char *cmd, void *arg);
+	static void funStart(OutStream *strm, const char *cmd, void *arg);
+	static void funRestart(OutStream *strm, const char *cmd, void *arg);
+	static void funSetPowerUp(OutStream *strm, const char *cmd, void *arg);
+	static void funSendCmd(OutStream *strm, const char *cmd, void *arg);
+	static void funSetEcho(OutStream *strm, const char *cmd, void *arg);
+	static void funShowSslCfg(OutStream *strm, const char *cmd, void *arg);
+	static void funSetSslCfg(OutStream *strm, const char *cmd, void *arg);
+	static void funGetNtp(OutStream *strm, const char *cmd, void *arg);
+	static void funGetGps(OutStream *strm, const char *cmd, void *arg);
+	static void funSendMqtt(OutStream *strm, const char *cmd, void *arg);
+	static void funOpenMqtt(OutStream *strm, const char *cmd, void *arg);
+	static void funCloseMqtt(OutStream *strm, const char *cmd, void *arg);
+	static void funSendSms(OutStream *strm, const char *cmd, void *arg);
+
 public:
 	BgPhase getPhase() {
 		return mPhase;
@@ -446,16 +470,16 @@ public:
 	bool isMqttSendingOk();
 	bool isMqttAutoRun();
 
-	bool isSimCardInserted(){
+	bool isSimCardInserted() {
 		return state.rdy.simCardInserted;
 	}
-	bool isNetworkRegistered(){
+	bool isNetworkRegistered() {
 		return state.rdy.isCReg;
 	}
-	bool isIPready(){
+	bool isIPready() {
 		return state.rdy.iAct;
 	}
-	bool isMqttSvrOpened(){
+	bool isMqttSvrOpened() {
 		return state.mqtt.svrOpened;
 	}
 

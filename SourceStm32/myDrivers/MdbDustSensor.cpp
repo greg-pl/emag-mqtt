@@ -148,6 +148,13 @@ void MdbMasterDustTask::onReciveData(bool replOK, uint8_t mdbFun, const uint8_t 
 	}
 }
 
+void MdbMasterDustTask::setHeater(ReqSrc reqSrc, bool heaterOn) {
+	uint16_t w = 0;
+	if (heaterOn)
+		w = HEATER_CONST_ON;
+	sendMdbFun6(reqSrc, config->data.R.rest.dustDevMdbNr, 8, w);
+}
+
 void MdbMasterDustTask::showState(OutStream *strm) {
 	MdbMasterTask::showState(strm);
 	if (strm->oOpen(colWHITE)) {
@@ -204,55 +211,44 @@ void MdbMasterDustTask::showMeas(OutStream *strm) {
 	}
 }
 
-const ShellItem menuExternDust[] = { //
-		{ "m", "pomiary" }, //
-				{ "heater_on", "włączenie grzania" }, //
-				{ "heater_off", "wyłączenie grzania" }, //
+void MdbMasterDustTask::funShowMeasure(OutStream *strm, const char *cmd, void *arg) {
+	MdbMasterDustTask *dev = (MdbMasterDustTask*) arg;
+	dev->showMeas(strm);
+}
+
+void MdbMasterDustTask::funHeaterOn(OutStream *strm, const char *cmd, void *arg) {
+	MdbMasterDustTask *dev = (MdbMasterDustTask*) arg;
+	dev->setHeater(reqCONSOLA, true);
+
+}
+
+void MdbMasterDustTask::funHeaterOff(OutStream *strm, const char *cmd, void *arg) {
+	MdbMasterDustTask *dev = (MdbMasterDustTask*) arg;
+	dev->setHeater(reqCONSOLA, false);
+}
+
+
+const ShellItemFx menuExternDustFx[] = { //
+		{ "m", "pomiary",MdbMasterDustTask::funShowMeasure }, //
+				{ "heater_on", "włączenie grzania", MdbMasterDustTask::funHeaterOn }, //
+				{ "heater_off", "wyłączenie grzania", MdbMasterDustTask::funHeaterOff }, //
 
 				{ NULL, NULL } };
 
-const ShellItem* MdbMasterDustTask::getMenu() {
-	if (menu.tab == NULL) {
-		buildMenu(menuExternDust);
-	}
-	return menu.tab;
+const ShellItemFx* MdbMasterDustTask::getMenuFx(){
+	return menuExternDustFx;
 }
 
-void MdbMasterDustTask::setHeater(ReqSrc reqSrc, bool heaterOn) {
-	uint16_t w = 0;
-	if (heaterOn)
-		w = HEATER_CONST_ON;
-	sendMdbFun6(reqSrc, config->data.R.rest.dustDevMdbNr, 8, w);
-}
-
-bool MdbMasterDustTask::execMyMenuItem(OutStream *strm, int idx, const char *cmd) {
-	switch (idx) {
-	case 0:  //m
-		showMeas(strm);
-		break;
-	case 1:  //heater_on
-		setHeater(reqCONSOLA, true);
-		break;
-	case 2:  //heater_off
-		setHeater(reqCONSOLA, false);
-		break;
-	default:
-		return false;
-	}
-	return true;
-}
-
-bool MdbMasterDustTask::execMenuItem(OutStream *strm, int idx, const char *cmd) {
-	bool q = MdbMasterTask::execMenuItem(strm, idx, cmd);
-	if (!q) {
-		q = execMyMenuItem(strm, idx - menu.baseCnt, cmd);
-	}
-	return q;
-}
 
 const char* MdbMasterDustTask::getMenuName() {
 	return "Extern Dust Menu";
 }
+
+const char* MdbMasterDustTask::getDevName()
+{
+	return "dust";
+}
+
 
 bool MdbMasterDustTask::isError() {
 	return ((autoRd.redTick == 0) || (HAL_GetTick() - autoRd.redTick > TIME_MEAS_VALID));

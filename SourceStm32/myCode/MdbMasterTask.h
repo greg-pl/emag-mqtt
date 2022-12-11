@@ -69,8 +69,65 @@ typedef struct {
 	bool dat;
 } MsgV;
 
+#define MAX_VAL_CNT  10  // maksymalna ilość rejestrów dla funcji 16
+
+typedef struct {
+	uint8_t devNr;
+	uint8_t fun;
+	uint16_t regAdr;
+	uint16_t regCnt;
+	uint16_t regVal[MAX_VAL_CNT];
+} ReqConsola;
+
+class MdbMasterTask;
+
+class MdbDev {
+	friend class MdbMasterTask;
+
+protected:
+	MdbMasterTask *mMdb;
+	uint8_t mAdr;
+	char mName[16];
+
+	virtual void loopFunc()=0;
+	virtual void onTimeOut()=0;
+
+	virtual void onReciveData(bool replOK, uint8_t mdbFun, const uint8_t *tab, int regCnt)=0;
+	virtual void showState(OutStream *strm)=0;
+	virtual const char* getMenuName()=0;
+	virtual const char* getDevName()=0;
+	virtual const ShellItemFx* getMenuFx()=0;
+	virtual void shell(OutStream *strm, const char *cmd);
+
+protected:
+	uint16_t GetWord(const uint8_t *p);
+	bool isCurrenReqEmpty();
+	void sendMdbFun3(ReqSrc reqSrc, uint8_t DevNr, uint16_t regAdr, uint16_t regCnt);
+	void sendMdbFun4(ReqSrc reqSrc, uint8_t DevNr, uint16_t regAdr, uint16_t regCnt);
+	void sendMdbFun6(ReqSrc reqSrc, uint8_t DevNr, uint16_t regAdr, uint16_t regVal);
+	void sendMdbFun16(ReqSrc reqSrc, uint8_t DevNr, uint16_t regAdr, uint16_t regCnt, uint16_t *regTab);
+
+public:
+	MdbDev(MdbMasterTask *mdbTask, uint8_t mdbAdr, const char *name);
+	virtual bool isAnyConfiguredData() {
+		return false;
+	}
+	virtual bool isDataError() {
+		return false;
+	}
+	virtual bool getMeasValue(MeasType measType, float *val) {
+		return false;
+	}
+	virtual bool getMeasValue(MeasType measType, int filtrType, float *val) {
+		return false;
+	}
+	virtual void getDeviceStatusTxt(char *txt, int max) {
+
+	}
+};
 
 class MdbMasterTask: public TaskClass {
+	friend class MdbDev;
 public:
 	enum {
 		MDB_1 = 1, MDB_2 = 2, MDB_3 = 3,
@@ -79,12 +136,20 @@ public:
 	enum {
 		SIGNAL_RXCHAR = 0x01, //
 		SIGNAL_CMD = 0x02, //
+		MAX_DEV = 4, //
 	};
 private:
-	enum {
-		MAX_VAL_CNT = 10, // maksymalna ilość rejestrów dla funcji 16
-		MAX_MDB_REPL_TM = 1000, // maksymalny czas na odpowiedz -> 1[sek]
+	struct {
+		int cnt;
+		MdbDev *tab[MAX_DEV];
+	} devs;
+	struct {
+		ShellItemFx *menuTab;
+		void **argTab;
+	} menuExp;
 
+	enum {
+		MAX_MDB_REPL_TM = 1000, // maksymalny czas na odpowiedz -> 1[sek]
 	};
 	MdbUart *mUart;
 
@@ -94,13 +159,13 @@ private:
 	void SetWord(uint8_t *p, uint16_t w);
 	void proceedRecFrame();
 	void sendConsolaReq();
+	void setConsolaReq(ReqConsola *req);
+	void doOnReciveData(bool replOK, uint8_t mdbFun, const uint8_t *tab, int regCnt);
+	void doOnTimeOut();
+	void addDev(MdbDev *dev);
 
 protected:
-	struct {
-		ShellItem *tab;
-		int baseCnt;
-	} menu;
-	void buildMenu(const ShellItem *toAddMenu);
+
 	void buidMsgRec(MsgV *m);
 
 protected:
@@ -112,6 +177,7 @@ protected:
 	void sendMdbFun16(ReqSrc reqSrc, uint8_t DevNr, uint16_t regAdr, uint16_t regCnt, uint16_t *regTab);
 
 	int mMdbNr;
+
 	int mDbgLevel;
 	struct {
 		struct {
@@ -126,55 +192,40 @@ protected:
 		int timeOutCnt;
 	} state;
 
-	struct {
-		uint8_t devNr;
-		uint8_t fun;
-		uint16_t regAdr;
-		uint16_t regCnt;
-		uint16_t regVal[MAX_VAL_CNT];
-	} reqConsola;
+	ReqConsola reqConsola;
 
 protected:
 	virtual void ThreadFunc();
-	virtual void loopFunc() {
-	}
-	virtual void doOnTimeOut() {
 
+	void showState(OutStream *strm);
+	const char* getMenuName();
+	const ShellItemFx* getMenuFx() {
+		return NULL;
 	}
-
-	virtual void showState(OutStream *strm);
-	virtual void onReciveData(bool replOK, uint8_t mdbFun, const uint8_t *tab, int regCnt) {
-	}
-	virtual bool execMenuItem(OutStream *strm, int idx, const char *cmd);
-	virtual const ShellItem* getMenu();
-	virtual const char* getMenuName();
 
 public:
 	MdbMasterTask(int mdbNr, int portNr);
+	static void funDbgLevel(OutStream *strm, const char *cmd, void *arg);
+	static void funShowState(OutStream *strm, const char *cmd, void *arg);
+	static void funOnOffPower(OutStream *strm, const char *cmd, void *arg);
+	static void funRdReg(OutStream *strm, const char *cmd, void *arg);
+	static void funRdAnalogInp(OutStream *strm, const char *cmd, void *arg);
+	static void funWdReg(OutStream *strm, const char *cmd, void *arg);
+	static void funWrMulReg(OutStream *strm, const char *cmd, void *arg);
+	static void funForChild(OutStream *strm, const char *cmd, void *arg);
+
+
 	void Start(int BaudRate, int parity);
 	void shell(OutStream *strm, const char *cmd);
 	void setPower(bool pwr);
 	bool getPower();
 	bool getPowerFlt();
-public:
-	virtual bool isAnyConfiguredData(){
-		return false;
+	int getTimeOutCnt(){
+		return state.timeOutCnt;
 	}
-	virtual bool isDataError(){
-		return false;
-	}
-	virtual bool getMeasValue(MeasType measType, float *val){
-		return false;
-	}
-	virtual bool getMeasValue(MeasType measType, int filtrType, float *val){
-		return false;
-	}
-	virtual void getDeviceStatusTxt(char *txt, int max){
 
-	}
+	bool isAnyConfiguredData();
+	bool isDataError();
 };
-
-
-
 
 #endif /* MDBMASTERTASK_H_ */

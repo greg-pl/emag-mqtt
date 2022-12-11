@@ -37,11 +37,9 @@ DustPMSA::DustPMSA(bool formal_exist) :
 
 }
 
-
-void DustPMSA::startRecive(){
+void DustPMSA::startRecive() {
 	HAL_UART_Receive_IT(&mHuart, &rxRec.mRecByte, 1);
 }
-
 
 HAL_StatusTypeDef DustPMSA::Init(SignaledClass *signObj) {
 	mSignObj = signObj;
@@ -330,86 +328,85 @@ void DustPMSA::showState(OutStream *strm) {
 		strm->oMsg("recFrameLenErr=%u", state.recFrameLenErr);
 		strm->oMsg("powerOffCnt=%u", state.powerOffCnt);
 
-
 		strm->oClose();
 	}
 }
 
-const ShellItem menuDust[] = { //
-		{ "s", "stan" }, //
-				{ "pwr", "ustaw zasilanie czujnika" }, //
-				{ "get", "send get measure" }, //
-				{ "wakeup", "wakeup sensor" }, //
-				{ "sleep", "sleep sensor" }, //
-				{ "active", "set active mode" }, //
-				{ "passive", "set passive mode" }, //
-				{ "hd_sleep", "set hardware sleep line" }, //
-				{ "meas", "pokaz n pomiarów" }, //
-				{ "clrCnt", "zeruj liczniki statystyki" }, //
+void DustPMSA::clrState() {
+
+	state.loopCnt = 0;
+	mIrqCnt = 0;
+	state.txCmplCnt = 0;
+	state.rxCnt = 0;
+	state.recFrameCnt = 0;
+	state.recFrameSumOkCnt = 0;
+	state.recFrameLenErr = 0;
+	state.powerOffCnt = 0;
+}
+
+void DustPMSA::funShowState(OutStream *strm, const char *cmd, void *arg) {
+	DustPMSA *dev = (DustPMSA*) arg;
+	dev->showState(strm);
+}
+void DustPMSA::funSetPower(OutStream *strm, const char *cmd, void *arg) {
+	int a;
+	Token::getAsInt(&cmd, &a);
+	Hdw::dustSensorOn(a);
+	strm->oMsg("DustPower=%u", a);
+}
+void DustPMSA::funGetMeas(OutStream *strm, const char *cmd, void *arg) {
+	DustPMSA *dev = (DustPMSA*) arg;
+	dev->sendGetMeasure();
+}
+void DustPMSA::funWakeup(OutStream *strm, const char *cmd, void *arg) {
+	DustPMSA *dev = (DustPMSA*) arg;
+	dev->sendWakeUp();
+}
+
+void DustPMSA::funGoSleep(OutStream *strm, const char *cmd, void *arg) {
+	DustPMSA *dev = (DustPMSA*) arg;
+	dev->sendGoSleep();
+}
+void DustPMSA::funSetActiveMode(OutStream *strm, const char *cmd, void *arg) {
+	DustPMSA *dev = (DustPMSA*) arg;
+	dev->sendSetActiveMode();
+}
+void DustPMSA::funSetPassiveMode(OutStream *strm, const char *cmd, void *arg) {
+	DustPMSA *dev = (DustPMSA*) arg;
+	dev->sendSetPassiveMode();
+}
+void DustPMSA::funSetHdSleep(OutStream *strm, const char *cmd, void *arg) {
+	int a;
+	Token::getAsInt(&cmd, &a);
+	Hdw::dustSleepOn(a);
+	strm->oMsg("DustHDSleep=%u", a);
+}
+void DustPMSA::funShowNmMeas(OutStream *strm, const char *cmd, void *arg) {
+	DustPMSA *dev = (DustPMSA*) arg;
+	dev->mShowMeasCnt = 1;
+	Token::getAsInt(&cmd, &dev->mShowMeasCnt);
+	strm->oMsg("ShowMeasCnt=%u", dev->mShowMeasCnt);
+}
+void DustPMSA::funClrStat(OutStream *strm, const char *cmd, void *arg) {
+	DustPMSA *dev = (DustPMSA*) arg;
+	dev->showState(strm);
+}
+
+const ShellItemFx menuDustFx[] = { //
+		{ "s", "stan", DustPMSA::funShowState }, //
+				{ "pwr", "ustaw zasilanie czujnika", DustPMSA::funSetPower }, //
+				{ "get", "send get measure", DustPMSA::funGetMeas }, //
+				{ "wakeup", "wakeup sensor", DustPMSA::funWakeup }, //
+				{ "sleep", "sleep sensor", DustPMSA::funGoSleep }, //
+				{ "active", "set active mode", DustPMSA::funSetActiveMode }, //
+				{ "passive", "set passive mode", DustPMSA::funSetPassiveMode }, //
+				{ "hd_sleep", "set hardware sleep line", DustPMSA::funSetHdSleep }, //
+				{ "meas", "pokaz n pomiarów", DustPMSA::funShowNmMeas }, //
+				{ "clrCnt", "zeruj liczniki statystyki", DustPMSA::funClrStat }, //
 
 				{ NULL, NULL } };
 
 void DustPMSA::shell(OutStream *strm, const char *cmd) {
-
-	char tok[20];
-	int idx = -1;
-
-	if (Token::get(&cmd, tok, sizeof(tok)))
-		idx = findCmd(menuDust, tok);
-	switch (idx) {
-	case 0: //s
-		showState(strm);
-		break;
-	case 1: { //pwr
-		int a;
-		Token::getAsInt(&cmd, &a);
-		Hdw::dustSensorOn(a);
-		strm->oMsg("DustPower=%u", a);
-	}
-		break;
-	case 2:  //get
-		sendGetMeasure();
-		break;
-	case 3:  //wakeup
-		sendWakeUp();
-		break;
-	case 4:  //sleep
-		sendGoSleep();
-		break;
-	case 5: //active
-		sendSetActiveMode();
-		break;
-	case 6:  //passive
-		sendSetPassiveMode();
-		break;
-	case 7: {  //hd_sleep
-		int a;
-		Token::getAsInt(&cmd, &a);
-		Hdw::dustSleepOn(a);
-		strm->oMsg("DustHDSleep=%u", a);
-	}
-		break;
-	case 8:  //meas
-		mShowMeasCnt = 1;
-		Token::getAsInt(&cmd, &mShowMeasCnt);
-		strm->oMsg("ShowMeasCnt=%u", mShowMeasCnt);
-		break;
-	case 9: //clrCnt
-		state.loopCnt=0;
-		mIrqCnt=0;
-		state.txCmplCnt=0;
-		state.rxCnt=0;
-		state.recFrameCnt=0;
-		state.recFrameSumOkCnt=0;
-		state.recFrameLenErr=0;
-		state.powerOffCnt=0;
-
-		break;
-
-	default:
-		showHelp(strm, "I2C Menu", menuDust);
-		break;
-	}
-
+	execMenuCmd(strm, menuDustFx, cmd, this, "Dust sensor PMSA Menu");
 }
 

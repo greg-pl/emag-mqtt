@@ -18,8 +18,6 @@
 #include <stdio.h>
 #include <math.h>
 
-
-
 extern ShellTask *shellTask;
 extern Config *config;
 
@@ -91,6 +89,42 @@ void MdbUart::writeBuf(const void *buf, int len) {
 	setTxEn(true);
 	TUart::writeBuf(buf, len);
 }
+
+//-----------------------------------------------------------------------------------------
+// MdbDev
+//-----------------------------------------------------------------------------------------
+
+MdbDev::MdbDev(MdbMasterTask *mdbTask, uint8_t mdbAdr, const char *name) {
+	strlcpy(mName, name, sizeof(mName));
+	mMdb = mdbTask;
+	mAdr = mdbAdr;
+	mMdb->addDev(this);
+}
+
+void MdbDev::shell(OutStream *strm, const char *cmd) {
+
+}
+
+bool MdbDev::isCurrenReqEmpty() {
+	return (mMdb->state.sent.currReq == reqEMPTY);
+}
+
+void MdbDev::sendMdbFun3(ReqSrc reqSrc, uint8_t DevNr, uint16_t regAdr, uint16_t regCnt) {
+	mMdb->sendMdbFun3(reqSrc, DevNr, regAdr, regCnt);
+}
+void MdbDev::sendMdbFun4(ReqSrc reqSrc, uint8_t DevNr, uint16_t regAdr, uint16_t regCnt) {
+	mMdb->sendMdbFun4(reqSrc, DevNr, regAdr, regCnt);
+}
+void MdbDev::sendMdbFun6(ReqSrc reqSrc, uint8_t DevNr, uint16_t regAdr, uint16_t regVal) {
+	mMdb->sendMdbFun6(reqSrc, DevNr, regAdr, regVal);
+}
+void MdbDev::sendMdbFun16(ReqSrc reqSrc, uint8_t DevNr, uint16_t regAdr, uint16_t regCnt, uint16_t *regTab) {
+	mMdb->sendMdbFun16(reqSrc, DevNr, regAdr, regCnt, regTab);
+}
+uint16_t MdbDev::GetWord(const uint8_t *p) {
+	return (p[0] << 8) | p[1];
+}
+
 //-----------------------------------------------------------------------------------------
 // MdbMasterTask
 //-----------------------------------------------------------------------------------------
@@ -98,17 +132,25 @@ void MdbUart::writeBuf(const void *buf, int len) {
 MdbMasterTask::MdbMasterTask(int mdbNr, int portNr) :
 		TaskClass::TaskClass("MDB", osPriorityNormal, 1024) {
 	char buf[16];
-	mMdbNr = mdbNr;
+
+	menuExp.menuTab = NULL;
+	menuExp.argTab = NULL;
+
 	snprintf(buf, sizeof(buf), "MDB_%u", mdbNr);
 	setTaskName(buf);
 
 	mUart = new MdbUart(portNr, 7);
 	memset(&state, 0, sizeof(state));
 	memset(&reqConsola, 0, sizeof(reqConsola));
+	memset(&devs, 0, sizeof(devs));
 	mDbgLevel = 0;
-	menu.tab = NULL;
-	menu.baseCnt = 0;
+}
 
+void MdbMasterTask::addDev(MdbDev *dev) {
+	if (devs.cnt < MAX_DEV) {
+		devs.tab[devs.cnt] = dev;
+		devs.cnt++;
+	}
 }
 
 void MdbMasterTask::Start(int BaudRate, int parity) {
@@ -248,6 +290,22 @@ void MdbMasterTask::buidMsgRec(MsgV *m) {
 	m->dat = (mDbgLevel >= 3) || (state.sent.currReq == reqCONSOLA);
 }
 
+void MdbMasterTask::doOnReciveData(bool replOK, uint8_t mdbFun, const uint8_t *tab, int regCnt) {
+	for (int i = 0; i < devs.cnt; i++) {
+		if (devs.tab[i]->mAdr == state.sent.devNr) {
+			devs.tab[i]->onReciveData(replOK, mdbFun, tab, regCnt);
+		}
+	}
+}
+
+void MdbMasterTask::doOnTimeOut() {
+	for (int i = 0; i < devs.cnt; i++) {
+		if (devs.tab[i]->mAdr == state.sent.devNr) {
+			devs.tab[i]->onTimeOut();
+		}
+	}
+}
+
 void MdbMasterTask::proceedRecFrame() {
 	int n = mUart->getRxCharCnt();
 	if (n > 4) {
@@ -274,7 +332,7 @@ void MdbMasterTask::proceedRecFrame() {
 							if (n != state.sent.regCnt) {
 								if (m.err)
 									shellTask->oMsgX(colRED, "MDB%u: Fun%u REPLY ERROR", mMdbNr, rxCmd);
-								onReciveData(false, rxCmd, NULL, 0);
+								doOnReciveData(false, rxCmd, NULL, 0);
 
 							} else {
 								if (m.dat) {
@@ -286,7 +344,7 @@ void MdbMasterTask::proceedRecFrame() {
 									}
 									shellTask->oMsgX(colWHITE, txt);
 								}
-								onReciveData(true, rxCmd, &inBuf[3], n);
+								doOnReciveData(true, rxCmd, &inBuf[3], n);
 							}
 
 						}
@@ -307,11 +365,11 @@ void MdbMasterTask::proceedRecFrame() {
 							uint16_t reg = GetWord(&inBuf[2]) + 1;
 							uint16_t cnt = GetWord(&inBuf[4]);
 							if ((reg == state.sent.regAdr) && (cnt == state.sent.regCnt)) {
-								onReciveData(true, rxCmd, NULL, 0);
+								doOnReciveData(true, rxCmd, NULL, 0);
 								if (m.info)
 									shellTask->oMsgX(colWHITE, "MDB%u: Fun16 ACK", mMdbNr);
 							} else {
-								onReciveData(false, rxCmd, NULL, 0);
+								doOnReciveData(false, rxCmd, NULL, 0);
 								if (m.err)
 									shellTask->oMsgX(colRED, "MDB%u: Fun16 ACK ERROR", mMdbNr);
 							}
@@ -319,7 +377,7 @@ void MdbMasterTask::proceedRecFrame() {
 							break;
 						}
 					} else {
-						onReciveData(false, rxCmd, NULL, 0);
+						doOnReciveData(false, rxCmd, NULL, 0);
 						if (m.err)
 							shellTask->oMsgX(colRED, "MDB%u: Modbus exception %u", mMdbNr, inBuf[2]);
 					}
@@ -351,6 +409,12 @@ void MdbMasterTask::sendConsolaReq() {
 		}
 		reqConsola.fun = 0;
 	}
+}
+
+//wywolywane z watku Shell'a
+void MdbMasterTask::setConsolaReq(ReqConsola *req) {
+	reqConsola = *req;
+	osSignalSet(getThreadId(), SIGNAL_CMD);
 }
 
 void MdbMasterTask::ThreadFunc() {
@@ -405,7 +469,9 @@ void MdbMasterTask::ThreadFunc() {
 			if (code & SIGNAL_CMD) {
 			}
 		}
-		loopFunc();
+		for (int i = 0; i < devs.cnt; i++) {
+			devs.tab[i]->loopFunc();
+		}
 
 		if (reqConsola.fun != 0) {
 			sendConsolaReq();
@@ -419,170 +485,176 @@ void MdbMasterTask::showState(OutStream *strm) {
 		strm->oMsg("PWR_ON=%u", getPower());
 		strm->oMsg("PWR_FLT=%u", getPowerFlt());
 		strm->oMsg("RxCnt=%u", mUart->getRxGlobCnt());
+		for (int i = 0; i < devs.cnt; i++) {
+			devs.tab[i]->showState(strm);
+		}
 		strm->oClose();
 	}
-
 }
 
-const ShellItem menuMdb[] = { //
-		{ "dbg", "zmien poziom logów (0..4)" }, //
-				{ "s", "stan" }, //
-				{ "pwr", "załaczenie zasilania +5V" }, //
-				{ "rdreg", "read registers MDB3: devNr,Addr,cnt" }, //
-				{ "rdinp", "read analog input MDB4: devNr,Addr,cnt" }, //
-				{ "wrreg", "write register MDB6: devNr,Addr,val" }, //
-				{ "wrmul", "write registers MDB16: devNr,Addr,val1,val2,..valX" }, //
-
-				{ NULL, NULL } };
-
-const ShellItem* MdbMasterTask::getMenu() {
-	return menuMdb;
+bool MdbMasterTask::isAnyConfiguredData() {
+	for (int i = 0; i < devs.cnt; i++) {
+		if (devs.tab[i]->isAnyConfiguredData())
+			return true;
+	}
+	return false;
+}
+bool MdbMasterTask::isDataError() {
+	bool err = false;
+	for (int i = 0; i < devs.cnt; i++) {
+		if (devs.tab[i]->isAnyConfiguredData())
+			err |= devs.tab[i]->isDataError();
+	}
+	return err;
 }
 
 const char* MdbMasterTask::getMenuName() {
-	return "Modbus Menu";
+	static char name[8];
+	snprintf(name, sizeof(name), "Mdb%u", mMdbNr);
+	return name;
 }
+
+void MdbMasterTask::funDbgLevel(OutStream *strm, const char *cmd, void *arg) {
+	MdbMasterTask *mdb = (MdbMasterTask*) arg;
+	Token::getAsInt(&cmd, &mdb->mDbgLevel);
+}
+
+void MdbMasterTask::funShowState(OutStream *strm, const char *cmd, void *arg) {
+	MdbMasterTask *mdb = (MdbMasterTask*) arg;
+	mdb->showState(strm);
+}
+
+void MdbMasterTask::funOnOffPower(OutStream *strm, const char *cmd, void *arg) {
+	MdbMasterTask *mdb = (MdbMasterTask*) arg;
+	bool q;
+	Token::getAsBool(&cmd, &q);
+	mdb->setPower(q);
+	strm->oMsgX(colWHITE, "SetPower=%u", q);
+
+}
+void MdbMasterTask::funRdReg(OutStream *strm, const char *cmd, void *arg) {
+	MdbMasterTask *mdb = (MdbMasterTask*) arg;
+
+	int devNr, adr, cnt;
+	if (Token::getAsInt(&cmd, &devNr)) {
+		if (Token::getAsInt(&cmd, &adr)) {
+			if (Token::getAsInt(&cmd, &cnt)) {
+				ReqConsola req;
+				req.devNr = devNr;
+				req.regAdr = adr;
+				req.regCnt = cnt;
+				req.fun = 3;
+				mdb->setConsolaReq(&req);
+				strm->oMsgX(colWHITE, "DevNr=%u RdReg %u,%u", req.devNr, req.regAdr, req.regCnt);
+			}
+		}
+	}
+}
+void MdbMasterTask::funRdAnalogInp(OutStream *strm, const char *cmd, void *arg) {
+	MdbMasterTask *mdb = (MdbMasterTask*) arg;
+
+	int devNr, adr, cnt;
+	if (Token::getAsInt(&cmd, &devNr)) {
+		if (Token::getAsInt(&cmd, &adr)) {
+			if (Token::getAsInt(&cmd, &cnt)) {
+				ReqConsola req;
+				req.devNr = devNr;
+				req.regAdr = adr;
+				req.regCnt = cnt;
+				req.fun = 4;
+				mdb->setConsolaReq(&req);
+				strm->oMsgX(colWHITE, "DevNr=%u RdInp %u,%u", req.devNr, req.regAdr, req.regCnt);
+			}
+		}
+	}
+}
+
+void MdbMasterTask::funWdReg(OutStream *strm, const char *cmd, void *arg) {
+	MdbMasterTask *mdb = (MdbMasterTask*) arg;
+
+	int devNr, adr, val;
+	if (Token::getAsInt(&cmd, &devNr)) {
+		if (Token::getAsInt(&cmd, &adr)) {
+			if (Token::getAsInt(&cmd, &val)) {
+				ReqConsola req;
+				req.fun = 6;
+				req.devNr = devNr;
+				req.regAdr = adr;
+				req.regVal[0] = val;
+				mdb->setConsolaReq(&req);
+				strm->oMsgX(colWHITE, "DevNr=%u WrReg %u: %u", req.devNr, req.regAdr, req.regVal[0]);
+			}
+		}
+	}
+}
+
+void MdbMasterTask::funWrMulReg(OutStream *strm, const char *cmd, void *arg) {
+	MdbMasterTask *mdb = (MdbMasterTask*) arg;
+	ReqConsola req;
+
+	int devNr, adr;
+	if (Token::getAsInt(&cmd, &devNr)) {
+		if (Token::getAsInt(&cmd, &adr)) {
+			int n = 0;
+			while (n < MAX_VAL_CNT) {
+				int val;
+				if (Token::getAsInt(&cmd, &val)) {
+					req.regVal[n] = val;
+					n++;
+				} else
+					break;
+			}
+			if (n > 0) {
+				req.fun = 16;
+				req.devNr = devNr;
+				req.regAdr = adr;
+				req.regCnt = n;
+				mdb->setConsolaReq(&req);
+				strm->oMsgX(colWHITE, "DevNr=%u WrMulReg %u: n=%u", req.devNr, req.regAdr, n);
+			}
+		}
+	}
+
+}
+
+void MdbMasterTask::funForChild(OutStream *strm, const char *cmd, void *arg) {
+	MdbDev *dev = (MdbDev*) arg;
+	dev->shell(strm, cmd);
+}
+
+const ShellItemFx menuMdbFx[] = { //
+		{ "dbg", "zmien poziom logów (0..4)", MdbMasterTask::funDbgLevel }, //
+				{ "s", "stan", MdbMasterTask::funShowState }, //
+				{ "pwr", "załaczenie zasilania +5V", MdbMasterTask::funOnOffPower }, //
+				{ "rdreg", "read registers MDB3: devNr,Addr,cnt", MdbMasterTask::funRdReg }, //
+				{ "rdinp", "read analog input MDB4: devNr,Addr,cnt", MdbMasterTask::funRdAnalogInp }, //
+				{ "wrreg", "write register MDB6: devNr,Addr,val", MdbMasterTask::funWdReg }, //
+				{ "wrmul", "write registers MDB16: devNr,Addr,val1,val2,..valX", MdbMasterTask::funWrMulReg }, //
+
+				{ NULL, NULL } };
 
 void MdbMasterTask::shell(OutStream *strm, const char *cmd) {
-	char tok[20];
-	int idx = -1;
+	if (menuExp.menuTab == NULL) {
+		int cnt = sizeof(menuMdbFx) / sizeof(ShellItemFx);
+		cnt += devs.cnt;
+		menuExp.argTab = (void**) malloc((cnt + devs.cnt) * sizeof(void*));
+		menuExp.menuTab = (ShellItemFx*) malloc((cnt + devs.cnt) * sizeof(ShellItemFx));
 
-	const ShellItem *menu = getMenu();
+		if (menuExp.menuTab != NULL) {
+			memcpy(&menuExp.menuTab[devs.cnt], menuMdbFx, cnt * sizeof(ShellItemFx));
+			for (int i = 0; i < cnt; i++) {
+				menuExp.argTab[devs.cnt + i] = this;
+			}
 
-	if (Token::get(&cmd, tok, sizeof(tok)))
-		idx = findCmd(menu, tok);
-
-	if (!execMenuItem(strm, idx, cmd)) {
-		showHelp(strm, getMenuName(), menu);
-	}
-}
-
-void MdbMasterTask::buildMenu(const ShellItem *toAddMenu) {
-	const ShellItem *item = menuMdb;
-	int k = 0;
-	while (item->cmd != NULL) {
-		k++;
-		item++;
-	}
-	menu.baseCnt = k;
-	item = toAddMenu;
-	while (item->cmd != NULL) {
-		k++;
-		item++;
-	}
-	menu.tab = (ShellItem*) malloc((k + 1) * sizeof(ShellItem));
-
-	k = 0;
-	item = menuMdb;
-	while (item->cmd != NULL) {
-		menu.tab[k].cmd = item->cmd;
-		menu.tab[k].descr = item->descr;
-		k++;
-		item++;
-	}
-	item = toAddMenu;
-	while (item->cmd != NULL) {
-		menu.tab[k].cmd = item->cmd;
-		menu.tab[k].descr = item->descr;
-		k++;
-		item++;
-	}
-	menu.tab[k].cmd = NULL;
-	menu.tab[k].descr = NULL;
-}
-
-bool MdbMasterTask::execMenuItem(OutStream *strm, int idx, const char *cmd) {
-	switch (idx) {
-	case 0:  //dbg
-		Token::getAsInt(&cmd, &mDbgLevel);
-		break;
-	case 1:  //s
-		showState(strm);
-		break;
-	case 2: { //pwr
-		bool q;
-		Token::getAsBool(&cmd, &q);
-		setPower(q);
-		strm->oMsgX(colWHITE, "SetPower=%u", q);
-	}
-		break;
-	case 3: //rdreg
-	case 4: { //rdinp
-		int devNr;
-		int adr;
-		int cnt;
-		if (Token::getAsInt(&cmd, &devNr)) {
-			if (Token::getAsInt(&cmd, &adr)) {
-				if (Token::getAsInt(&cmd, &cnt)) {
-					reqConsola.devNr = devNr;
-					reqConsola.regAdr = adr;
-					reqConsola.regCnt = cnt;
-					const char *nm;
-					if (idx == 3) {
-						reqConsola.fun = 3;
-						nm = "RdReg";
-					} else {
-						reqConsola.fun = 4;
-						nm = "RdInp";
-					}
-					strm->oMsgX(colWHITE, "DevNr=%u %s %u,%u", reqConsola.devNr, nm, reqConsola.regAdr, reqConsola.regCnt);
-					osSignalSet(getThreadId(), SIGNAL_CMD);
-				}
+			for (int i = 0; i < devs.cnt; i++) {
+				menuExp.menuTab[i].cmd = devs.tab[i]->mName;
+				menuExp.menuTab[i].descr = ">>>";
+				menuExp.menuTab[i].fun = funForChild;
+				menuExp.argTab[i] = devs.tab[i];
 			}
 		}
 	}
-		break;
-
-	case 5: { //wrreg
-		int devNr;
-		int adr;
-		int val;
-		if (Token::getAsInt(&cmd, &devNr)) {
-			if (Token::getAsInt(&cmd, &adr)) {
-				if (Token::getAsInt(&cmd, &val)) {
-					reqConsola.fun = 6;
-					reqConsola.devNr = devNr;
-					reqConsola.regAdr = adr;
-					reqConsola.regVal[0] = val;
-					strm->oMsgX(colWHITE, "DevNr=%u WrReg %u: %u", reqConsola.devNr, reqConsola.regAdr, reqConsola.regVal[0]);
-					osSignalSet(getThreadId(), SIGNAL_CMD);
-				}
-			}
-		}
-	}
-		break;
-	case 6: { //wrmul
-		int devNr;
-		int adr;
-		if (Token::getAsInt(&cmd, &devNr)) {
-			if (Token::getAsInt(&cmd, &adr)) {
-				int n = 0;
-				while (n < MAX_VAL_CNT) {
-					int val;
-					if (Token::getAsInt(&cmd, &val)) {
-						reqConsola.regVal[n] = val;
-						n++;
-					} else
-						break;
-				}
-				if (n > 0) {
-					reqConsola.fun = 16;
-					reqConsola.devNr = devNr;
-					reqConsola.regAdr = adr;
-					reqConsola.regCnt = n;
-					strm->oMsgX(colWHITE, "DevNr=%u WrMulReg %u: n=%u", reqConsola.devNr, reqConsola.regAdr, n);
-					osSignalSet(getThreadId(), SIGNAL_CMD);
-				}
-			}
-		}
-	}
-		break;
-	default:
-		return false;
-	};
-	return true;
+	if (menuExp.menuTab != NULL)
+		execMenuCmdArg(strm, menuExp.menuTab, cmd, menuExp.argTab, "I2C Menu");
 }
-
-
-
 

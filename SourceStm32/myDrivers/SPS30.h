@@ -104,6 +104,7 @@ private:
 	void putTxFrame(uint8_t a);
 	void SendFrame(uint8_t cmd, const uint8_t *dt, uint8_t len);
 	void ShowMesuredRec(OutStream *strm);
+	void showState(OutStream *strm);
 
 	SPS30_Status execNewFrame();
 	void sendGetDevInfo(uint8_t par);
@@ -119,6 +120,14 @@ protected:
 	virtual void ErrorCallback();
 public:
 	SPS30();
+	static void funShowState(OutStream *strm, const char *cmd, void *arg);
+	static void funDbgLevel(OutStream *strm, const char *cmd, void *arg);
+	static void funSetPower(OutStream *strm, const char *cmd, void *arg);
+	static void funGetInfo(OutStream *strm, const char *cmd, void *arg);
+	static void funFanClean(OutStream *strm, const char *cmd, void *arg);
+	static void funRunMeasure(OutStream *strm, const char *cmd, void *arg);
+	static void funSowMeasure(OutStream *strm, const char *cmd, void *arg);
+
 	virtual void StartMeas();
 	virtual void StopMeas();
 	virtual void shell(OutStream *strm, const char *cmd);
