@@ -9,6 +9,7 @@
 #define MDBMASTERTASK_H_
 
 #include <IOStream.h>
+#include "UniDev.h"
 #include "TaskClass.h"
 #include "uart.h"
 #include "GlobData.h"
@@ -16,12 +17,10 @@
 #include "ShellItem.h"
 #include "Filters.h"
 
-typedef enum {
-	reqEMPTY = 0, //
-	reqCONSOLA, //
-	reqSYS,
-} ReqSrc;
 
+//-----------------------------------------------------------------------------------------------------------------
+// MdbUart
+//-----------------------------------------------------------------------------------------------------------------
 class MdbUart: public TUart {
 public:
 	enum {
@@ -63,11 +62,52 @@ public:
 	void clearRxBuf();
 };
 
+//-----------------------------------------------------------------------------------------------------------------
+// MdbDev
+//-----------------------------------------------------------------------------------------------------------------
+typedef enum {
+	reqEMPTY = 0, //
+	reqCONSOLA, //
+	reqSYS,
+} ReqSrc;
+
+class MdbMasterTask;
+class MdbDev : public UniDev {
+	friend class MdbMasterTask;
+
+protected:
+	MdbMasterTask *mMdb;
+	uint8_t mMdbAdr;
+
+	virtual void loopFunc()=0;
+	virtual void onTimeOut()=0;
+	virtual void onReciveData(bool replOK, uint8_t mdbFun, const uint8_t *tab, int regCnt)=0;
+protected:
+	virtual void showState(OutStream *strm)=0;
+	virtual void shell(OutStream *strm, const char *cmd);
+protected:
+	uint16_t GetWord(const uint8_t *p);
+	float GetFloat(const uint8_t *p);
+	uint8_t getMdbNr();
+	uint32_t getSentTick();
+	bool isCurrenReq();
+	void sendMdbFun3(ReqSrc reqSrc, uint8_t DevNr, uint16_t regAdr, uint16_t regCnt);
+	void sendMdbFun4(ReqSrc reqSrc, uint8_t DevNr, uint16_t regAdr, uint16_t regCnt);
+	void sendMdbFun6(ReqSrc reqSrc, uint8_t DevNr, uint16_t regAdr, uint16_t regVal);
+	void sendMdbFun16(ReqSrc reqSrc, uint8_t DevNr, uint16_t regAdr, uint16_t regCnt, uint16_t *regTab);
+
+public:
+	MdbDev(MdbMasterTask *mdbTask, uint8_t mdbAdr, const char *name);
+};
+
+//-----------------------------------------------------------------------------------------------------------------
+// MdbMasterTask
+//-----------------------------------------------------------------------------------------------------------------
 typedef struct {
 	bool err;
 	bool info;
 	bool dat;
-} MsgV;
+} DbgV;
 
 #define MAX_VAL_CNT  10  // maksymalna ilość rejestrów dla funcji 16
 
@@ -79,52 +119,6 @@ typedef struct {
 	uint16_t regVal[MAX_VAL_CNT];
 } ReqConsola;
 
-class MdbMasterTask;
-
-class MdbDev {
-	friend class MdbMasterTask;
-
-protected:
-	MdbMasterTask *mMdb;
-	uint8_t mAdr;
-	char mName[16];
-
-	virtual void loopFunc()=0;
-	virtual void onTimeOut()=0;
-
-	virtual void onReciveData(bool replOK, uint8_t mdbFun, const uint8_t *tab, int regCnt)=0;
-	virtual void showState(OutStream *strm)=0;
-	virtual const char* getMenuName()=0;
-	virtual const char* getDevName()=0;
-	virtual const ShellItemFx* getMenuFx()=0;
-	virtual void shell(OutStream *strm, const char *cmd);
-
-protected:
-	uint16_t GetWord(const uint8_t *p);
-	bool isCurrenReqEmpty();
-	void sendMdbFun3(ReqSrc reqSrc, uint8_t DevNr, uint16_t regAdr, uint16_t regCnt);
-	void sendMdbFun4(ReqSrc reqSrc, uint8_t DevNr, uint16_t regAdr, uint16_t regCnt);
-	void sendMdbFun6(ReqSrc reqSrc, uint8_t DevNr, uint16_t regAdr, uint16_t regVal);
-	void sendMdbFun16(ReqSrc reqSrc, uint8_t DevNr, uint16_t regAdr, uint16_t regCnt, uint16_t *regTab);
-
-public:
-	MdbDev(MdbMasterTask *mdbTask, uint8_t mdbAdr, const char *name);
-	virtual bool isAnyConfiguredData() {
-		return false;
-	}
-	virtual bool isDataError() {
-		return false;
-	}
-	virtual bool getMeasValue(MeasType measType, float *val) {
-		return false;
-	}
-	virtual bool getMeasValue(MeasType measType, int filtrType, float *val) {
-		return false;
-	}
-	virtual void getDeviceStatusTxt(char *txt, int max) {
-
-	}
-};
 
 class MdbMasterTask: public TaskClass {
 	friend class MdbDev;
@@ -166,7 +160,7 @@ private:
 
 protected:
 
-	void buidMsgRec(MsgV *m);
+	void buidDbgRec(DbgV *m);
 
 protected:
 	uint16_t GetWord(const uint8_t *p);
@@ -214,13 +208,12 @@ public:
 	static void funWrMulReg(OutStream *strm, const char *cmd, void *arg);
 	static void funForChild(OutStream *strm, const char *cmd, void *arg);
 
-
 	void Start(int BaudRate, int parity);
 	void shell(OutStream *strm, const char *cmd);
 	void setPower(bool pwr);
 	bool getPower();
 	bool getPowerFlt();
-	int getTimeOutCnt(){
+	int getTimeOutCnt() {
 		return state.timeOutCnt;
 	}
 
@@ -228,4 +221,4 @@ public:
 	bool isDataError();
 };
 
-#endif /* MDBMASTERTASK_H_ */
+#endif

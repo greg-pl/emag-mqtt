@@ -10,7 +10,6 @@
 #include "utils.h"
 #include "main.h"
 #include "UMain.h"
-#include "shell.h"
 #include "Config.h"
 #include "i2cDev.h"
 #include "Hal.h"
@@ -19,33 +18,27 @@
 #include <stdio.h>
 #include <math.h>
 
-
-extern ShellTask *shellTask;
 extern Config *config;
 
 //-----------------------------------------------------------------------------------------
 // MdbMasterDustTask
 //-----------------------------------------------------------------------------------------
-MdbMasterDustTask::MdbMasterDustTask(int mdbNr, int portNr) :
-		MdbMasterTask::MdbMasterTask(mdbNr, portNr) {
+ExtDustsensor::ExtDustsensor(MdbMasterTask *mdbTask, uint8_t mdbAdr, const char *name) :
+		MdbDev::MdbDev(mdbTask, mdbAdr, name) {
 
 	memset(&dustData, 0, sizeof(dustData));
 	memset(&autoRd, 0, sizeof(autoRd));
 	dustData.PmStatus = 0x01; //Power_off
 }
 
-bool MdbMasterDustTask::isCfgDustOn() {
-	return (config->data.R.exDev.sensExist[ssPM1_0] || config->data.R.exDev.sensExist[ssPM2_5] || config->data.R.exDev.sensExist[ssPM10]);
-}
-
-void MdbMasterDustTask::loopFunc() {
-	if (isCfgDustOn()) {
+void ExtDustsensor::loopFunc() {
+	if (isAnyConfiguredData()) {
 		if (HAL_GetTick() - autoRd.tick > TM_AUTO_RD) {
 			autoRd.tick = HAL_GetTick();
 			autoRd.phase = 1;
 		}
 		if (autoRd.phase != 0) {
-			if (state.sent.currReq == reqEMPTY) {
+			if (!isCurrenReq()) {
 				switch (autoRd.phase) {
 				case 1:
 					autoRd.reqCnt++;
@@ -53,7 +46,7 @@ void MdbMasterDustTask::loopFunc() {
 					sendMdbFun4(reqSYS, config->data.R.rest.dustDevMdbNr, 1, 29);
 					break;
 				case 2:
-					if (HAL_GetTick() - state.sent.tick > MAX_TIME_REPL)
+					if (HAL_GetTick() - getSentTick() > MAX_TIME_REPL)
 						autoRd.phase = 0;
 					break;
 				}
@@ -82,8 +75,8 @@ void MdbMasterDustTask::loopFunc() {
 						if (HAL_GetTick() - autoRd.heaterOrderLastSendTick > 5000) {
 							autoRd.heaterOrderLastSendTick = HAL_GetTick();
 							setHeater(reqSYS, doOn);
-							if (config->data.R.exDev.heater.showMsg>=1) {
-								shellTask->oMsgX(colGREEN, "MDB%u:T=%u SetHeater:%u temp=%.1f[*C]", mMdbNr, autoRd.heaterOrderLastSendTick, doOn, dustData.temperature);
+							if (config->data.R.exDev.heater.showMsg >= 1) {
+								getOutStream()->oMsgX(colGREEN, "MDB%u:T=%u SetHeater:%u temp=%.1f[*C]", getMdbNr(), autoRd.heaterOrderLastSendTick, doOn, dustData.temperature);
 							}
 						}
 
@@ -95,17 +88,17 @@ void MdbMasterDustTask::loopFunc() {
 	}
 
 }
-void MdbMasterDustTask::doOnTimeOut() {
+void ExtDustsensor::onTimeOut() {
 	if (autoRd.phase > 0) {
 		autoRd.phase = 0;
-		shellTask->oMsgX(colRED, "MDB%u: read dust measure TIMEOUT", mMdbNr);
+		getOutStream()->oMsgX(colRED, "MDB%u: read dust measure TIMEOUT", getMdbNr());
 		strcpy(autoRd.statusTxt, "TimeOut");
 	} else {
-		shellTask->oMsgX(colRED, "MDB%u: TIMEOUT", mMdbNr);
+		getOutStream()->oMsgX(colRED, "MDB%u: TIMEOUT", getMdbNr());
 	}
 }
 
-void MdbMasterDustTask::onReciveData(bool replOK, uint8_t mdbFun, const uint8_t *tab, int regCnt) {
+void ExtDustsensor::onReciveData(bool replOK, uint8_t mdbFun, const uint8_t *tab, int regCnt) {
 	if (autoRd.phase > 0) {
 		if (replOK) {
 
@@ -148,15 +141,14 @@ void MdbMasterDustTask::onReciveData(bool replOK, uint8_t mdbFun, const uint8_t 
 	}
 }
 
-void MdbMasterDustTask::setHeater(ReqSrc reqSrc, bool heaterOn) {
+void ExtDustsensor::setHeater(ReqSrc reqSrc, bool heaterOn) {
 	uint16_t w = 0;
 	if (heaterOn)
 		w = HEATER_CONST_ON;
 	sendMdbFun6(reqSrc, config->data.R.rest.dustDevMdbNr, 8, w);
 }
 
-void MdbMasterDustTask::showState(OutStream *strm) {
-	MdbMasterTask::showState(strm);
+void ExtDustsensor::showState(OutStream *strm) {
 	if (strm->oOpen(colWHITE)) {
 		strm->oMsg("RdTime=%.2f[s]", (float) ((HAL_GetTick() - autoRd.redTick)) / 1000.0);
 		strm->oMsg("autoRd.Status=%s", autoRd.statusTxt);
@@ -168,8 +160,8 @@ void MdbMasterDustTask::showState(OutStream *strm) {
 
 }
 
-HAL_StatusTypeDef MdbMasterDustTask::getMeas(DustMeasRec *meas) {
-	if (!isError() && isMeasValid()) {
+HAL_StatusTypeDef ExtDustsensor::getMeas(DustMeasRec *meas) {
+	if (!isDataError() && isMeasValid()) {
 		meas->pm1_0 = dustData.pm1_0;
 		meas->pm2_5 = dustData.pm2_5;
 		meas->pm10 = dustData.pm10;
@@ -182,10 +174,40 @@ HAL_StatusTypeDef MdbMasterDustTask::getMeas(DustMeasRec *meas) {
 	}
 }
 
-bool MdbMasterDustTask::isMeasValid() {
+bool ExtDustsensor::isMeasValid() {
 	return ((dustData.PmStatus & 0x7F) == 0);
 }
-void MdbMasterDustTask::showMeas(OutStream *strm) {
+
+bool ExtDustsensor::isAnyConfiguredData() {
+	return (config->data.R.exDev.sensExist[ssPM1_0] || config->data.R.exDev.sensExist[ssPM2_5] || config->data.R.exDev.sensExist[ssPM10]);
+}
+
+bool ExtDustsensor::isDataError() {
+	return ((autoRd.redTick == 0) || (HAL_GetTick() - autoRd.redTick > TIME_MEAS_VALID));
+}
+
+
+bool ExtDustsensor::getMeasValue(MeasType measType, float *val) {
+	if (!isDataError() && isMeasValid()) {
+
+		switch (measType) {
+		case ssPM1_0:
+			*val = dustData.pm1_0;
+			return true;
+		case ssPM2_5:
+			*val = dustData.pm2_5;
+			return true;
+		case ssPM10:
+			*val = dustData.pm10;
+			return true;
+		default:
+			return false;
+		}
+	}
+	return false;
+}
+
+void ExtDustsensor::showMeas(OutStream *strm) {
 	if (strm->oOpen(colWHITE)) {
 		strm->oMsg("DevId=0x%04X", dustData.devID);
 		strm->oMsg("SerNum=%u", dustData.serialNumer);
@@ -211,45 +233,30 @@ void MdbMasterDustTask::showMeas(OutStream *strm) {
 	}
 }
 
-void MdbMasterDustTask::funShowMeasure(OutStream *strm, const char *cmd, void *arg) {
-	MdbMasterDustTask *dev = (MdbMasterDustTask*) arg;
+void ExtDustsensor::funShowMeasure(OutStream *strm, const char *cmd, void *arg) {
+	ExtDustsensor *dev = (ExtDustsensor*) arg;
 	dev->showMeas(strm);
 }
 
-void MdbMasterDustTask::funHeaterOn(OutStream *strm, const char *cmd, void *arg) {
-	MdbMasterDustTask *dev = (MdbMasterDustTask*) arg;
+void ExtDustsensor::funHeaterOn(OutStream *strm, const char *cmd, void *arg) {
+	ExtDustsensor *dev = (ExtDustsensor*) arg;
 	dev->setHeater(reqCONSOLA, true);
 
 }
 
-void MdbMasterDustTask::funHeaterOff(OutStream *strm, const char *cmd, void *arg) {
-	MdbMasterDustTask *dev = (MdbMasterDustTask*) arg;
+void ExtDustsensor::funHeaterOff(OutStream *strm, const char *cmd, void *arg) {
+	ExtDustsensor *dev = (ExtDustsensor*) arg;
 	dev->setHeater(reqCONSOLA, false);
 }
 
-
 const ShellItemFx menuExternDustFx[] = { //
-		{ "m", "pomiary",MdbMasterDustTask::funShowMeasure }, //
-				{ "heater_on", "włączenie grzania", MdbMasterDustTask::funHeaterOn }, //
-				{ "heater_off", "wyłączenie grzania", MdbMasterDustTask::funHeaterOff }, //
+		{ "m", "pomiary", ExtDustsensor::funShowMeasure }, //
+				{ "heater_on", "włączenie grzania", ExtDustsensor::funHeaterOn }, //
+				{ "heater_off", "wyłączenie grzania", ExtDustsensor::funHeaterOff }, //
 
 				{ NULL, NULL } };
 
-const ShellItemFx* MdbMasterDustTask::getMenuFx(){
-	return menuExternDustFx;
+void ExtDustsensor::shell(OutStream *strm, const char *cmd) {
+	execMenuCmd(strm, menuExternDustFx, cmd, this, "Extern Dust Menu");
 }
 
-
-const char* MdbMasterDustTask::getMenuName() {
-	return "Extern Dust Menu";
-}
-
-const char* MdbMasterDustTask::getDevName()
-{
-	return "dust";
-}
-
-
-bool MdbMasterDustTask::isError() {
-	return ((autoRd.redTick == 0) || (HAL_GetTick() - autoRd.redTick > TIME_MEAS_VALID));
-}

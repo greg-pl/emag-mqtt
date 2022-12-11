@@ -10,7 +10,7 @@
 
 #include <MdbMasterTask.h>
 
-class NoiseDetector: public MdbMasterTask {
+class NoiseDetector: public MdbDev {
 private:
 
 	enum {
@@ -29,8 +29,8 @@ private:
 	} autoRd;
 
 	struct {
-		int valueHd; //[ppb]
-		float valueFiz; //[ug/m3]
+		int valueHd;
+		float valueFiz;
 		FiltrFIR *filtrFIR;
 		FiltrIR *filtrIR;
 	} noiseData;
@@ -40,22 +40,20 @@ private:
 
 protected:
 	virtual void loopFunc();
-	virtual void doOnTimeOut();
-
+	virtual void onTimeOut();
 	virtual void onReciveData(bool replOK, uint8_t mdbFun, const uint8_t *tab, int regCnt);
+
 	virtual void showState(OutStream *strm);
-	virtual const char* getMenuName();
-	virtual const char* getDevName();
-	virtual const ShellItemFx* getMenuFx();
-
+	virtual void shell(OutStream *strm, const char *cmd);
 public:
-	NoiseDetector(int mdbNr, int portNr);
+	NoiseDetector(MdbMasterTask *mdbTask, uint8_t mdbAdr, const char *name);
 	static void funShowMeasure(OutStream *strm, const char *cmd, void *arg);
-
-	bool getNoiseValue(float *val);
-	bool getNoiseValue(int filtrType, float *val);
-	bool isCfgNoiseOn();
-	bool isError();
+public:
+	//Unidev
+	virtual bool getMeasValue(MeasType measType, float *val);
+	virtual bool isAnyConfiguredData();
+	virtual bool isDataError();
+	//virtual void getDeviceStatusTxt(char *txt, int max);
 
 };
 

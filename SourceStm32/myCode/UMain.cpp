@@ -23,7 +23,7 @@
 #include "GlobData.h"
 #include "MdbMasterTask.h"
 #include "Hal.h"
-#include "ssd1306/ssd1306.h"
+#include "ssd1306.h"
 
 #include "_SensorDrivers.h"
 
@@ -32,18 +32,21 @@ extern IWDG_HandleTypeDef hiwdg;
 EventGroupHandle_t sysEvents;
 
 ShellTask *shellTask;
-NoiseDetector *mdbMaster_1;
+MdbMasterTask *mdbMaster_1;
 MdbMasterTask *mdbMaster_2;
+MdbMasterTask *mdbMaster_3;
+
 LedMatrix *ledMatrix;
 GasS873 *gasS873;
 GasS873 *gasS873X;
+NoiseDetector *noiseDet;
 
 Config *config;
 Bg96Driver *bg96;
 SHT35Device *sht35;
 Bmp338Device *bmp338;
 DustSensorBase *dustInternSensor;
-MdbMasterDustTask *dustExternSensor;
+ExtDustsensor *dustExternSensor;
 I2cBus *i2cBus1;
 SSD1306Dev *lcd;
 VerInfo mSoftVer;
@@ -492,12 +495,12 @@ bool DefaultTask::getHdwError() {
 	if (config->data.P.dustInpType == dust_Intern) {
 		q |= dustInternSensor->isError();
 	} else {
-		q |= dustExternSensor->isError();
+		q |= dustExternSensor->isDataError();
 	}
 	q |= i2cBus1->isError();
 
-	if (mdbMaster_1->isCfgNoiseOn()) {
-		q |= mdbMaster_1->isError();
+	if (noiseDet!=NULL) {
+		q |= noiseDet->isDataError();
 	}
 	if (mdbMaster_2->isAnyConfiguredData()) {
 		q |= mdbMaster_2->isDataError();
@@ -552,14 +555,39 @@ void DefaultTask::ThreadFunc() {
 
 	HAL_IWDG_Refresh(&hiwdg);
 
+	config = new Config();
+	config->Init(shellTask);
+
+	HAL_IWDG_Refresh(&hiwdg);
+
 	sht35 = new SHT35Device(i2cBus1, 0x88, "sht");
 	bmp338 = new Bmp338Device(i2cBus1, 0xEC, "bmp");
 	lcd = new SSD1306Dev(i2cBus1, 0x78, "ssd");
 
 	HAL_IWDG_Refresh(&hiwdg);
 
-	config = new Config();
-	config->Init(shellTask);
+	mdbMaster_1 = new MdbMasterTask(MdbMasterTask::MDB_1, TUart::myUART1);
+	mdbMaster_1->Start(9600, TUart::parityNONE);
+	mdbMaster_1->setPower(true);
+
+	mdbMaster_2 = new MdbMasterTask(MdbMasterTask::MDB_2, TUart::myUART3);
+	mdbMaster_2->Start(9600, TUart::parityEVEN);
+	mdbMaster_2->setPower(true);
+
+	mdbMaster_3 = new MdbMasterTask(MdbMasterTask::MDB_3, TUart::myUART5);
+	mdbMaster_3->Start(9600, TUart::parityEVEN);
+	mdbMaster_3->setPower(true);
+
+
+	noiseDet = new NoiseDetector(mdbMaster_1, config->data.R.rest.gasDevMdbNr, "noise");
+
+	gasS873 = new GasS873(mdbMaster_2, config->data.R.rest.gasDevMdbNr, "gas");
+	gasS873X = new GasS873(mdbMaster_2, config->data.R.rest.gasDevMdbNr, "g2");
+
+
+
+	HAL_IWDG_Refresh(&hiwdg);
+
 
 	Rtc::Init();
 	HAL_IWDG_Refresh(&hiwdg);
@@ -602,9 +630,11 @@ void DefaultTask::ThreadFunc() {
 		dustInternSensor->Init(this);
 		dustInternSensor->StartMeas();
 	} else {
-		dustExternSensor = new MdbMasterDustTask(MdbMasterTask::MDB_3, TUart::myUART5);
-		dustExternSensor->Start(9600, TUart::parityEVEN);
-		dustExternSensor->setPower(true);
+		mdbMaster_3 = new MdbMasterTask(MdbMasterTask::MDB_3, TUart::myUART5);
+		mdbMaster_3->Start(9600, TUart::parityEVEN);
+		mdbMaster_3->setPower(true);
+
+		dustExternSensor = new ExtDustsensor(mdbMaster_3, config->data.R.rest.gasDevMdbNr,"dust");
 	}
 	HAL_IWDG_Refresh(&hiwdg);
 
@@ -757,16 +787,6 @@ void uMainCont() {
 	shellTask = new ShellTask();
 	shellTask->Start();
 
-	mdbMaster_1 = new NoiseDetector(MdbMasterTask::MDB_1, TUart::myUART1);
-	mdbMaster_1->Start(9600, TUart::parityNONE);
-	mdbMaster_1->setPower(true);
-
-	mdbMaster_2 = new MdbMasterTask(MdbMasterTask::MDB_2, TUart::myUART3);
-	mdbMaster_2->Start(9600, TUart::parityEVEN);
-	mdbMaster_2->setPower(true);
-
-	gasS873 = new GasS873(mdbMaster_2, config->data.R.rest.gasDevMdbNr, "gas");
-	gasS873X = new GasS873(mdbMaster_2, config->data.R.rest.gasDevMdbNr, "g2");
 
 	HAL_IWDG_Refresh(&hiwdg);
 

@@ -24,10 +24,11 @@ extern Bg96Driver *bg96;
 extern SHT35Device *sht35;
 extern Bmp338Device *bmp338;
 extern DustSensorBase *dustInternSensor;
-extern MdbMasterDustTask *dustExternSensor;
-extern NoiseDetector *mdbMaster_1;
+extern ExtDustsensor *dustExternSensor;
+extern MdbMasterTask *mdbMaster_1;
 extern MdbMasterTask *mdbMaster_2;
 extern GasS873 *gasS873;
+extern NoiseDetector *noiseDet;
 
 
 GlobDtRec GlobData::dt;
@@ -205,9 +206,9 @@ void GlobData::FillMeas(float *tab) {
 	}
 
 	//noise
-	if (mdbMaster_1 != NULL) {
+	if (noiseDet != NULL) {
 		float val;
-		mdbMaster_1->getNoiseValue(&val);
+		noiseDet->getMeasValue(ssNOISE, &val);
 		tab[ssNOISE] = val;
 	}
 

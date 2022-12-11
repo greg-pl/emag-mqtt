@@ -10,32 +10,25 @@
 #include "utils.h"
 #include "main.h"
 #include "UMain.h"
-#include "shell.h"
 #include "Config.h"
-//#include "i2cDev.h"
-//#include "Hal.h"
 
 #include "string.h"
 #include "stdio.h"
 #include "math.h"
 
-extern ShellTask *shellTask;
 extern Config *config;
 
 //-----------------------------------------------------------------------------------------
 // MdbMasterNoiseTask
 //-----------------------------------------------------------------------------------------
-NoiseDetector::NoiseDetector(int mdbNr, int portNr) :
-		MdbMasterTask::MdbMasterTask(mdbNr, portNr) {
+NoiseDetector::NoiseDetector(MdbMasterTask *mdbTask, uint8_t mdbAdr, const char *name) :
+		MdbDev::MdbDev(mdbTask, mdbAdr, name) {
 	memset(&autoRd, 0, sizeof(autoRd));
 	memset(&noiseData, 0, sizeof(noiseData));
 
 	strcpy(autoRd.statusTxt, "Start");
 }
 
-bool NoiseDetector::isCfgNoiseOn() {
-	return (config->data.R.exDev.sensExist[ssNOISE]);
-}
 
 void NoiseDetector::onReciveData(bool replOK, uint8_t mdbFun, const uint8_t *tab, int regCnt) {
 	if (autoRd.phase > 0) {
@@ -68,24 +61,24 @@ void NoiseDetector::onReciveData(bool replOK, uint8_t mdbFun, const uint8_t *tab
 	}
 }
 
-void NoiseDetector::doOnTimeOut() {
+void NoiseDetector::onTimeOut() {
 	if (autoRd.phase > 0) {
 		autoRd.phase = 0;
-		shellTask->oMsgX(colRED, "MDB%u: read measure TIMEOUT", mMdbNr);
+		getOutStream()->oMsgX(colRED, "MDB%u: read measure TIMEOUT", getMdbNr());
 		strcpy(autoRd.statusTxt, "TimeOut");
 	} else {
-		shellTask->oMsgX(colRED, "MDB%u: TIMEOUT", mMdbNr);
+		getOutStream()->oMsgX(colRED, "MDB%u: TIMEOUT", getMdbNr());
 	}
 }
 
 void NoiseDetector::loopFunc() {
-	if (isCfgNoiseOn()) {
+	if (isAnyConfiguredData()) {
 		if (HAL_GetTick() - autoRd.tick > TM_AUTO_RD) {
 			autoRd.tick = HAL_GetTick();
 			autoRd.phase = 1;
 		}
 		if (autoRd.phase != 0) {
-			if (state.sent.currReq == reqEMPTY) {
+			if (!isCurrenReq()) {
 				switch (autoRd.phase) {
 				case 1:
 					autoRd.reqCnt++;
@@ -93,7 +86,7 @@ void NoiseDetector::loopFunc() {
 					sendMdbFun4(reqSYS, 1, 1, 1); // jeden rejestr od początku pamięci
 					break;
 				case 2:
-					if (HAL_GetTick() - state.sent.tick > MAX_TIME_REPL)
+					if (HAL_GetTick() - getSentTick() > MAX_TIME_REPL)
 						autoRd.phase = 0;
 					break;
 				}
@@ -103,7 +96,6 @@ void NoiseDetector::loopFunc() {
 }
 
 void NoiseDetector::showState(OutStream *strm) {
-	MdbMasterTask::showState(strm);
 	if (strm->oOpen(colWHITE)) {
 		strm->oMsg("RedCnt=%d", autoRd.redCnt);
 		strm->oMsg("TmRd=%.2f[s]", (HAL_GetTick() - autoRd.redTick) / 1000.0);
@@ -120,7 +112,7 @@ void NoiseDetector::showMeas(OutStream *strm) {
 
 		int n = snprintf(gtxt, sizeof(gtxt), "Noise: ");
 
-		if (!isError()) {
+		if (!isDataError()) {
 			n += snprintf(&gtxt[n], sizeof(gtxt) - n, "%.1f[dB]", noiseData.valueFiz);
 			if (noiseData.filtrFIR != NULL) {
 				n += snprintf(&gtxt[n], sizeof(gtxt) - n, " (FIR:%.1f) (IR:%.1f)", noiseData.filtrFIR->out(), noiseData.filtrIR->out());
@@ -135,20 +127,23 @@ void NoiseDetector::showMeas(OutStream *strm) {
 
 }
 
-bool NoiseDetector::isError() {
+bool NoiseDetector::isAnyConfiguredData(){
+	return config->data.R.exDev.sensExist[ssNOISE];
+}
+
+bool NoiseDetector::isDataError() {
 	return ((autoRd.redTick == 0) || (HAL_GetTick() - autoRd.redTick > TIME_MEAS_VALID));
 }
 
-bool NoiseDetector::getNoiseValue(float *val) {
-	return getNoiseValue(config->data.R.exDev.noiseFiltrType, val);
-}
-
-bool NoiseDetector::getNoiseValue(int filtrType, float *val) {
-
-	if (isError()) {
-		*val = NAN;
+bool NoiseDetector::getMeasValue(MeasType measType, float *val) {
+	if (measType != ssNOISE) {
 		return false;
 	}
+
+	if (isDataError()) {
+		return false;
+	}
+	int filtrType = config->data.R.exDev.noiseFiltrType;
 
 	float v = noiseData.valueFiz;
 	switch (filtrType) {
@@ -174,15 +169,7 @@ const ShellItemFx menuNoiseFx[] = { //
 		{ "m", "pomiary", NoiseDetector::funShowMeasure }, //
 				{ NULL, NULL } };
 
-const ShellItemFx* NoiseDetector::getMenuFx() {
-	return menuNoiseFx;
-}
-
-const char* NoiseDetector::getMenuName() {
-	return "Noise sensor Menu";
-}
-const char* NoiseDetector::getDevName() {
-	return "noise";
-
+void NoiseDetector::shell(OutStream *strm, const char *cmd) {
+	execMenuCmd(strm, menuNoiseFx, cmd, this, "Noise sensor Menu");
 }
 

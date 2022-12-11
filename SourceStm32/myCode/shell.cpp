@@ -33,14 +33,16 @@
 
 extern Bg96Driver *bg96;
 extern DustSensorBase *dustInternSensor;
-extern MdbMasterDustTask *dustExternSensor;
-extern NoiseDetector *mdbMaster_1;
+extern ExtDustsensor *dustExternSensor;
+extern MdbMasterTask *mdbMaster_1;
 extern MdbMasterTask *mdbMaster_2;
 extern SHT35Device *sht35;
 extern Bmp338Device *bmp338;
 extern LedMatrix *ledMatrix;
 extern I2cBus *i2cBus1;
 extern GasS873 *gasS873;
+extern NoiseDetector *noiseDet;
+
 
 //-------------------------------------------------------------------------------------------------------------------------
 // ShellConnection
@@ -457,10 +459,10 @@ static void funShowState(OutStream *strm, const char *cmd, void *arg) {
 		if (config->data.P.dustInpType == dust_Intern) {
 			strm->oMsg("DustInternSensor:%s", ErrOk(dustInternSensor->isError()));
 		} else {
-			strm->oMsg("DustExternSensor:%s", ErrOk(dustExternSensor->isError()));
+			strm->oMsg("DustExternSensor:%s", ErrOk(dustExternSensor->isDataError()));
 		}
-		if (mdbMaster_1->isCfgNoiseOn()) {
-			strm->oMsg("NoiseSensor     :%s", ErrOk(mdbMaster_1->isError()));
+		if (noiseDet!=NULL) {
+			strm->oMsg("NoiseSensor     :%s", ErrOk(noiseDet->isDataError()));
 		}
 		if (gasS873->isAnyConfiguredData()) {
 			strm->oMsg("GasSensor       :%s", ErrOk(gasS873->isDataError()));
@@ -533,7 +535,7 @@ static void funMenuDust(OutStream *strm, const char *cmd, void *arg) {
 	if (config->data.P.dustInpType == dust_Intern) {
 		dustInternSensor->shell(strm, cmd);
 	} else {
-		dustExternSensor->shell(strm, cmd);
+		//dustExternSensor->shell(strm, cmd);
 	}
 }
 static void funMenuMdb1(OutStream *strm, const char *cmd, void *arg) {
@@ -642,8 +644,8 @@ const ShellItemFx mainMenuFx[] = { //
 				{ "bg", ">> menu BG96", funMenuBG96 }, //
 				{ "iic", ">> menu układów i2c", funMenuI2C }, //
 				{ "dust", ">> menu czujnika pyłów", funMenuDust }, //
-				{ "noise", ">> czujnik hałasu, menu modbus master X7", funMenuMdb1 }, //
-				{ "gas", ">> czujnik  gazów, menu modbus master X6", funMenuMdb2 }, //
+				{ "mdb1", ">> menu modbus master X7", funMenuMdb1 }, //
+				{ "mdb2", ">> menu modbus master X6", funMenuMdb2 }, //
 				{ "matrix", ">> menu LedMatrix", funMenuLedMatrix }, //
 				{ "ps", "lista wątków", funShowTask }, //
 				{ "psx", "lista tasków", funShowTaskEx }, //

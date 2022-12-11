@@ -10,7 +10,7 @@
 
 #include "MdbMasterTask.h"
 
-class MdbMasterDustTask: public MdbMasterTask {
+class ExtDustsensor: public MdbDev {
 private:
 	enum {
 		TM_AUTO_RD = 2000, // czas automatycznego odczytu czujnika hałasu
@@ -57,24 +57,27 @@ private:
 
 protected:
 	virtual void loopFunc();
-	virtual void doOnTimeOut();
-
+	virtual void onTimeOut();
 	virtual void onReciveData(bool replOK, uint8_t mdbFun, const uint8_t *tab, int regCnt);
+
 	virtual void showState(OutStream *strm);
-	virtual const char* getMenuName();
-	virtual const char* getDevName();
-	virtual const ShellItemFx* getMenuFx();
+	virtual void shell(OutStream *strm, const char *cmd);
 
 public:
-	MdbMasterDustTask(int mdbNr, int portNr);
+	ExtDustsensor(MdbMasterTask *mdbTask, uint8_t mdbAdr, const char *name);
 	static void funShowMeasure(OutStream *strm, const char *cmd, void *arg);
 	static void funHeaterOn(OutStream *strm, const char *cmd, void *arg);
 	static void funHeaterOff(OutStream *strm, const char *cmd, void *arg);
 
 	HAL_StatusTypeDef getMeas(DustMeasRec *meas);
 	void setHeater(ReqSrc reqSrc, bool heaterOn);
-	bool isCfgDustOn();
-	bool isError();
+public:
+	//Unidev
+	virtual bool getMeasValue(MeasType measType, float *val);
+	virtual bool isAnyConfiguredData();
+	virtual bool isDataError();
+	//virtual void getDeviceStatusTxt(char *txt, int max);
+
 
 };
 

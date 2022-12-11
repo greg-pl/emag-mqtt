@@ -18,7 +18,7 @@
 
 extern ShellTask *shellTask;
 
-I2cBus::I2cBus(I2C_TypeDef *i2cDef){
+I2cBus::I2cBus(I2C_TypeDef *i2cDef) {
 	mI2cDef = i2cDef;
 	menuExp.menuTab = NULL;
 	menuExp.argTab = NULL;
@@ -34,7 +34,6 @@ I2cBus::I2cBus(I2C_TypeDef *i2cDef){
 
 	InitHd();
 }
-
 
 HAL_StatusTypeDef I2cBus::_InitHd() {
 	memset(&hi2c, 0, sizeof(hi2c));
@@ -387,7 +386,8 @@ void I2cBus::shell(OutStream *strm, const char *cmd) {
 //-------------------------------------------------------------------------------------------------------------------------
 // I2c1Dev
 //-------------------------------------------------------------------------------------------------------------------------
-I2cDev::I2cDev(I2cBus *bus, uint8_t adr, const char *name) {
+I2cDev::I2cDev(I2cBus *bus, uint8_t adr, const char *name) :
+		UniDev::UniDev(name) {
 	mBus = bus;
 	mDevAdr = adr;
 	mDevExist = false;

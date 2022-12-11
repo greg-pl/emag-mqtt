@@ -8,6 +8,7 @@
 #ifndef I2CDEV_H_
 #define I2CDEV_H_
 
+#include <UniDev.h>
 #include <IOStream.h>
 #include "cmsis_os.h"
 #include "stm32f4xx_hal.h"
@@ -19,14 +20,13 @@
 
 class I2cBus;
 
-class I2cDev {
+class I2cDev : public UniDev {
 	friend class I2cBus;
 
 protected:
 	I2cBus *mBus;
 	uint8_t mDevAdr;
 	bool mDevExist;
-	char mName[16];
 	void showDevExist(OutStream *strm);
 	virtual void tick() {
 	}

@@ -9,17 +9,14 @@
 
 #include <IOStream.h>
 #include "TaskClass.h"
-#include "uart.h"
 #include "GlobData.h"
 #include "ShellItem.h"
 #include "Config.h"
-#include "shell.h"
 
 #include "math.h"
 #include "string.h"
 #include "stdio.h"
 
-extern ShellTask *shellTask;
 extern Config *config;
 
 //-----------------------------------------------------------------------------------------
@@ -32,23 +29,6 @@ GasS873::GasS873(MdbMasterTask *mdbTask, uint8_t mdbAdr, const char *name) :
 	strcpy(autoRd.statusTxt, "Start");
 }
 
-bool GasS873::isAnyConfiguredData() {
-	if (config->data.R.exDev.sensExist[ssCO])
-		return true;
-	if (config->data.R.exDev.sensExist[ssCO2])
-		return true;
-	if (config->data.R.exDev.sensExist[ssTEMPERATURE])
-		return true;
-	if (config->data.R.exDev.sensExist[ssHUMIDITY])
-		return true;
-	if (config->data.R.exDev.sensExist[ssPRESSURE])
-		return true;
-	return false;
-}
-
-bool GasS873::isDataError() {
-	return ((autoRd.redTick == 0) || (HAL_GetTick() - autoRd.redTick > TIME_MEAS_VALID));
-}
 
 MeasType GasS873::getMeasType(uint8_t sensorType, uint8_t verTyp) {
 	if (sensorType == 0x03 && verTyp == 0x03)
@@ -89,7 +69,7 @@ void GasS873::onReciveData(bool replOK, uint8_t mdbFun, const uint8_t *tab, int 
 			case 2: {
 				uint16_t w = GetWord(&tab[0]);
 				gasData.devCnt = w & 0xff;
-				gasData.devCntTh = (gasData.devCnt < MAX_DEV_CNT) ? gasData.devCnt : MAX_DEV_CNT;
+				gasData.devCntTh = (gasData.devCnt < MAX_SENSOR_CNT) ? gasData.devCnt : MAX_SENSOR_CNT;
 
 				gasData.serialNum = GetWord(&tab[2]);
 				gasData.ProdYear = GetWord(&tab[4]);
@@ -138,34 +118,34 @@ void GasS873::onReciveData(bool replOK, uint8_t mdbFun, const uint8_t *tab, int 
 void GasS873::onTimeOut() {
 	if (autoRd.phase > 0) {
 		autoRd.phase = 0;
-		shellTask->oMsgX(colRED, "MDB%u: read measure TIMEOUT", mMdb->MdbNr);
+		getOutStream()->oMsgX(colRED, "MDB%u: read measure TIMEOUT", getMdbNr());
 		strcpy(autoRd.statusTxt, "TimeOut");
 	} else {
-		shellTask->oMsgX(colRED, "MDB%u: TIMEOUT", mMdbNr);
+		getOutStream()->oMsgX(colRED, "MDB%u: TIMEOUT", getMdbNr());
 	}
 }
 
 void GasS873::loopFunc() {
 	if (isAnyConfiguredData()) {
-		if (HAL_GetTick() - autoRd.tick > TM_AUTO_RD) {
-			autoRd.tick = HAL_GetTick();
+		if (HAL_GetTick() - autoRd.startTick > TM_AUTO_RD) {
+			autoRd.startTick = HAL_GetTick();
 			autoRd.phase = 1;
 		}
 		if (autoRd.phase != 0) {
-			if (isCurrenReqEmpty()) {
+			if (!isCurrenReq()) {
 				switch (autoRd.phase) {
 				case 1:
 					autoRd.reqCnt++;
 					autoRd.phase = 2;
-					sendMdbFun4(reqSYS, config->data.R.rest.gasDevMdbNr, 1, 4); //todo było 1,5
+					sendMdbFun4(reqSYS, mMdbAdr, 1, 4); //todo było 1,5
 					break;
 				case 3:
-					sendMdbFun4(reqSYS, config->data.R.rest.gasDevMdbNr, 1001, 4 * gasData.devCntTh);
+					sendMdbFun4(reqSYS, mMdbAdr, 1001, 4 * gasData.devCntTh);
 					autoRd.phase = 4;
 					break;
 				case 4:
 				case 2:
-					if (HAL_GetTick() - state.sent.tick > MAX_TIME_REPL)
+					if (HAL_GetTick() - getSentTick()> MAX_TIME_REPL)
 						autoRd.phase = 0;
 					break;
 				}
@@ -175,7 +155,6 @@ void GasS873::loopFunc() {
 }
 
 void GasS873::showState(OutStream *strm) {
-	MdbDev::showState(strm);
 	if (strm->oOpen(colWHITE)) {
 		strm->oMsg("RedCnt=%d", autoRd.redCnt);
 		strm->oMsg("TmRd=%.2f[s]", (HAL_GetTick() - autoRd.redTick) / 1000.0);
@@ -198,17 +177,32 @@ const char* GasS873::getSensValidStr(uint16_t status) {
 }
 
 
-
-bool GasS873::getMeasValue(MeasType measType, float *val) {
-	return getMeasValue(measType, config->data.R.exDev.gasFiltrType, val);
+bool GasS873::isAnyConfiguredData() {
+	if (config->data.R.exDev.sensExist[ssCO])
+		return true;
+	if (config->data.R.exDev.sensExist[ssCO2])
+		return true;
+	if (config->data.R.exDev.sensExist[ssTEMPERATURE])
+		return true;
+	if (config->data.R.exDev.sensExist[ssHUMIDITY])
+		return true;
+	if (config->data.R.exDev.sensExist[ssPRESSURE])
+		return true;
+	return false;
 }
 
-bool GasS873::getMeasValue(MeasType measType, int filtrType, float *val) {
+bool GasS873::isDataError() {
+	return ((autoRd.redTick == 0) || (HAL_GetTick() - autoRd.redTick > TIME_MEAS_VALID));
+}
+
+
+bool GasS873::getMeasValue(MeasType measType, float *val) {
 
 	if (isDataError()) {
 		*val = NAN;
 		return false;
 	}
+	int filtrType =  config->data.R.exDev.gasFiltrType;
 
 	for (int i = 0; i < gasData.devCntTh; i++) {
 		if (measType == gasData.sensorTab[i].measType) {
@@ -235,6 +229,11 @@ bool GasS873::getMeasValue(MeasType measType, int filtrType, float *val) {
 	return false;
 }
 
+void GasS873::getDeviceStatusTxt(char *txt, int max) {
+	snprintf(txt, max, "ReqCnt=%u RdCnt=%u TimeOutCnt=%u ST=%s", autoRd.reqCnt, autoRd.redCnt, mMdb->getTimeOutCnt(), autoRd.statusTxt);
+}
+
+
 void GasS873::showMeas(OutStream *strm) {
 	if (strm->oOpen(colWHITE)) {
 		strm->oMsg("RedCnt=%d", autoRd.redCnt);
@@ -253,7 +252,7 @@ void GasS873::showMeas(OutStream *strm) {
 			GlobData::GetMeasName(mt), getSensValidStr(pD->Status), pD->Status);
 
 			if (isMeasValid(pD->Status)) {
-				n += snprintf(&gtxt[n], sizeof(gtxt) - n, "v=%5d  ", pD->valueHd);
+				n += snprintf(&gtxt[n], sizeof(gtxt) - n, "V=%5d  ", pD->valueHd);
 				n += snprintf(&gtxt[n], sizeof(gtxt) - n, GlobData::GetMeasPrecisionStr(mt), pD->valueFiz);
 				n += snprintf(&gtxt[n], sizeof(gtxt) - n, "[%s]", GlobData::GetMeasUnit(mt));
 
@@ -274,35 +273,21 @@ void GasS873::funShowMeasure(OutStream *strm, const char *cmd, void *arg) {
 	gas->showMeas(strm);
 }
 
+void GasS873::funShowState(OutStream *strm, const char *cmd, void *arg) {
+	GasS873 *gas = (GasS873*) arg;
+	gas->showState(strm);
+}
+
+
 const ShellItemFx menuGasFx[] = { //
+		{ "s", "stan", GasS873::funShowState}, //
 		{ "m", "pomiary", GasS873::funShowMeasure }, //
 				{ NULL, NULL } };
 
-
-const ShellItemFx* GasS873::getMenuFx() {
-	return menuGasFx;
+void GasS873::shell(OutStream *strm, const char *cmd){
+	execMenuCmd(strm, menuGasFx, cmd, this, "Menu S873(gas)");
 }
 
-bool GasS873::execMyMenuItem(OutStream *strm, int idx, const char *cmd) {
-	switch (idx) {
-	case 0:  //m
-		showMeas(strm);
-		break;
-	default:
-		return false;
-	}
-	return true;
-}
 
-const char* GasS873::getMenuName() {
-	return "Menu S873(gas)";
-}
 
-const char* GasS873::getDevName() {
-	return "gas";
-}
-
-void GasS873::getDeviceStatusTxt(char *txt, int max) {
-	snprintf(txt, max, "ReqCnt=%u RdCnt=%u TimeOutCnt=%u ST=%s", autoRd.reqCnt, autoRd.redCnt, mMdb->getTimeOutCnt(), autoRd.statusTxt);
-}
 

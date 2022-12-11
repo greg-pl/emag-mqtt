@@ -94,10 +94,10 @@ void MdbUart::writeBuf(const void *buf, int len) {
 // MdbDev
 //-----------------------------------------------------------------------------------------
 
-MdbDev::MdbDev(MdbMasterTask *mdbTask, uint8_t mdbAdr, const char *name) {
-	strlcpy(mName, name, sizeof(mName));
+MdbDev::MdbDev(MdbMasterTask *mdbTask, uint8_t mdbAdr, const char *name) :
+		UniDev::UniDev(name) {
 	mMdb = mdbTask;
-	mAdr = mdbAdr;
+	mMdbAdr = mdbAdr;
 	mMdb->addDev(this);
 }
 
@@ -105,8 +105,8 @@ void MdbDev::shell(OutStream *strm, const char *cmd) {
 
 }
 
-bool MdbDev::isCurrenReqEmpty() {
-	return (mMdb->state.sent.currReq == reqEMPTY);
+bool MdbDev::isCurrenReq() {
+	return (mMdb->state.sent.currReq != reqEMPTY);
 }
 
 void MdbDev::sendMdbFun3(ReqSrc reqSrc, uint8_t DevNr, uint16_t regAdr, uint16_t regCnt) {
@@ -125,6 +125,22 @@ uint16_t MdbDev::GetWord(const uint8_t *p) {
 	return (p[0] << 8) | p[1];
 }
 
+float MdbDev::GetFloat(const uint8_t *p) {
+	float w;
+	uint16_t *pw = (uint16_t*) &w;
+	pw[0] = GetWord(&p[0]);
+	pw[1] = GetWord(&p[2]);
+	return w;
+}
+
+uint8_t MdbDev::getMdbNr() {
+	return mMdb->mMdbNr;
+}
+
+uint32_t MdbDev::getSentTick() {
+	return mMdb->state.sent.tick;
+}
+
 //-----------------------------------------------------------------------------------------
 // MdbMasterTask
 //-----------------------------------------------------------------------------------------
@@ -133,6 +149,7 @@ MdbMasterTask::MdbMasterTask(int mdbNr, int portNr) :
 		TaskClass::TaskClass("MDB", osPriorityNormal, 1024) {
 	char buf[16];
 
+	mMdbNr = mdbNr;
 	menuExp.menuTab = NULL;
 	menuExp.argTab = NULL;
 
@@ -284,15 +301,35 @@ void MdbMasterTask::sendMdbFun16(ReqSrc reqSrc, uint8_t DevNr, uint16_t regAdr, 
 	}
 }
 
-void MdbMasterTask::buidMsgRec(MsgV *m) {
+void MdbMasterTask::buidDbgRec(DbgV *m) {
 	m->err = (mDbgLevel >= 1) || (state.sent.currReq == reqCONSOLA);
 	m->info = (mDbgLevel >= 2) || (state.sent.currReq == reqCONSOLA);
 	m->dat = (mDbgLevel >= 3) || (state.sent.currReq == reqCONSOLA);
 }
 
+void MdbMasterTask::sendConsolaReq() {
+	if (state.sent.currReq == reqEMPTY) {
+		switch (reqConsola.fun) {
+		case 3:
+			sendMdbFun3(reqCONSOLA, reqConsola.devNr, reqConsola.regAdr, reqConsola.regCnt);
+			break;
+		case 4:
+			sendMdbFun4(reqCONSOLA, reqConsola.devNr, reqConsola.regAdr, reqConsola.regCnt);
+			break;
+		case 6:
+			sendMdbFun6(reqCONSOLA, reqConsola.devNr, reqConsola.regAdr, reqConsola.regVal[0]);
+			break;
+		case 16:
+			sendMdbFun16(reqCONSOLA, reqConsola.devNr, reqConsola.regAdr, reqConsola.regCnt, reqConsola.regVal);
+			break;
+		}
+		reqConsola.fun = 0;
+	}
+}
+
 void MdbMasterTask::doOnReciveData(bool replOK, uint8_t mdbFun, const uint8_t *tab, int regCnt) {
 	for (int i = 0; i < devs.cnt; i++) {
-		if (devs.tab[i]->mAdr == state.sent.devNr) {
+		if (devs.tab[i]->mMdbAdr == state.sent.devNr) {
 			devs.tab[i]->onReciveData(replOK, mdbFun, tab, regCnt);
 		}
 	}
@@ -300,7 +337,7 @@ void MdbMasterTask::doOnReciveData(bool replOK, uint8_t mdbFun, const uint8_t *t
 
 void MdbMasterTask::doOnTimeOut() {
 	for (int i = 0; i < devs.cnt; i++) {
-		if (devs.tab[i]->mAdr == state.sent.devNr) {
+		if (devs.tab[i]->mMdbAdr == state.sent.devNr) {
 			devs.tab[i]->onTimeOut();
 		}
 	}
@@ -310,8 +347,8 @@ void MdbMasterTask::proceedRecFrame() {
 	int n = mUart->getRxCharCnt();
 	if (n > 4) {
 		const uint8_t *inBuf = mUart->getRxBuf();
-		MsgV m;
-		buidMsgRec(&m);
+		DbgV m;
+		buidDbgRec(&m);
 
 		if (TCrc::Check(inBuf, n)) {
 			if (inBuf[0] != state.sent.devNr) {
@@ -391,32 +428,6 @@ void MdbMasterTask::proceedRecFrame() {
 
 }
 
-void MdbMasterTask::sendConsolaReq() {
-	if (state.sent.currReq == reqEMPTY) {
-		switch (reqConsola.fun) {
-		case 3:
-			sendMdbFun3(reqCONSOLA, reqConsola.devNr, reqConsola.regAdr, reqConsola.regCnt);
-			break;
-		case 4:
-			sendMdbFun4(reqCONSOLA, reqConsola.devNr, reqConsola.regAdr, reqConsola.regCnt);
-			break;
-		case 6:
-			sendMdbFun6(reqCONSOLA, reqConsola.devNr, reqConsola.regAdr, reqConsola.regVal[0]);
-			break;
-		case 16:
-			sendMdbFun16(reqCONSOLA, reqConsola.devNr, reqConsola.regAdr, reqConsola.regCnt, reqConsola.regVal);
-			break;
-		}
-		reqConsola.fun = 0;
-	}
-}
-
-//wywolywane z watku Shell'a
-void MdbMasterTask::setConsolaReq(ReqConsola *req) {
-	reqConsola = *req;
-	osSignalSet(getThreadId(), SIGNAL_CMD);
-}
-
 void MdbMasterTask::ThreadFunc() {
 	uint32_t sleepTm = 50;
 	xEventGroupWaitBits(sysEvents, EVENT_CREATE_DEVICES, false, false, 1000000);
@@ -441,8 +452,8 @@ void MdbMasterTask::ThreadFunc() {
 		sleepTm = 50;
 		uint32_t tt = HAL_GetTick();
 
-		MsgV m;
-		buidMsgRec(&m);
+		DbgV m;
+		buidDbgRec(&m);
 
 //czy TimeOUT  dla funkcji Modbus
 		if (state.sent.currReq != reqEMPTY) {
@@ -456,14 +467,14 @@ void MdbMasterTask::ThreadFunc() {
 		}
 
 		uint32_t tr = mUart->getLastRxCharTick();
-		if (tr != 0 && tt - tr > 10) {
+		if (tr != 0 && tt - tr > 5) {
 			proceedRecFrame();
 		}
 
 		if (ev.status == osEventSignal) {
 			int code = ev.value.v;
 			if (code & SIGNAL_RXCHAR) {
-				sleepTm = 11;
+				sleepTm = 6;
 			}
 
 			if (code & SIGNAL_CMD) {
@@ -478,6 +489,12 @@ void MdbMasterTask::ThreadFunc() {
 		}
 
 	} // koniec pętli
+}
+
+//wywolywane z watku Shell'a
+void MdbMasterTask::setConsolaReq(ReqConsola *req) {
+	reqConsola = *req;
+	osSignalSet(getThreadId(), SIGNAL_CMD);
 }
 
 void MdbMasterTask::showState(OutStream *strm) {
@@ -654,7 +671,12 @@ void MdbMasterTask::shell(OutStream *strm, const char *cmd) {
 			}
 		}
 	}
+	static char menuName[20] = { 0 };
+	if (menuName[0] == 0) {
+		snprintf(menuName, sizeof(menuName), "Mdb%u menu", mMdbNr);
+	}
+
 	if (menuExp.menuTab != NULL)
-		execMenuCmdArg(strm, menuExp.menuTab, cmd, menuExp.argTab, "I2C Menu");
+		execMenuCmdArg(strm, menuExp.menuTab, cmd, menuExp.argTab, menuName);
 }
 

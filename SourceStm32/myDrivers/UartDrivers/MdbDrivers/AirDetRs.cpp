@@ -8,11 +8,8 @@
 #include "AirDetRs.h"
 
 #include "utils.h"
-#include "main.h"
 #include "UMain.h"
-#include "shell.h"
 #include "Config.h"
-#include "i2cDev.h"
 #include "Hal.h"
 #include "Bmp338Device.h"
 #include "Sht35Device.h"
@@ -23,14 +20,13 @@
 
 extern SHT35Device *sht35;
 extern Bmp338Device *bmp338;
-extern ShellTask *shellTask;
 extern Config *config;
 
 //-----------------------------------------------------------------------------------------
 // MdbMasterGasTask
 //-----------------------------------------------------------------------------------------
-AirDetRs::AirDetRs(int mdbNr, int portNr) :
-		MdbMasterTask::MdbMasterTask(mdbNr, portNr) {
+AirDetRs::AirDetRs(MdbMasterTask *mdbTask, uint8_t mdbAdr, const char *name) :
+		MdbDev::MdbDev(mdbTask, mdbAdr, name) {
 	memset(&autoRd, 0, sizeof(autoRd));
 	memset(&gasData, 0, sizeof(gasData));
 
@@ -39,18 +35,6 @@ AirDetRs::AirDetRs(int mdbNr, int portNr) :
 	zeroOfs.cnt = 0;
 	zeroOfs.phase = 0;
 	zeroOfs.sensNr = 0;
-}
-
-bool AirDetRs::isCfgAnyGas() {
-	if (config->data.R.exDev.sensExist[ssCO])
-		return true;
-	if (config->data.R.exDev.sensExist[ssSO2])
-		return true;
-	if (config->data.R.exDev.sensExist[ssO3])
-		return true;
-	if (config->data.R.exDev.sensExist[ssNO2])
-		return true;
-	return false;
 }
 
 float AirDetRs::getGasFactor(int id) {
@@ -178,7 +162,7 @@ void AirDetRs::onReciveData(bool replOK, uint8_t mdbFun, const uint8_t *tab, int
 		}
 	}
 	if (zeroOfs.phase > 0) {
-		shellTask->oMsgX(colWHITE, "MDB%u: Ack %s. Phase=%u sensNr=%u", mMdbNr, ErrOk(!replOK), zeroOfs.phase, zeroOfs.sensNr);
+		getOutStream()->oMsgX(colWHITE, "MDB%u: Ack %s. Phase=%u sensNr=%u", getMdbNr(), ErrOk(!replOK), zeroOfs.phase, zeroOfs.sensNr);
 		if (replOK) {
 			switch (zeroOfs.phase) {
 			case 2:
@@ -196,28 +180,28 @@ void AirDetRs::onReciveData(bool replOK, uint8_t mdbFun, const uint8_t *tab, int
 				if (zeroOfs.sensNr < gasData.devCntTh) {
 					sendZeroOfs_Phase5Frame();
 				} else {
-					shellTask->oMsgX(colGREEN, "MDB%u: Send zero offset OK", mMdbNr);
+					getOutStream()->oMsgX(colGREEN, "MDB%u: Send zero offset OK", getMdbNr());
 					zeroOfs.phase = 0;
 				}
 				break;
 			}
 		} else {
-			shellTask->oMsgX(colRED, "MDB%u: Send zero offset ERROR. Phase=%u sensNr=%u", mMdbNr, zeroOfs.phase, zeroOfs.sensNr);
+			getOutStream()->oMsgX(colRED, "MDB%u: Send zero offset ERROR. Phase=%u sensNr=%u", getMdbNr(), zeroOfs.phase, zeroOfs.sensNr);
 			zeroOfs.phase = 0;
 		}
 	}
 }
 
-void AirDetRs::doOnTimeOut() {
+void AirDetRs::onTimeOut() {
 	if (zeroOfs.phase > 0) {
 		zeroOfs.phase = 0;
-		shellTask->oMsgX(colRED, "MDB%u: Send zero offset TIMEOUT. Phase=%u sensNr=%u", mMdbNr, zeroOfs.phase, zeroOfs.sensNr);
+		getOutStream()->oMsgX(colRED, "MDB%u: Send zero offset TIMEOUT. Phase=%u sensNr=%u", getMdbNr(), zeroOfs.phase, zeroOfs.sensNr);
 	} else if (autoRd.phase > 0) {
 		autoRd.phase = 0;
-		shellTask->oMsgX(colRED, "MDB%u: read measure TIMEOUT", mMdbNr);
+		getOutStream()->oMsgX(colRED, "MDB%u: read measure TIMEOUT", getMdbNr());
 		strcpy(autoRd.statusTxt, "TimeOut");
 	} else {
-		shellTask->oMsgX(colRED, "MDB%u: TIMEOUT", mMdbNr);
+		getOutStream()->oMsgX(colRED, "MDB%u: TIMEOUT", getMdbNr());
 	}
 }
 
@@ -236,7 +220,7 @@ void AirDetRs::sendZeroOfs_Phase1Frame() {
 
 	sendZeroOfs_FrameZero(tab);
 	tab[6] = zeroOfs.sensNr * 0x100;
-	sendMdbFun16(reqSYS, config->data.R.rest.gasDevMdbNr, 10001, 7, tab);
+	sendMdbFun16(reqSYS, mMdbAdr, 10001, 7, tab);
 }
 
 void AirDetRs::sendZeroOfs_Phase5Frame() {
@@ -244,7 +228,7 @@ void AirDetRs::sendZeroOfs_Phase5Frame() {
 
 	sendZeroOfs_FrameZero(tab);
 	tab[6] = zeroOfs.sensNr * 0x100 + 3;
-	sendMdbFun16(reqSYS, config->data.R.rest.gasDevMdbNr, 10001, 7, tab);
+	sendMdbFun16(reqSYS, mMdbAdr, 10001, 7, tab);
 }
 
 void AirDetRs::sendZeroOfs_Phase3Frame() {
@@ -255,11 +239,11 @@ void AirDetRs::sendZeroOfs_Phase3Frame() {
 		tab[2 + i] = zeroOfs.tab[i];
 	}
 	tab[6] = 0x0005;
-	sendMdbFun16(reqSYS, config->data.R.rest.gasDevMdbNr, 10001, 7, tab);
+	sendMdbFun16(reqSYS, mMdbAdr, 10001, 7, tab);
 }
 
 void AirDetRs::loopFunc() {
-	if (isCfgAnyGas()) {
+	if (isAnyConfiguredData()) {
 		if (HAL_GetTick() - autoRd.tick > TM_AUTO_RD) {
 			if (zeroOfs.phase == 0) {
 				autoRd.tick = HAL_GetTick();
@@ -267,20 +251,20 @@ void AirDetRs::loopFunc() {
 			}
 		}
 		if (autoRd.phase != 0) {
-			if (state.sent.currReq == reqEMPTY) {
+			if (!isCurrenReq()) {
 				switch (autoRd.phase) {
 				case 1:
 					autoRd.reqCnt++;
 					autoRd.phase = 2;
-					sendMdbFun4(reqSYS, config->data.R.rest.gasDevMdbNr, 1, 4); //todo było 1,5
+					sendMdbFun4(reqSYS, mMdbAdr, 1, 4); //todo było 1,5
 					break;
 				case 3:
-					sendMdbFun4(reqSYS, config->data.R.rest.gasDevMdbNr, 1001, 4 * gasData.devCntTh);
+					sendMdbFun4(reqSYS, mMdbAdr, 1001, 4 * gasData.devCntTh);
 					autoRd.phase = 4;
 					break;
 				case 4:
 				case 2:
-					if (HAL_GetTick() - state.sent.tick > MAX_TIME_REPL)
+					if (HAL_GetTick() - getSentTick() > MAX_TIME_REPL)
 						autoRd.phase = 0;
 					break;
 				}
@@ -291,11 +275,11 @@ void AirDetRs::loopFunc() {
 				zeroOfs.flag = false;
 				zeroOfs.phase = 1;
 				zeroOfs.sensNr = 0;
-				shellTask->oMsgX(colYELLOW, "ZeroOfs  cnt=%u", zeroOfs.cnt);
+				getOutStream()->oMsgX(colYELLOW, "ZeroOfs  cnt=%u", zeroOfs.cnt);
 			}
 		}
 		if (zeroOfs.phase != 0) {
-			if (state.sent.currReq == reqEMPTY) {
+			if (!isCurrenReq()) {
 				switch (zeroOfs.phase) {
 				case 1:
 					zeroOfs.phase = 2;
@@ -315,7 +299,7 @@ void AirDetRs::loopFunc() {
 				case 2:
 				case 4:
 				case 6:
-					if (HAL_GetTick() - state.sent.tick > MAX_TIME_REPL + 500)
+					if (HAL_GetTick() - getSentTick() > MAX_TIME_REPL + 500)
 						zeroOfs.phase = 0;
 					break;
 				}
@@ -326,7 +310,6 @@ void AirDetRs::loopFunc() {
 }
 
 void AirDetRs::showState(OutStream *strm) {
-	MdbMasterTask::showState(strm);
 	if (strm->oOpen(colWHITE)) {
 		strm->oMsg("RedCnt=%d", autoRd.redCnt);
 		strm->oMsg("TmRd=%.2f[s]", (HAL_GetTick() - autoRd.redTick) / 1000.0);
@@ -378,20 +361,31 @@ void AirDetRs::showMeas(OutStream *strm) {
 	}
 }
 
-bool AirDetRs::isError() {
+bool AirDetRs::isDataError() {
 	return ((autoRd.redTick == 0) || (HAL_GetTick() - autoRd.redTick > TIME_MEAS_VALID));
 }
 
-bool AirDetRs::getGasValue(MeasType measType, float *val) {
-	return getGasValue(measType, config->data.R.exDev.gasFiltrType, val);
+bool AirDetRs::isAnyConfiguredData() {
+	if (config->data.R.exDev.sensExist[ssCO])
+		return true;
+	if (config->data.R.exDev.sensExist[ssSO2])
+		return true;
+	if (config->data.R.exDev.sensExist[ssO3])
+		return true;
+	if (config->data.R.exDev.sensExist[ssNO2])
+		return true;
+	return false;
 }
 
-bool AirDetRs::getGasValue(MeasType measType, int filtrType, float *val) {
 
-	if (isError()) {
+bool AirDetRs::getMeasValue(MeasType measType, float *val) {
+
+	if (isDataError()) {
 		*val = NAN;
 		return false;
 	}
+
+	int filtrType = config->data.R.exDev.gasFiltrType;
 
 	int gasCode = 0;
 	switch (measType) {
@@ -448,22 +442,26 @@ bool AirDetRs::zeroGasFromSMS(const char *ptr, char *resText, int maxLen) {
 			break;
 	}
 	if (zeroOfs.cnt == gasData.devCntTh) {
-		if (shellTask->oOpen(colBLUE)) {
-			shellTask->oMsg("GAS: Zero offset z SMS");
+		if (getOutStream()->oOpen(colBLUE)) {
+			getOutStream()->oMsg("GAS: Zero offset z SMS");
 			for (int i = 0; i < gasData.devCntTh; i++) {
-				shellTask->oMsg("%u. z=%d", i + 1, (int) ((int16_t) zeroOfs.tab[i]));
+				getOutStream()->oMsg("%u. z=%d", i + 1, (int) ((int16_t) zeroOfs.tab[i]));
 			}
-			shellTask->oClose();
+			getOutStream()->oClose();
 		}
 
 		zeroOfs.flag = true;
 		strlcpy(resText, "ZERO-GAS. Procedura rozpoczęta.", maxLen);
 		return true;
 	} else {
-		shellTask->oMsgX(colBLUE, "SMS Błąd. Ilość parametrów powinna być %u", gasData.devCntTh);
+		getOutStream()->oMsgX(colBLUE, "SMS Błąd. Ilość parametrów powinna być %u", gasData.devCntTh);
 		snprintf(resText, maxLen, "ZERO-GAS. Błąd, ilość parametrów powinna być %u", gasData.devCntTh);
 		return false;
 	}
+}
+
+void AirDetRs::getDeviceStatusTxt(char *txt, int max) {
+	snprintf(txt, max, "ReqCnt=%u RdCnt=%u TimeOutCnt=%u ST=%s", autoRd.reqCnt, autoRd.redCnt, mMdb->getTimeOutCnt(), autoRd.statusTxt);
 }
 
 void AirDetRs::funShowMeasure(OutStream *strm, const char *cmd, void *arg) {
@@ -496,18 +494,7 @@ const ShellItemFx menuGasFx[] = { //
 
 				{ NULL, NULL } };
 
-const ShellItemFx* AirDetRs::getMenuFx() {
-	return menuGasFx;
+void AirDetRs::shell(OutStream *strm, const char *cmd) {
+	execMenuCmd(strm, menuGasFx, cmd, this, "GAS sensor Menu");
 }
 
-const char* AirDetRs::getMenuName() {
-	return "GAS sensor Menu";
-}
-
-const char* AirDetRs::getDevName() {
-	return "gas";
-}
-
-void AirDetRs::getDeviceStatusTxt(char *txt, int max) {
-	snprintf(txt, max, "ReqCnt=%u RdCnt=%u TimeOutCnt=%u ST=%s", autoRd.reqCnt, autoRd.redCnt, state.timeOutCnt, autoRd.statusTxt);
-}
