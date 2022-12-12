@@ -13,10 +13,7 @@
 #include <main.h>
 #include <Utils.h>
 #include <cpx.h>
-#include "Shell.h"
 #include <ShellItem.h>
-
-extern ShellTask *shellTask;
 
 I2cBus::I2cBus(I2C_TypeDef *i2cDef) {
 	mI2cDef = i2cDef;
@@ -277,7 +274,7 @@ void I2cBus::tick() {
 			bool busyAf = rdBusyFlag();
 			closeMutex();
 			BusRestart();
-			shellTask->oMsgX(colRED, "I2CBus RESTART: sdaBf=%u, sdaAf=%u, busyAf=%u", sdaBf, sdaAf, busyAf);
+			getOutStream()->oMsgX(colRED, "I2CBus RESTART: sdaBf=%u, sdaAf=%u, busyAf=%u", sdaBf, sdaAf, busyAf);
 			mBusRestartCnt++;
 		}
 
@@ -288,10 +285,10 @@ void I2cBus::tick() {
 	}
 }
 
-bool I2cBus::isError() {
+bool I2cBus::isDataError() {
 	bool q = 0;
 	for (int i = 0; i < devs.cnt; i++) {
-		q |= devs.tab[i]->isError();
+		q |= devs.tab[i]->isDataError();
 	}
 	return q;
 }

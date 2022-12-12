@@ -59,7 +59,7 @@ public:
 	};
 
 	static GlobDtRec dt;
-	static char *jsonbuf;
+	static CxString *jsonbuf;
 	static const char *GetMeasName(MeasType meas);
 	static const char *GetMeasUnit(MeasType meas);
 	static const char* GetMeasPrecisionStr(MeasType meas);
@@ -70,7 +70,7 @@ public:
 	static void showJson(OutStream *strm);
 	static int buildExportJson();
 	static bool getData(float *data);
-	static HAL_StatusTypeDef getDustMeas(DustMeasRec *dustMeas);
+	static UniDev *getDustSensor();
 
 
 

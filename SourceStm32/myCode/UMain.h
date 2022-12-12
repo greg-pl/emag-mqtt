@@ -44,10 +44,6 @@ extern VerInfo mSoftVer;
 
 
 extern void uMainCont();
-extern void shMsg(int color, const char *pFormat, ...);
-extern unsigned char shOpenMsg(int color);
-extern void shMsgClose();
-extern void shMsgItem(const char *pFormat, ...);
 extern void reboot(int tm);
 extern void getDevStatusAsTxt(char *buf,int max);
 

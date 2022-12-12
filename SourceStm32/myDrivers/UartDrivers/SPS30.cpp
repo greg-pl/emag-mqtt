@@ -7,13 +7,12 @@
 
 #include "SPS30.h"
 #include "utils.h"
-#include "shell.h"
 #include "ShellItem.h"
 #include "Hal.h"
+#include "Token.h"
 
 #include <string.h>
 
-extern ShellTask *shellTask;
 
 //kody błędów zwracane przez SPS30
 enum {
@@ -27,7 +26,7 @@ enum {
 };
 
 SPS30::SPS30() :
-		DustSensorBase::DustSensorBase(), TUart::TUart(TUart::myUART5, 7) {
+		DustSensorBase::DustSensorBase("SPS30"), TUart::TUart(TUart::myUART5, 7) {
 	memset(&state, 0, sizeof(state));
 	memset(&rxRec, 0, sizeof(rxRec));
 	memset(&txRec, 0, sizeof(txRec));
@@ -143,7 +142,7 @@ void SPS30::setPower(bool on) {
 	Hdw::dustSensorOn(on);
 }
 
-SPS30_Status SPS30::execNewFrame() {
+TStatus SPS30::execNewFrame() {
 	char frame[80];
 
 	if (rxRec.buf[0] != START_BYTE || rxRec.buf[rxRec.rxPtr - 1] != START_BYTE)
@@ -196,7 +195,7 @@ SPS30_Status SPS30::execNewFrame() {
 
 	state.devState = frame[2];
 	if (mDebug >= 2)
-		shellTask->oMsgX(colMAGENTA, "rec cmd=0x%02X state=0x%02X L=%d(%d)", cmd, state.devState, dtLen, dtLen1);
+		getOutStream()->oMsgX(colMAGENTA, "rec cmd=0x%02X state=0x%02X L=%d(%d)", cmd, state.devState, dtLen, dtLen1);
 	if (mDebug >= 3) {
 		char txt[100];
 		int n = snprintf(txt, sizeof(txt), "DT:");
@@ -204,18 +203,18 @@ SPS30_Status SPS30::execNewFrame() {
 		for (int i = 0; i < dtLen; i++) {
 			n += snprintf(&txt[n], sizeof(txt) - n, "0x%02X,", frDt[i]);
 		}
-		shellTask->oMsgX(colMAGENTA, txt);
+		getOutStream()->oMsgX(colMAGENTA, txt);
 	}
 
 	switch (cmd) {
 	case cmdSTART_MEASURE:
 		if (mDebug >= 1) {
-			shellTask->oMsgX(colMAGENTA, "SP30:StartMeasureAck");
+			getOutStream()->oMsgX(colMAGENTA, "SP30:StartMeasureAck");
 		}
 		break;
 	case cmdSTOP_MEASURE:
 		if (mDebug >= 1) {
-			shellTask->oMsgX(colMAGENTA, "SP30:StopMeasureAck");
+			getOutStream()->oMsgX(colMAGENTA, "SP30:StopMeasureAck");
 		}
 		break;
 	case cmdREAD_VAL: {
@@ -231,7 +230,7 @@ SPS30_Status SPS30::execNewFrame() {
 			state.measFrame.sendGetReqMeasTick = 0;
 
 			if (mDebug >= 3) {
-				ShowMesuredRec(shellTask);
+				ShowMesuredRec(getOutStream());
 			}
 			if (openMutex(50)) {
 				uint32_t tt = HAL_GetTick();
@@ -249,12 +248,12 @@ SPS30_Status SPS30::execNewFrame() {
 		break;
 	case cmdSTART_FAN_CLEANING:
 		if (mDebug >= 1) {
-			shellTask->oMsgX(colMAGENTA, "CleaningAck");
+			getOutStream()->oMsgX(colMAGENTA, "CleaningAck");
 		}
 		break;
 	case cmdDEVICE_INFO:
 		if (mDebug >= 1) {
-			shellTask->oMsgX(colMAGENTA, "DevInfo=[%s]", frDt);
+			getOutStream()->oMsgX(colMAGENTA, "DevInfo=[%s]", frDt);
 		}
 		break;
 	case cmdRESET:

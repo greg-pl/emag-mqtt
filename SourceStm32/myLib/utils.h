@@ -36,31 +36,6 @@ extern "C" bool strbcmp2(const char *buf, const char *wz, const char **rest);
 extern "C" bool loadSoftVer(VerInfo *ver, const char *mem);
 
 
-
-class Token {
-private:
-	static bool isSep(const char *sep, char ch);
-public:
-	static void trim(const char **inp);
-	static bool get(const char **inp, const char *sepStr, char *tok, int size, char *pSep);
-	static bool get(const char **inp, char *tok, int size, char *pSep);
-	static bool get(const char **inp, char *tok, int size);
-	static bool get(const char **inp);
-
-	static bool getAsInt(const char **inp, int *val);
-	static bool getAsInt(const char **inp, const char *sepStr, int *val);
-	static bool getAsBool(const char **inp, bool *val);
-
-	static bool getAsFloat(const char **inp, float *val);
-	static bool chgCtrlChar(char *dst, const char *src, int max);
-	static void remooveEOL(char *line);
-	static bool remooveQuota(char *line);
-	static void copyNoQuota(char *dst, int max, const char *src);
-	static void setQuotaStr(char *dst, const char *txt, int max);
-	static void shiftLeft(char *buf, int dist);
-	static int parseInt(const char *ptr, int len);
-};
-
 class TimeTools {
 public:
 	static bool CheckTime(const TDATE *tm);

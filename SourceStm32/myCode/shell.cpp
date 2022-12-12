@@ -23,6 +23,7 @@
 #include "MdbMasterTask.h"
 #include "ProjectConfig.h"
 #include "Hal.h"
+#include "Token.h"
 
 #include "_SensorDrivers.h"
 
@@ -457,7 +458,7 @@ static void funShowState(OutStream *strm, const char *cmd, void *arg) {
 		strm->oMsg("Ver             :%u.%03u - %s", mSoftVer.ver, mSoftVer.rev, buf);
 		strm->oMsg("RtcInitStatus   :%s", HAL_getErrStr(Rtc::mRtcStatus));
 		if (config->data.P.dustInpType == dust_Intern) {
-			strm->oMsg("DustInternSensor:%s", ErrOk(dustInternSensor->isError()));
+			strm->oMsg("DustInternSensor:%s", ErrOk(dustInternSensor->isDataError()));
 		} else {
 			strm->oMsg("DustExternSensor:%s", ErrOk(dustExternSensor->isDataError()));
 		}
@@ -467,8 +468,8 @@ static void funShowState(OutStream *strm, const char *cmd, void *arg) {
 		if (gasS873->isAnyConfiguredData()) {
 			strm->oMsg("GasSensor       :%s", ErrOk(gasS873->isDataError()));
 		}
-		strm->oMsg("Bmp338          :%s", ErrOk(bmp338->isError()));
-		strm->oMsg("Sht35           :%s", ErrOk(sht35->isError()));
+		strm->oMsg("Bmp338          :%s", ErrOk(bmp338->isDataError()));
+		strm->oMsg("Sht35           :%s", ErrOk(sht35->isDataError()));
 		strm->oMsg("SIM card rdy    :%s", YN(bg96->isSimCardInserted()));
 		strm->oMsg("Network regist. :%s", YN(bg96->isNetworkRegistered()));
 		strm->oMsg("Network IP rdy  :%s", YN(bg96->isIPready()));

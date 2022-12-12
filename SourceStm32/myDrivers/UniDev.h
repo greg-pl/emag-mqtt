@@ -10,7 +10,6 @@
 
 #include "Config.h"
 
-
 class UniDev {
 protected:
 	char mName[16];
@@ -26,10 +25,8 @@ public:
 		return false;
 	}
 	virtual void getDeviceStatusTxt(char *txt, int max) {
-
+		txt[0] = 0;
 	}
 };
-
-
 
 #endif /* UNIDEV_H_ */

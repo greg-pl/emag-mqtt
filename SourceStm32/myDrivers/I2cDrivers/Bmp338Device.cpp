@@ -7,10 +7,13 @@
 
 #include <Bmp338Device.h>
 #include <math.h>
+#include <Config.h>
 
 //-------------------------------------------------------------------------------------------------------------------------
 // Bmp338Device
 //-------------------------------------------------------------------------------------------------------------------------
+
+extern Config *config;
 
 #define AC_CONCAT_BYTES(msb, lsb) (((uint16_t)msb << 8) | (uint16_t)lsb)
 
@@ -181,19 +184,27 @@ HAL_StatusTypeDef Bmp338Device::measure(double *temp, double *press) {
 	return st;
 }
 
-bool Bmp338Device::isError() {
+bool Bmp338Device::isAnyConfiguredData() {
+	return config->data.R.exDev.sensExist[ssTEMPERATURE] || config->data.R.exDev.sensExist[ssPRESSURE];
+}
+
+bool Bmp338Device::isDataError() {
 	return (HAL_GetTick() - mLastRdDataTick > TIME_DT_VALID);
 }
 
-HAL_StatusTypeDef Bmp338Device::getData(float *temperature, float *pressure) {
-	if (!isError()) {
-		*temperature = filterTemper.get();
-		*pressure = filterPressure.get();
-		return HAL_OK;
-	} else {
-		*temperature = NAN;
-		*pressure = NAN;
-		return HAL_ERROR;
+
+bool Bmp338Device::getMeasValue(MeasType measType, float *val) {
+	if (isDataError())
+		return false;
+	switch (measType) {
+	case ssTEMPERATURE:
+		*val = filterTemper.get();
+		return true;
+	case ssPRESSURE:
+		*val = filterPressure.get();
+		return true;
+	default:
+		return false;
 	}
 }
 

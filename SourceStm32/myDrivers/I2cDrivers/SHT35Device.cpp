@@ -7,6 +7,10 @@
 
 #include <SHT35Device.h>
 #include <math.h>
+#include <Config.h>
+#include "Token.h"
+
+extern Config *config;
 
 typedef enum {
 	CMD_READ_SERIALNBR = 0x3780, // read serial number
@@ -228,7 +232,6 @@ HAL_StatusTypeDef SHT35Device::ReadAlertData(uint16_t cmdSHT, float *humidity, f
 	uint16_t data;
 	HAL_StatusTypeDef st = ReadWordWithCrc(cmdSHT, &data);
 	if (st == HAL_OK) {
-
 		*humidity = CalcHumidity(data & 0xFE00);
 		*temperature = CalcTemperature(data << 7);
 	}
@@ -283,14 +286,28 @@ HAL_StatusTypeDef SHT35Device::StartPeriodicMeasurment(etRepeatability repeatabi
 	return st;
 }
 
-bool SHT35Device::isError() {
+bool SHT35Device::isDataError() {
 	return (HAL_GetTick() - mLastRdDataTick > TIME_DT_VALID);
 }
 
-HAL_StatusTypeDef SHT35Device::getData(float *temperature, float *humidity) {
-	*temperature = filterTemp.get();
-	*humidity = filterHumidity.get();
-	return HAL_OK;
+bool SHT35Device::isAnyConfiguredData() {
+	return config->data.R.exDev.sensExist[ssTEMPERATURE] || config->data.R.exDev.sensExist[ssHUMIDITY];
+}
+
+bool SHT35Device::getMeasValue(MeasType measType, float *val) {
+	if (isDataError())
+		return false;
+	switch (measType) {
+	case ssTEMPERATURE:
+		*val = filterTemp.get();
+		return true;
+	case ssHUMIDITY:
+		*val = filterHumidity.get();
+		return true;
+	default:
+		return false;
+	}
+
 }
 
 HAL_StatusTypeDef SHT35Device::readData() {
@@ -379,15 +396,6 @@ void SHT35Device::setAllert(OutStream *strm, int nr) {
 	}
 }
 
-void SHT35Device::showMeasData(OutStream *strm) {
-	float temperature, humidity;
-	HAL_StatusTypeDef st = getData(&temperature, &humidity);
-	if (st == HAL_OK)
-		strm->oMsg("Temper=%.2f[st]  Humi=%.1f[%%]", temperature, humidity);
-	else
-		strm->oMsg("Data error:%s", HAL_getErrStr(st));
-}
-
 void SHT35Device::showStatus(OutStream *strm) {
 	uint16_t status;
 	HAL_StatusTypeDef st = ReadStatus(&status);
@@ -408,12 +416,10 @@ void SHT35Device::showSerialNumer(OutStream *strm) {
 }
 
 void SHT35Device::showMeas(OutStream *strm) {
-	float temperature, humidity;
-	HAL_StatusTypeDef st = getData(&temperature, &humidity);
-	if (st == HAL_OK)
-		strm->oMsg("SHT35 : Temper=%.2f[st]  Humi=%.1f[%%]", temperature, humidity);
+	if (!isDataError())
+		strm->oMsg("SHT35 : Temper=%.2f[st]  Humi=%.1f[%%]", filterTemp.get(), filterHumidity.get());
 	else
-		strm->oMsg("SHT35 : Data error:%s", HAL_getErrStr(st));
+		strm->oMsg("SHT35 : Data error");
 }
 
 void SHT35Device::showState(OutStream *strm) {
@@ -424,7 +430,7 @@ void SHT35Device::showState(OutStream *strm) {
 		strm->oMsg("MeasStart=%s", HAL_getErrStr(mMeasStart));
 		showDevExist(strm);
 		showStatus(strm);
-		showMeasData(strm);
+		showMeas(strm);
 	}
 }
 

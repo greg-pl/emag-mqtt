@@ -9,7 +9,6 @@
 #define LEDMATRIX_H_
 
 #include <uart.h>
-#include <DustSensorBase.h>
 #include <IOStream.h>
 
 class LedMatrix: public TUart {
@@ -64,7 +63,6 @@ private:
 			int sendCnt; // licznik poprawnych przesłań
 			int faceNr;
 		} autoSend;
-		DustMeasRec dustMeas;
 	} state;
 
 	void showState(OutStream *strm);

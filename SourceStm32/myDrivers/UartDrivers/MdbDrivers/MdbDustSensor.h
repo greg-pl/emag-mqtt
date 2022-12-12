@@ -68,8 +68,6 @@ public:
 	static void funShowMeasure(OutStream *strm, const char *cmd, void *arg);
 	static void funHeaterOn(OutStream *strm, const char *cmd, void *arg);
 	static void funHeaterOff(OutStream *strm, const char *cmd, void *arg);
-
-	HAL_StatusTypeDef getMeas(DustMeasRec *meas);
 	void setHeater(ReqSrc reqSrc, bool heaterOn);
 public:
 	//Unidev

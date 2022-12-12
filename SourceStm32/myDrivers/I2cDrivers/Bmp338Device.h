@@ -67,10 +67,15 @@ public:
 	static void funShowState(OutStream *strm, const char *cmd, void *arg) ;
 	static void funBMPInit(OutStream *strm, const char *cmd, void *arg) ;
 
-	virtual HAL_StatusTypeDef getData(float *temperature, float *pressure);
 	virtual void showState(OutStream *strm);
 	virtual void showMeas(OutStream *strm);
-	virtual bool isError();
+public:
+	//Unidev
+	virtual bool getMeasValue(MeasType measType, float *val);
+	virtual bool isAnyConfiguredData();
+	virtual bool isDataError();
+	//virtual void getDeviceStatusTxt(char *txt, int max);
+
 };
 
 #endif /* BMP338DEVICE_H_ */

@@ -12,6 +12,7 @@
 #include <GlobData.h>
 #include <math.h>
 #include <ShellItem.h>
+#include "Token.h"
 
 typedef struct {
 	uint8_t device; // wersja urządzenia
@@ -202,10 +203,15 @@ void LedMatrix::tick() {
 			if (HAL_GetTick() - state.autoSend.lastSendTick > TM_AUTO_SEND) {
 				if (HAL_GetTick() - state.autoSend.tryTick > TM_AUTO_TRY) {
 					state.autoSend.tryTick = HAL_GetTick();
+					float pm2_5;
+					bool q = false;
 
-					HAL_StatusTypeDef st = GlobData::getDustMeas(&state.dustMeas);
-					if (st == HAL_OK) {
-						state.autoSend.faceNr = getFaceNr(state.autoSend.faceNr, state.dustMeas.pm2_5);
+					UniDev *dustSens = GlobData::getDustSensor();
+					if (dustSens != NULL) {
+						q = dustSens->getMeasValue(ssPM2_5, &pm2_5);
+					}
+					if (q) {
+						state.autoSend.faceNr = getFaceNr(state.autoSend.faceNr, pm2_5);
 						setState(1);
 					}
 				}

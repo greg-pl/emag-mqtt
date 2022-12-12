@@ -9,11 +9,10 @@
 
 #include "DustPMSA.h"
 #include "utils.h"
-#include "shell.h"
 #include "ShellItem.h"
 #include "Hal.h"
+#include "Token.h"
 
-extern ShellTask *shellTask;
 
 //kody błędów zwracane przez PMSA
 enum {
@@ -27,7 +26,7 @@ enum {
 };
 
 DustPMSA::DustPMSA(bool formal_exist) :
-		DustSensorBase::DustSensorBase(), TUart::TUart(TUart::myUART5, 7) {
+		DustSensorBase::DustSensorBase("PMSA"), TUart::TUart(TUart::myUART5, 7) {
 
 	mFormaldehydeExist = formal_exist;
 	memset(&state, 0, sizeof(state));
@@ -143,33 +142,35 @@ void DustPMSA::setPower(bool on) {
 }
 
 void DustPMSA::ShowMesuredRec() {
-	if (shellTask->oOpen(colWHITE)) {
-		shellTask->oMsg("--- N=%u ------TT=%u--(dt=%u)---------", mShowMeasCnt, (int) HAL_GetTick(), state.measFrame.getMeasTick - state.measFrame.prevMeasTick);
+	OutStream *s =  getOutStream();
 
-		shellTask->oMsg("PM1.0 : %.0f[ug/m3]", measHpma.PM_1_0);
-		shellTask->oMsg("PM2.5 : %.0f[ug/m3]", measHpma.PM_2_5);
-		shellTask->oMsg("PM10  : %.0f[ug/m3]", measHpma.PM_10);
-		shellTask->oMsg("Atmosferic environment");
-		shellTask->oMsg("PM1.0 : %.0f[ug/m3]", measHpma.PM_AE_1_0);
-		shellTask->oMsg("PM2.5 : %.0f[ug/m3]", measHpma.PM_AE_2_5);
-		shellTask->oMsg("PM10  : %.0f[ug/m3]", measHpma.PM_AE_10);
-		shellTask->oMsg("Number of particles");
-		shellTask->oMsg("Num D<0.3mm  : %u", measHpma.NUM_D03);
-		shellTask->oMsg("Num D<0.5mm  : %u", measHpma.NUM_D05);
-		shellTask->oMsg("Num D<1.0mm  : %u", measHpma.NUM_D10);
-		shellTask->oMsg("Num D<2.5mm  : %u", measHpma.NUM_D25);
-		shellTask->oMsg("Num D<5.0mm  : %u", measHpma.NUM_D50);
-		shellTask->oMsg("Num D<10.0mm : %u", measHpma.NUM_D100);
+	if (s->oOpen(colWHITE)) {
+		s->oMsg("--- N=%u ------TT=%u--(dt=%u)---------", mShowMeasCnt, (int) HAL_GetTick(), state.measFrame.getMeasTick - state.measFrame.prevMeasTick);
+
+		s->oMsg("PM1.0 : %.0f[ug/m3]", measHpma.PM_1_0);
+		s->oMsg("PM2.5 : %.0f[ug/m3]", measHpma.PM_2_5);
+		s->oMsg("PM10  : %.0f[ug/m3]", measHpma.PM_10);
+		s->oMsg("Atmosferic environment");
+		s->oMsg("PM1.0 : %.0f[ug/m3]", measHpma.PM_AE_1_0);
+		s->oMsg("PM2.5 : %.0f[ug/m3]", measHpma.PM_AE_2_5);
+		s->oMsg("PM10  : %.0f[ug/m3]", measHpma.PM_AE_10);
+		s->oMsg("Number of particles");
+		s->oMsg("Num D<0.3mm  : %u", measHpma.NUM_D03);
+		s->oMsg("Num D<0.5mm  : %u", measHpma.NUM_D05);
+		s->oMsg("Num D<1.0mm  : %u", measHpma.NUM_D10);
+		s->oMsg("Num D<2.5mm  : %u", measHpma.NUM_D25);
+		s->oMsg("Num D<5.0mm  : %u", measHpma.NUM_D50);
+		s->oMsg("Num D<10.0mm : %u", measHpma.NUM_D100);
 		if (!mFormaldehydeExist) {
-			shellTask->oMsg("reserved     : %u", measHpma.Reserved);
+			s->oMsg("reserved     : %u", measHpma.Reserved);
 		} else {
-			shellTask->oMsg("Formaldehyde : %.3f[mg/m3]", measHpma.Formaldehyde);
-			shellTask->oMsg("Temperature  : %.1f[st.C]", measHpma.Temper);
-			shellTask->oMsg("Humidity     : %.1f[%%]", measHpma.Humidity);
-			shellTask->oMsg("Firm.Ver     : %u", measHpma.FirmwareVer);
-			shellTask->oMsg("ErrorCode    : %u", measHpma.ErrorCode);
+			s->oMsg("Formaldehyde : %.3f[mg/m3]", measHpma.Formaldehyde);
+			s->oMsg("Temperature  : %.1f[st.C]", measHpma.Temper);
+			s->oMsg("Humidity     : %.1f[%%]", measHpma.Humidity);
+			s->oMsg("Firm.Ver     : %u", measHpma.FirmwareVer);
+			s->oMsg("ErrorCode    : %u", measHpma.ErrorCode);
 		}
-		shellTask->oClose();
+		s->oClose();
 	}
 
 }

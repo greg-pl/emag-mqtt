@@ -19,7 +19,6 @@
 #include <MdbMasterTask.h>
 #include "_SensorDrivers.h"
 
-
 extern Bg96Driver *bg96;
 extern SHT35Device *sht35;
 extern Bmp338Device *bmp338;
@@ -30,10 +29,10 @@ extern MdbMasterTask *mdbMaster_2;
 extern GasS873 *gasS873;
 extern NoiseDetector *noiseDet;
 
-
 GlobDtRec GlobData::dt;
 osMutexId GlobData::mGlobMutex = NULL;
-char *GlobData::jsonbuf = NULL;
+CxString *GlobData::jsonbuf = NULL;
+
 
 extern "C" const char* getGpsFormat(int idx) {
 	return "%.5f";
@@ -46,6 +45,25 @@ const char* getFrm1(int idx) {
 	return "%.1f";
 }
 
+CpxFloatDefItem floatLatitudeDef = {
+		min:-90, //
+		max:90, //
+		getFrm: getGpsFormat //
+};
+
+CpxFloatDefItem floatLongitudeDef = {
+		min:-180, //
+		max:180, //
+		getFrm: getGpsFormat //
+};
+
+
+CpxFloatDefItem floatRssiDef = {
+		min:-100, //
+		max:0, //
+		getFrm: getFrm1 //
+};
+
 const char* getItemFormat(int idx) {
 	MeasType mt = ssUNKNOWN;
 	if (idx >= 0 && idx < SENSOR_CNT)
@@ -53,27 +71,35 @@ const char* getItemFormat(int idx) {
 	return GlobData::GetMeasPrecisionStr(mt);
 }
 
-const CpxDef SensorDscr[] = { //
-		{ ctype : cpxSTR, ofs: offsetof(SensorDt, code), Name : "code", size:sizeof(SensorDt::code) }, //
-				{ ctype : cpxFLOAT, ofs: offsetof(SensorDt, value), Name : "value", size:sizeof(SensorDt::value), exPtr:(const void*) getItemFormat }, //
+CpxFloatDefItem floatSensorDef = {
+		min:0, //
+		max:0, //
+		getFrm: getItemFormat //
+};
+
+
+
+const CpxDescr SensorDscr[] = { //
+		        { ctype : cpxSTR, ofs: offsetof(SensorDt, code), Name : "code", size:sizeof(SensorDt::code) }, //
+				{ ctype : cpxFLOAT, ofs: offsetof(SensorDt, value), Name : "value", size:sizeof(SensorDt::value), exPtr:(const void*) &floatSensorDef }, //
 				{ ctype : cpxNULL } };
 
-GroupInfo sensorGroupInfo = { //
+CpxChildInfo sensorGroupInfo = { //
 		itemCnt: SENSOR_CNT, //
 				itemSize : sizeof(SensorDt), //
 				defs: SensorDscr, //
 		};
 
-const CpxDef GlobDataDscr[] = { //
+const CpxDescr GlobDataDscr[] = { //
 		{ ctype : cpxSTR, ofs: offsetof(GlobDtRec, version), Name : "version", size:sizeof(GlobDtRec::version) }, //
 				{ ctype : cpxSTR, ofs: offsetof(GlobDtRec, name_space), Name : "namespace", size:sizeof(GlobDtRec::name_space) }, //
 				{ ctype : cpxSTR, ofs: offsetof(GlobDtRec, imei), Name : "imei", size:sizeof(GlobDtRec::imei) }, //
 				{ ctype : cpxSTR, ofs: offsetof(GlobDtRec, serianNr), Name : "ssn", size:sizeof(GlobDtRec::serianNr) }, //
-				{ ctype : cpxFLOAT, ofs: offsetof(GlobDtRec, latitude), Name : "latitude", size:sizeof(GlobDtRec::latitude), exPtr :(const void*) getGpsFormat }, //
-				{ ctype : cpxFLOAT, ofs: offsetof(GlobDtRec, longitude), Name : "longitude", size:sizeof(GlobDtRec::longitude), exPtr :(const void*) getGpsFormat }, //
+				{ ctype : cpxFLOAT, ofs: offsetof(GlobDtRec, latitude), Name : "latitude", size:sizeof(GlobDtRec::latitude), exPtr :(const void*) &floatLatitudeDef }, //
+				{ ctype : cpxFLOAT, ofs: offsetof(GlobDtRec, longitude), Name : "longitude", size:sizeof(GlobDtRec::longitude), exPtr :(const void*) &floatLongitudeDef }, //
 				{ ctype : cpxBOOL, ofs: offsetof(GlobDtRec, gpsFix), Name : "gpsFix", size:sizeof(GlobDtRec::gpsFix) }, //
 				{ ctype : cpxINT, ofs: offsetof(GlobDtRec, gpsSrc), Name : "gpsSrc", size:sizeof(GlobDtRec::gpsSrc) }, //
-				{ ctype : cpxFLOAT, ofs: offsetof(GlobDtRec, signalRssi), Name : "signalRssi", size:sizeof(GlobDtRec::signalRssi), exPtr :(const void*) getFrm1 }, //
+				{ ctype : cpxFLOAT, ofs: offsetof(GlobDtRec, signalRssi), Name : "signalRssi", size:sizeof(GlobDtRec::signalRssi), exPtr :(const void*) &floatRssiDef }, //
 				{ ctype : cpxSTR, ofs: offsetof(GlobDtRec, status), Name : "status", size:sizeof(GlobDtRec::status) }, //
 				{ ctype : cpxSTR, ofs: offsetof(GlobDtRec, info), Name : "info", size:sizeof(GlobDtRec::info) }, //
 
@@ -82,7 +108,7 @@ const CpxDef GlobDataDscr[] = { //
 				//{ ctype : cpxSTR, ofs: offsetof(GlobDtRec, komoraSt), Name : "status_komora", size:sizeof(GlobDtRec::komoraSt) }, //
 				{ ctype : cpxFLOAT, ofs: offsetof(GlobDtRec, tempNTC), Name : "TempNTC", size:sizeof(GlobDtRec::tempNTC) }, //
 				{ ctype : cpxSTR, ofs: offsetof(GlobDtRec, hsn), Name : "hsn", size:sizeof(GlobDtRec::hsn) }, //
-				{ ctype : cpxTAB, ofs: offsetof(GlobDtRec, sensorDt), Name : "sensors", size:(sizeof(GlobDtRec::sensorDt) / sizeof(SensorDt)), exPtr :&sensorGroupInfo }, //
+				{ ctype : cpxCHILD, ofs: offsetof(GlobDtRec, sensorDt), Name : "sensors", size:(sizeof(GlobDtRec::sensorDt) / sizeof(SensorDt)), exPtr :&sensorGroupInfo }, //
 				{ ctype : cpxNULL } };
 
 typedef struct {
@@ -165,51 +191,37 @@ void GlobData::FillMeas(float *tab) {
 	float temperature1 = NAN, humidity = NAN;
 	float temperature2 = NAN, pressure = NAN;
 
-	if (sht35 != NULL)
-		sht35->getData(&temperature1, &humidity);
-	if (bmp338 != NULL)
-		bmp338->getData(&temperature2, &pressure);
+	if (sht35 != NULL) {
+		sht35->getMeasValue(ssTEMPERATURE, &temperature1);
+		sht35->getMeasValue(ssHUMIDITY, &humidity);
+	}
+	if (bmp338 != NULL) {
+		bmp338->getMeasValue(ssTEMPERATURE, &temperature2);
+		bmp338->getMeasValue(ssPRESSURE, &pressure);
+	}
 
 	tab[ssTEMPERATURE] = temperature1;
 	tab[ssHUMIDITY] = humidity;
 	tab[ssPRESSURE] = pressure;
 
-	//dust
-	DustMeasRec dustMeas;
-
-	HAL_StatusTypeDef dustSt = getDustMeas(&dustMeas);
-	if (dustSt == HAL_OK) {
-		tab[ssPM1_0] = dustMeas.pm1_0;
-		tab[ssPM2_5] = dustMeas.pm2_5;
-		tab[ssPM10] = dustMeas.pm10;
-		tab[ssCh2o] = dustMeas.Formaldehyde;
-	} else {
-		tab[ssPM1_0] = NAN;
-		tab[ssPM2_5] = NAN;
-		tab[ssPM10] = NAN;
-		tab[ssCh2o] = NAN;
-	}
+	UniDev *dustDev = getDustSensor();
+	dustDev->getMeasValue(ssPM1_0, &tab[ssPM1_0]);
+	dustDev->getMeasValue(ssPM2_5, &tab[ssPM2_5]);
+	dustDev->getMeasValue(ssPM10, &tab[ssPM10]);
+	dustDev->getMeasValue(ssCh2o, &tab[ssCh2o]);
 
 	if (mdbMaster_2 != NULL) {
-		float val;
 		//gas
-		gasS873->getMeasValue(ssNO2, &val);
-		tab[ssNO2] = val;
-		gasS873->getMeasValue(ssO3, &val);
-		tab[ssO3] = val;
-		gasS873->getMeasValue(ssCO, &val);
-		tab[ssCO] = val;
-		gasS873->getMeasValue(ssCO2, &val);
-		tab[ssCO2] = val;
-		gasS873->getMeasValue(ssSO2, &val);
-		tab[ssSO2] = val;
+		gasS873->getMeasValue(ssNO2, &tab[ssNO2]);
+		gasS873->getMeasValue(ssO3, &tab[ssO3]);
+		gasS873->getMeasValue(ssCO, &tab[ssCO]);
+		gasS873->getMeasValue(ssCO2, &tab[ssCO2]);
+		gasS873->getMeasValue(ssSO2, &tab[ssSO2]);
 	}
 
 	//noise
 	if (noiseDet != NULL) {
-		float val;
-		noiseDet->getMeasValue(ssNOISE, &val);
-		tab[ssNOISE] = val;
+		noiseDet->getMeasValue(ssNOISE, &tab[ssNOISE]);
 	}
 
 }
@@ -295,34 +307,32 @@ void GlobData::show(OutStream *strm) {
 	Cpx cpx;
 	cpx.init(GlobDataDscr, &dt);
 	cpx.list(strm);
-
 }
 
 void GlobData::showJson(OutStream *strm) {
 	if (jsonbuf == NULL) {
-		jsonbuf = (char*) malloc(JSON_SIZE);
+		jsonbuf = new CxString(JSON_SIZE);
 	}
 	if (jsonbuf != NULL) {
 		Fill();
 		Cpx cpx;
 		cpx.init(GlobDataDscr, &dt);
-		int len0 = cpx.buildjson(jsonbuf, JSON_SIZE);
-		int len = strlen(jsonbuf);
-		strm->oMsgX(colWHITE, "Len=%d %d", len, len0);
-		strm->dumpBuf(colYELLOW, jsonbuf);
+		cpx.buildjson(jsonbuf);
+		strm->oMsgX(colWHITE, "Len=%d", jsonbuf->len());
+		strm->dumpBuf(colYELLOW, jsonbuf->p());
 	}
 }
 
 int GlobData::buildExportJson() {
 	if (jsonbuf == NULL) {
-		jsonbuf = (char*) malloc(JSON_SIZE);
+		jsonbuf = new CxString(JSON_SIZE);
 	}
 	if (jsonbuf != NULL) {
 		Fill();
 		Cpx cpx;
 		cpx.init(GlobDataDscr, &dt);
-		cpx.buildjson(jsonbuf, JSON_SIZE);
-		int len = strlen(jsonbuf);
+		cpx.buildjson(jsonbuf);
+		int len = jsonbuf->len();
 		if (len > 0) {
 			jsonbuf[len++] = CTRL_Z_CH; // potrzebne do wysłania przez BG96
 			jsonbuf[len] = 0;
@@ -332,10 +342,50 @@ int GlobData::buildExportJson() {
 		return -1;
 }
 
-HAL_StatusTypeDef GlobData::getDustMeas(DustMeasRec *dustMeas) {
+UniDev* GlobData::getDustSensor() {
 	if (config->data.P.dustInpType == dust_Intern) {
-		return dustInternSensor->getMeas(dustMeas);
+		return dustInternSensor;
 	} else {
-		return dustExternSensor->getMeas(dustMeas);
+		return dustExternSensor;
 	}
+
 }
+
+/*
+ {
+    "version": "1.1.138",
+    "namespace": "im40",
+    "imei": "866770056670574",
+    "ssn": "260060036640920",
+    "gpsFix": false,
+    "gpsSrc": 0,
+    "signalRssi": -71.0,
+    "status": "OK",
+    "info": "",
+    "pktNr": 19,
+    "time": "2022.12.12 20:10:33",
+    "TempNTC": 30.425037,
+    "hsn": "W00001",
+    "sensors": [
+        {
+            "code": "temperature"
+        },
+        {
+            "code": "humidity"
+        },
+        {
+            "code": "pressure",
+            "value": 980.4
+        },
+        {
+            "code": "co",
+            "value": 1187
+        },
+        {
+            "code": "co2",
+            "value": 900
+        }
+    ]
+}
+
+ */

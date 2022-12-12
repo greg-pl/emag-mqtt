@@ -78,7 +78,6 @@ private:
 
 	void showSerialNumer(OutStream *strm);
 	void showStatus(OutStream *strm);
-	void showMeasData(OutStream *strm);
 	void showAlert(OutStream *strm);
 	void setAllert(OutStream *strm, int nr);
 
@@ -115,10 +114,16 @@ public:
 
 public:
 	SHT35Device(I2cBus *bus, uint8_t adr, const char *name);
-	virtual HAL_StatusTypeDef getData(float *temperature, float *humidity);
 	virtual void showState(OutStream *strm);
 	virtual void showMeas(OutStream *strm);
-	virtual bool isError();
+
+public:
+	//Unidev
+	virtual bool getMeasValue(MeasType measType, float *val);
+	virtual bool isAnyConfiguredData();
+	virtual bool isDataError();
+	//virtual void getDeviceStatusTxt(char *txt, int max);
+
 };
 
 #endif /* SHT35DEVICE_H_ */

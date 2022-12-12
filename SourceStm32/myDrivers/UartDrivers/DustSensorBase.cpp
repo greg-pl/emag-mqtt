@@ -7,11 +7,15 @@
 
 #include <DustSensorBase.h>
 #include <math.h>
+#include <config.h>
 
 #define TIME_DT_RD    2000
 #define FILTR_FACTOR  0.8
 
-DustSensorBase::DustSensorBase() {
+extern Config *config;
+
+DustSensorBase::DustSensorBase(const char *name) :
+		UniDev::UniDev(name) {
 	osMutexDef(DustDev);
 	mDustMutex = osMutexCreate(osMutex(DustDev));
 
@@ -21,33 +25,53 @@ DustSensorBase::DustSensorBase() {
 	exportDt.filterFormaldehyde.init(FILTR_FACTOR);
 	exportDt.mLastRdDataTick = HAL_GetTick();
 
-
 }
 
-bool DustSensorBase::isError() {
+bool DustSensorBase::isDataError() {
 	return (HAL_GetTick() - exportDt.mLastRdDataTick > MAX_MEAS_VALID);
 }
 
-HAL_StatusTypeDef DustSensorBase::getMeas(DustMeasRec *meas) {
-	HAL_StatusTypeDef st = HAL_NO_VALUE;
-	if (!isError()) {
-		if (openMutex(50)) {
-			meas->pm1_0 = exportDt.filterPM1_0.get();
-			meas->pm2_5 = exportDt.filterPM2_5.get();
-			meas->pm10 = exportDt.filterPM10.get();
-			meas->Formaldehyde = exportDt.filterFormaldehyde.get();
-			closeMutex();
-			st = HAL_OK;
-		} else
-			st = HAL_NO_SEMF;
+bool DustSensorBase::isAnyConfiguredData() {
+	bool q = false;
+	q |= config->data.R.exDev.sensExist[ssPM1_0];
+	q |= config->data.R.exDev.sensExist[ssPM2_5];
+	q |= config->data.R.exDev.sensExist[ssPM10];
+	if (isFormaldehyde())
+		q |= config->data.R.exDev.sensExist[ssCh2o];
+	return q;
+}
+
+bool DustSensorBase::getMeasValue(MeasType measType, float *val) {
+
+	if (!isDataError())
+		return false;
+
+	if (openMutex(50)) {
+		bool ret = true;
+		switch (measType) {
+		case ssPM1_0:
+			*val = exportDt.filterPM1_0.get();
+			break;
+		case ssPM2_5:
+			*val = exportDt.filterPM2_5.get();
+			break;
+		case ssPM10:
+			*val = exportDt.filterPM10.get();
+			break;
+		case ssCh2o:
+			if (isFormaldehyde())
+				*val = exportDt.filterFormaldehyde.get();
+			else
+				ret = false;
+			break;
+		default:
+			ret = false;
+			break;
+		}
+		closeMutex();
+		return ret;
 	}
-	if (st != HAL_OK) {
-		meas->pm1_0 = NAN;
-		meas->pm2_5 = NAN;
-		meas->pm10 = NAN;
-		meas->Formaldehyde = NAN;
-	}
-	return st;
+	return false;
 }
 
 bool DustSensorBase::openMutex(int tm) {
@@ -55,6 +79,14 @@ bool DustSensorBase::openMutex(int tm) {
 }
 void DustSensorBase::closeMutex() {
 	osMutexRelease(mDustMutex);
+}
+
+//----------------------------------------------------------------------------------------
+// DustSensorNull
+//----------------------------------------------------------------------------------------
+DustSensorNull::DustSensorNull() :
+		DustSensorBase::DustSensorBase("NullDust") {
+
 }
 
 void DustSensorNull::StartMeas() {
@@ -66,12 +98,14 @@ void DustSensorNull::shell(OutStream *strm, const char *cmd) {
 	strm->oMsgX(colRED, "No implemented");
 }
 
-HAL_StatusTypeDef DustSensorNull::getMeas(DustMeasRec *meas) {
-	meas->pm1_0 = NAN;
-	meas->pm2_5 = NAN;
-	meas->pm10 = NAN;
-	return HAL_ERROR;
+bool DustSensorNull::isDataError() {
+	return true;
 }
+
+bool DustSensorNull::isAnyConfiguredData() {
+	return false;
+}
+
 void DustSensorNull::setPower(bool on) {
 }
 HAL_StatusTypeDef DustSensorNull::Init(SignaledClass *signObj) {

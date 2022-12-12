@@ -11,15 +11,11 @@
 #include <IOStream.h>
 #include "stm32f4xx_hal.h"
 #include "utils.h"
+#include "UniDev.h"
 
-typedef struct {
-	float pm1_0;
-	float pm2_5;
-	float pm10;
-	float Formaldehyde; // tylko dla PMS5003ST
-} DustMeasRec;
 
-class DustSensorBase {
+
+class DustSensorBase : public UniDev{
 private:
 	osMutexId mDustMutex;
 protected:
@@ -35,6 +31,9 @@ protected:
 		DtFilter filterPM10;
 		DtFilter filterFormaldehyde;
 	} exportDt;
+	virtual bool isFormaldehyde(){
+		return false;
+	}
 public:
 	virtual void StartMeas()=0;
 	virtual void StopMeas()=0;
@@ -42,21 +41,28 @@ public:
 	virtual void setPower(bool on)=0;
 	virtual HAL_StatusTypeDef Init(SignaledClass *signObj)=0;
 	virtual void tick()=0;
-	virtual bool isError();
 public:
-	DustSensorBase();
-	HAL_StatusTypeDef getMeas(DustMeasRec *meas);
+	DustSensorBase(const char *name);
+public:
+	//Unidev
+	virtual bool isDataError();
+	virtual bool getMeasValue(MeasType measType, float *val);
+	virtual bool isAnyConfiguredData();
 };
 
 class DustSensorNull: public DustSensorBase {
 public:
+	DustSensorNull();
 	virtual void StartMeas();
 	virtual void StopMeas();
 	virtual void shell(OutStream *strm, const char *cmd);
-	virtual HAL_StatusTypeDef getMeas(DustMeasRec *meas);
 	virtual void setPower(bool on);
 	virtual HAL_StatusTypeDef Init(SignaledClass *signObj);
 	virtual void tick();
+public:
+	//Unidev
+	virtual bool isDataError();
+	virtual bool isAnyConfiguredData();
 };
 
 #endif /* DUSTSENSORBASE_H_ */

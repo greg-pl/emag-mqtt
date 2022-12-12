@@ -19,10 +19,10 @@
 #include <cpx.h>
 #include <GlobData.h>
 #include "MdbMasterTask.h"
+#include "AirDetRs.h"
+#include "Token.h"
 
-#include <Shell.h>
-extern ShellTask *shellTask;
-extern MdbMasterTask *mdbMaster_2;
+extern AirDetRs *airDetRs;
 
 //-------------------------------------------------------------------------------------------------------------------------
 //
@@ -263,7 +263,7 @@ void Bg96Driver::logT(LogLevel lev, const char *frm, ...) {
 		}
 		va_list ap;
 		va_start(ap, frm);
-		shellTask->oFormatX(color, frm, ap);
+		getOutStream()->oFormatX(color, frm, ap);
 		va_end(ap);
 	}
 }
@@ -297,18 +297,18 @@ void Bg96Driver::writeCmd(const char *cmd) {
 	if (mEcho.tx) {
 		switch (mEcho.timeMode) {
 		case 0:
-			shellTask->oMsgX(colMAGENTA, "%s", cmd);
+			getOutStream()->oMsgX(colMAGENTA, "%s", cmd);
 			break;
 		case 1:
 		case 2:
-			shellTask->oMsgX(colMAGENTA, "%u:%s", HAL_GetTick() - mStartTick, cmd);
+			getOutStream()->oMsgX(colMAGENTA, "%u:%s", HAL_GetTick() - mStartTick, cmd);
 			break;
 		case 3: {
 			char buf[20];
 			TDATE tm;
 			Rtc::ReadOnlyTime(&tm);
 			TimeTools::TimeStrZZ(buf, &tm);
-			shellTask->oMsgX(colMAGENTA, "%s:%s", buf, cmd);
+			getOutStream()->oMsgX(colMAGENTA, "%s:%s", buf, cmd);
 		}
 			break;
 		}
@@ -329,14 +329,14 @@ void Bg96Driver::showRxEcho(int idx, const char *txt) {
 
 	switch (mEcho.timeMode) {
 	case 0:
-		shellTask->oMsgX(colGREEN, "%u>%s", idx, inpLine2);
+		getOutStream()->oMsgX(colGREEN, "%u>%s", idx, inpLine2);
 		break;
 	case 3:
 	case 1:
-		shellTask->oMsgX(colGREEN, "%u>%u:%s", idx, HAL_GetTick() - mSendTick, inpLine2);
+		getOutStream()->oMsgX(colGREEN, "%u>%u:%s", idx, HAL_GetTick() - mSendTick, inpLine2);
 		break;
 	case 2:
-		shellTask->oMsgX(colGREEN, "%u>%u:%s", idx, HAL_GetTick() - mStartTick, inpLine2);
+		getOutStream()->oMsgX(colGREEN, "%u>%u:%s", idx, HAL_GetTick() - mStartTick, inpLine2);
 		break;
 	}
 }
@@ -781,7 +781,7 @@ int Bg96Driver::closeBGFile(int fileHandle) {
 	return st;
 }
 
-const CpxDef SslCfgDscr[] = { //
+const CpxDescr SslCfgDscr[] = { //
 		{ ctype : cpxBYTE, ofs: offsetof(SSL_Cfg, sslversion), Name : "sslversion", sizeof(SSL_Cfg::sslversion) }, //
 				{ ctype : cpxBYTE, ofs: offsetof(SSL_Cfg, seclevel), Name : "seclevel", sizeof(SSL_Cfg::seclevel) }, //
 				{ ctype : cpxHEXWORD, ofs: offsetof(SSL_Cfg, ciphersuite), Name : "ciphersuite", sizeof(SSL_Cfg::ciphersuite) }, //
@@ -806,11 +806,12 @@ int Bg96Driver::showSslContext(int contextNr) {
 
 	const uint32_t FLAGS = nnQSslCfg | nnOK | nnError;
 
-	const CpxDef *def = SslCfgDscr;
+	Cpx cpx;
+	cpx.init(SslCfgDscr, &sslCfg);
 
 	int st = stOK;
-	while (def->ctype != cpxNULL) {
-		writeCmdF("at+qsslcfg=\"%s\",%d", def->Name, contextNr);
+	while (!cpx.isEof()) {
+		writeCmdF("at+qsslcfg=\"%s\",%d", cpx.getDscrName(), contextNr);
 		st = getReplUntil(FLAGS, 300);
 		if (st < 0)
 			break;
@@ -824,39 +825,39 @@ int Bg96Driver::showSslContext(int contextNr) {
 				break;
 		}
 
-		Cpx::set(def, &sslCfg, recR.sslCfg.paramValue);
-		def++;
+		cpx.setItem(recR.sslCfg.paramValue);
+		cpx.next();
 	}
 	if (st == stOK) {
 		Cpx cpx;
 		cpx.init(SslCfgDscr, &sslCfg);
-		cpx.list(shellTask);
+		cpx.list(getOutStream());
 	} else {
-		shellTask->oMsgX(colRED, "Błąd odczytu, st=%d", st);
+		getOutStream()->oMsgX(colRED, "Błąd odczytu, st=%d", st);
 	}
 	return stOK;
 }
 
 int Bg96Driver::setSslContext(int contextNr, const SSL_Cfg *pCfg) {
 
-	const CpxDef *def = SslCfgDscr;
+	Cpx cpx;
+	cpx.init(SslCfgDscr, pCfg);
 
-	while (def->ctype != cpxNULL) {
+	while (!cpx.isEof()) {
 		char buf[40];
-		Cpx::getAsTxt(def, pCfg, buf, sizeof(buf));
+		cpx.getAsTxt(buf, sizeof(buf));
 		if (buf[0] != 0) {
-			writeCmdF("at+qsslcfg=\"%s\",%d,%s", def->Name, contextNr, buf);
+			writeCmdF("at+qsslcfg=\"%s\",%d,%s", cpx.getDscrName(), contextNr, buf);
 			int st = getReplOk(300);
 			if (st < 0) {
 				return st;
 			}
 		}
-		def++;
+		cpx.next();
 	}
 
-	Cpx cpx;
 	cpx.init(SslCfgDscr, pCfg);
-	cpx.list(shellTask);
+	cpx.list(getOutStream());
 	return stOK;
 }
 
@@ -968,7 +969,7 @@ int Bg96Driver::sendMqqtData(const char *varName, const char *data, bool doDataC
 
 	writeCmdNoEcho(data, doDataCpy);
 	if (mEcho.tx)
-		shellTask->oMsgX(colMAGENTA, "%u:*Dane*", HAL_GetTick() - mSendTick);
+		getOutStream()->oMsgX(colMAGENTA, "%u:*Dane*", HAL_GetTick() - mSendTick);
 
 	st = getReplWithErr(nnQmtPub, 20000); //todo: dorobić zależności od pkt_timeout i retry_times
 	if (st != stOK)
@@ -989,7 +990,7 @@ int Bg96Driver::sendMqqt(int idx, int val) {
 	default:
 	case 0:
 		if (GlobData::buildExportJson() > 0) {
-			dt = GlobData::jsonbuf;
+			dt = GlobData::jsonbuf->p();
 			var = config->data.R.mqtt.varNamePub;
 		}
 		break;
@@ -1441,7 +1442,7 @@ void Bg96Driver::mqttLoopFun() {
 		if (GlobData::buildExportJson() >= 0) {
 
 			state.mqtt.trySendTick = HAL_GetTick();
-			st = sendMqqtData(config->data.R.mqtt.varNamePub, GlobData::jsonbuf,
+			st = sendMqqtData(config->data.R.mqtt.varNamePub, GlobData::jsonbuf->p(),
 			false);
 			if (st == stOK) {
 				state.mqtt.sentTick = HAL_GetTick();
@@ -1455,21 +1456,22 @@ void Bg96Driver::mqttLoopFun() {
 }
 
 void Bg96Driver::execNewSMS() {
-	shellTask->oMsgX(colBLUE, "SMS [%s]: %s", state.sms.nrTel, state.sms.msg);
+	getOutStream()->oMsgX(colBLUE, "SMS [%s]: %s", state.sms.nrTel, state.sms.msg);
 	const char *ptr = state.sms.msg;
 	char tok[40];
 	bool repl = false;
 
 	Token::get(&ptr, tok, sizeof(tok));
 	if (strcmp(tok, bgParam.imei) == 0) {
-		shellTask->oMsgX(colBLUE, "SMS: IMEI OK");
+		getOutStream()->oMsgX(colBLUE, "SMS: IMEI OK");
 		Token::get(&ptr, tok, sizeof(tok));
 		if (strcmp(tok, "ZERO-GAS") == 0) {
-			shellTask->oMsgX(colBLUE, "SMS: ZERO-GAS");
-			//mdbMaster_2->zeroGasFromSMS(ptr, state.sendSms.msg, sizeof(state.sendSms.msg) - 1);  TODO
+			getOutStream()->oMsgX(colBLUE, "SMS: ZERO-GAS");
+			if (airDetRs != NULL)
+				airDetRs->zeroGasFromSMS(ptr, state.sendSms.msg, sizeof(state.sendSms.msg) - 1);
 			repl = true;
 		} else if (strcmp(tok, "REBOOT") == 0) {
-			shellTask->oMsgX(colBLUE, "SMS: REBOOT");
+			getOutStream()->oMsgX(colBLUE, "SMS: REBOOT");
 			strlcpy(state.sendSms.msg, "REBOOTING", sizeof(state.sendSms.msg));
 			reboot(2000);
 			repl = true;
@@ -1773,7 +1775,6 @@ bool Bg96Driver::setEchoMode(const char *cmd) {
 		return false;
 	}
 }
-
 
 //-------------------------------------------------------------------------------------------------------------
 void Bg96Driver::showState(OutStream *strm) {

@@ -20,7 +20,7 @@
 
 class I2cBus;
 
-class I2cDev : public UniDev {
+class I2cDev: public UniDev {
 	friend class I2cBus;
 
 protected:
@@ -57,7 +57,6 @@ public:
 	virtual void showState(OutStream *strm)=0;
 	virtual void showMeas(OutStream *strm) {
 	}
-	virtual bool isError()=0;
 };
 
 class I2cBus {
@@ -77,10 +76,10 @@ private:
 		I2cDev *tab[MAX_DEV_CNT];
 	} devs;
 
-	struct{
+	struct {
 		ShellItemFx *menuTab;
 		void **argTab;
-	}menuExp;
+	} menuExp;
 
 	I2C_TypeDef *mI2cDef;
 	I2C_HandleTypeDef hi2c;
@@ -144,7 +143,7 @@ public:
 	int getBusRestartCnt() {
 		return mBusRestartCnt;
 	}
-	bool isError();
+	bool isDataError();
 };
 
 #endif /* I2CDEV_H_ */

@@ -112,6 +112,10 @@ protected:
 	virtual void TxCpltCallback();
 	virtual void RxCpltCallback();
 	virtual void ErrorCallback();
+	virtual bool isFormaldehyde(){
+		return true;
+	}
+
 public:
 	DustPMSA(bool formal_exist);
 

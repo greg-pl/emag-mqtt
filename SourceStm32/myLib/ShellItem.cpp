@@ -8,6 +8,7 @@
 
 #include "utils.h"
 #include "string.h"
+#include "Token.h"
 
 
 const ShellItemFx* findCmdFx(const ShellItemFx *item, const char *cmd) {

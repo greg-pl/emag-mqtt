@@ -160,19 +160,6 @@ void ExtDustsensor::showState(OutStream *strm) {
 
 }
 
-HAL_StatusTypeDef ExtDustsensor::getMeas(DustMeasRec *meas) {
-	if (!isDataError() && isMeasValid()) {
-		meas->pm1_0 = dustData.pm1_0;
-		meas->pm2_5 = dustData.pm2_5;
-		meas->pm10 = dustData.pm10;
-		return HAL_OK;
-	} else {
-		meas->pm1_0 = NAN;
-		meas->pm2_5 = NAN;
-		meas->pm10 = NAN;
-		return HAL_ERROR;
-	}
-}
 
 bool ExtDustsensor::isMeasValid() {
 	return ((dustData.PmStatus & 0x7F) == 0);

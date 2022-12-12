@@ -13,7 +13,6 @@
 #include "TaskClass.h"
 #include "uart.h"
 #include "GlobData.h"
-#include "DustSensorBase.h"
 #include "ShellItem.h"
 #include "Filters.h"
 

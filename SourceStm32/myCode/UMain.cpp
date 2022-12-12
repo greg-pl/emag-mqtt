@@ -50,6 +50,7 @@ ExtDustsensor *dustExternSensor;
 I2cBus *i2cBus1;
 SSD1306Dev *lcd;
 VerInfo mSoftVer;
+AirDetRs *airDetRs = NULL;
 
 #define SIGN_NO_INIT1  0x34568923
 #define SIGN_NO_INIT2  0xAAFFEECC
@@ -256,7 +257,7 @@ void ethernetif_notify_conn_changed(struct netif *netif) {
 }
 
 void DefaultTask::doNetStatusChg() {
-	shellTask->oMsgX(colYELLOW, "Net interface status changed.");
+	getOutStream()->oMsgX(colYELLOW, "Net interface status changed.");
 	NetState netState;
 	getNetIfState(&netState);
 
@@ -412,8 +413,11 @@ void DefaultTask::heaterTick() {
 		if (heater.waitNtcMeasure) {
 			if (NTC::isNewMeas()) {
 				heater.waitNtcMeasure = false;
+				temp = NAN;
+				humidity = NAN;
+				sht35->getMeasValue(ssTEMPERATURE, &temp);
+				sht35->getMeasValue(ssHUMIDITY, &humidity);
 
-				sht35->getData(&temp, &humidity);
 				if (config->data.R.exDev.heater.useNTCtemp)
 					temp = NTC::temp;
 				measOk = true;
@@ -454,7 +458,7 @@ void DefaultTask::heaterTick() {
 				}
 
 				if (config->data.R.exDev.heater.showMsg >= 2) {
-					shellTask->oMsgX(colYELLOW, "HEATER-%s, REG-%s QR-%s T=%.1f[*C] H=%.0f[%%] useNTC=%u tempOFF=%.1f[*C] DD=0x%08X", OnOff(heater.on), OnOff(heater.regTempOut), OnOff(qr), //
+					getOutStream()->oMsgX(colYELLOW, "HEATER-%s, REG-%s QR-%s T=%.1f[*C] H=%.0f[%%] useNTC=%u tempOFF=%.1f[*C] DD=0x%08X", OnOff(heater.on), OnOff(heater.regTempOut), OnOff(qr), //
 					temp, humidity, config->data.R.exDev.heater.useNTCtemp, config->data.R.exDev.heater.tempOFF, dd);
 				}
 
@@ -482,9 +486,9 @@ void DefaultTask::heaterTick() {
 			else
 				strcpy(buf, "??:??:??,??");
 			if (measOk) {
-				shellTask->oMsgX(colYELLOW, "%s HEATER-%s, T=%.1f[st.C] H=%.0f[%%]", buf, OnOff(qw), temp, humidity);
+				getOutStream()->oMsgX(colYELLOW, "%s HEATER-%s, T=%.1f[st.C] H=%.0f[%%]", buf, OnOff(qw), temp, humidity);
 			} else {
-				shellTask->oMsgX(colYELLOW, "%s HEATER-%s", buf, OnOff(qw));
+				getOutStream()->oMsgX(colYELLOW, "%s HEATER-%s", buf, OnOff(qw));
 			}
 		}
 	}
@@ -493,13 +497,13 @@ void DefaultTask::heaterTick() {
 bool DefaultTask::getHdwError() {
 	bool q = false;
 	if (config->data.P.dustInpType == dust_Intern) {
-		q |= dustInternSensor->isError();
+		q |= dustInternSensor->isDataError();
 	} else {
 		q |= dustExternSensor->isDataError();
 	}
-	q |= i2cBus1->isError();
+	q |= i2cBus1->isDataError();
 
-	if (noiseDet!=NULL) {
+	if (noiseDet != NULL) {
 		q |= noiseDet->isDataError();
 	}
 	if (mdbMaster_2->isAnyConfiguredData()) {
@@ -578,16 +582,12 @@ void DefaultTask::ThreadFunc() {
 	mdbMaster_3->Start(9600, TUart::parityEVEN);
 	mdbMaster_3->setPower(true);
 
-
 	noiseDet = new NoiseDetector(mdbMaster_1, config->data.R.rest.gasDevMdbNr, "noise");
 
 	gasS873 = new GasS873(mdbMaster_2, config->data.R.rest.gasDevMdbNr, "gas");
 	gasS873X = new GasS873(mdbMaster_2, config->data.R.rest.gasDevMdbNr, "g2");
 
-
-
 	HAL_IWDG_Refresh(&hiwdg);
-
 
 	Rtc::Init();
 	HAL_IWDG_Refresh(&hiwdg);
@@ -634,7 +634,7 @@ void DefaultTask::ThreadFunc() {
 		mdbMaster_3->Start(9600, TUart::parityEVEN);
 		mdbMaster_3->setPower(true);
 
-		dustExternSensor = new ExtDustsensor(mdbMaster_3, config->data.R.rest.gasDevMdbNr,"dust");
+		dustExternSensor = new ExtDustsensor(mdbMaster_3, config->data.R.rest.gasDevMdbNr, "dust");
 	}
 	HAL_IWDG_Refresh(&hiwdg);
 
@@ -709,7 +709,7 @@ void WdgTask::ThreadFunc() {
 			HAL_IWDG_Refresh(&hiwdg);
 			upCnt = 0;
 		} else {
-			shellTask->oMsgX(colRED, "DEAD_TASK:%s", deadTask->getThreadName());
+			getOutStream()->oMsgX(colRED, "DEAD_TASK:%s", deadTask->getThreadName());
 			if (upCnt++ < 5) {
 				HAL_IWDG_Refresh(&hiwdg);
 			}
@@ -787,7 +787,6 @@ void uMainCont() {
 	shellTask = new ShellTask();
 	shellTask->Start();
 
-
 	HAL_IWDG_Refresh(&hiwdg);
 
 	osKernelStart();
@@ -808,15 +807,3 @@ void reboot(int tm) {
 	rebootRec.flag = true;
 }
 
-void shMsg(int color, const char *pFormat, ...) {
-	shellTask->oMsgX((TermColor) color, pFormat);
-}
-unsigned char shMsgOpen(TermColor color) {
-	return shellTask->oOpen((TermColor) color);
-}
-void shMsgClose() {
-	shellTask->oClose();
-}
-void shMsgItem(const char *pFormat, ...) {
-	shellTask->oMsg(pFormat);
-}

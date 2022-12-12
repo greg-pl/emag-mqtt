@@ -9,7 +9,6 @@
 #include "utils.h"
 #include "main.h"
 #include "UMain.h"
-#include "shell.h"
 #include "Config.h"
 #include "i2cDev.h"
 #include "Hal.h"
@@ -17,8 +16,8 @@
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
+#include "Token.h"
 
-extern ShellTask *shellTask;
 extern Config *config;
 
 MdbUart::MdbUart(int PortNr, int Priority) :
@@ -353,12 +352,12 @@ void MdbMasterTask::proceedRecFrame() {
 		if (TCrc::Check(inBuf, n)) {
 			if (inBuf[0] != state.sent.devNr) {
 				if (m.err)
-					shellTask->oMsgX(colRED, "MDB%u: replay DEVNR not agree: %u<->%u", mMdbNr, state.sent.devNr, inBuf[0]);
+					getOutStream()->oMsgX(colRED, "MDB%u: replay DEVNR not agree: %u<->%u", mMdbNr, state.sent.devNr, inBuf[0]);
 			} else {
 				uint8_t rxCmd = inBuf[1] & 0x7F;
 				if (rxCmd != state.sent.code) {
 					if (m.err)
-						shellTask->oMsgX(colRED, "MDB%u: replay FUN not agree: %u<->%u", mMdbNr, state.sent.code, rxCmd);
+						getOutStream()->oMsgX(colRED, "MDB%u: replay FUN not agree: %u<->%u", mMdbNr, state.sent.code, rxCmd);
 				} else {
 					state.sent.currReq = reqEMPTY;
 					if ((inBuf[1] & 0x80) == 0) {
@@ -368,7 +367,7 @@ void MdbMasterTask::proceedRecFrame() {
 							int n = inBuf[2] >> 1;
 							if (n != state.sent.regCnt) {
 								if (m.err)
-									shellTask->oMsgX(colRED, "MDB%u: Fun%u REPLY ERROR", mMdbNr, rxCmd);
+									getOutStream()->oMsgX(colRED, "MDB%u: Fun%u REPLY ERROR", mMdbNr, rxCmd);
 								doOnReciveData(false, rxCmd, NULL, 0);
 
 							} else {
@@ -379,7 +378,7 @@ void MdbMasterTask::proceedRecFrame() {
 										uint16_t w = GetWord(&inBuf[3 + 2 * i]);
 										m += snprintf(&txt[m], sizeof(txt) - m, "%02X,", w);
 									}
-									shellTask->oMsgX(colWHITE, txt);
+									getOutStream()->oMsgX(colWHITE, txt);
 								}
 								doOnReciveData(true, rxCmd, &inBuf[3], n);
 							}
@@ -391,10 +390,10 @@ void MdbMasterTask::proceedRecFrame() {
 							uint16_t v = GetWord(&inBuf[4]);
 							if ((reg == state.sent.regAdr) && (v == state.sent.regVal)) {
 								if (m.info)
-									shellTask->oMsgX(colWHITE, "MDB%u: Fun6 ACK", mMdbNr);
+									getOutStream()->oMsgX(colWHITE, "MDB%u: Fun6 ACK", mMdbNr);
 							} else {
 								if (m.err)
-									shellTask->oMsgX(colRED, "MDB%u: Fun6 ACK ERROR", mMdbNr);
+									getOutStream()->oMsgX(colRED, "MDB%u: Fun6 ACK ERROR", mMdbNr);
 							}
 						}
 							break;
@@ -404,11 +403,11 @@ void MdbMasterTask::proceedRecFrame() {
 							if ((reg == state.sent.regAdr) && (cnt == state.sent.regCnt)) {
 								doOnReciveData(true, rxCmd, NULL, 0);
 								if (m.info)
-									shellTask->oMsgX(colWHITE, "MDB%u: Fun16 ACK", mMdbNr);
+									getOutStream()->oMsgX(colWHITE, "MDB%u: Fun16 ACK", mMdbNr);
 							} else {
 								doOnReciveData(false, rxCmd, NULL, 0);
 								if (m.err)
-									shellTask->oMsgX(colRED, "MDB%u: Fun16 ACK ERROR", mMdbNr);
+									getOutStream()->oMsgX(colRED, "MDB%u: Fun16 ACK ERROR", mMdbNr);
 							}
 						}
 							break;
@@ -416,7 +415,7 @@ void MdbMasterTask::proceedRecFrame() {
 					} else {
 						doOnReciveData(false, rxCmd, NULL, 0);
 						if (m.err)
-							shellTask->oMsgX(colRED, "MDB%u: Modbus exception %u", mMdbNr, inBuf[2]);
+							getOutStream()->oMsgX(colRED, "MDB%u: Modbus exception %u", mMdbNr, inBuf[2]);
 					}
 				}
 
@@ -462,7 +461,7 @@ void MdbMasterTask::ThreadFunc() {
 				state.timeOutCnt++;
 				doOnTimeOut();
 				if (m.err)
-					shellTask->oMsgX(colRED, "MDB%u: TimeOut DevNr=%u Fun=%u", mMdbNr, state.sent.devNr, state.sent.code);
+					getOutStream()->oMsgX(colRED, "MDB%u: TimeOut DevNr=%u Fun=%u", mMdbNr, state.sent.devNr, state.sent.code);
 			}
 		}
 

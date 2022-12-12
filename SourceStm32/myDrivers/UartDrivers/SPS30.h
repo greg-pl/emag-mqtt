@@ -10,6 +10,7 @@
 
 #include <DustSensorBase.h>
 #include <uart.h>
+#include <ErrorDef.h>
 
 //rekord danych odczytywany z SPS30
 typedef union {
@@ -28,12 +29,6 @@ typedef union {
 	};
 } SPS30_Data;
 
-typedef enum {
-	stOK = 0, //
-	stERR_NO_START_BYTE, //
-	stERR_SUM, //
-	stFRAME_TOO_BIG, //
-} SPS30_Status;
 
 class SPS30: public DustSensorBase, public TUart {
 
@@ -106,7 +101,7 @@ private:
 	void ShowMesuredRec(OutStream *strm);
 	void showState(OutStream *strm);
 
-	SPS30_Status execNewFrame();
+	TStatus execNewFrame();
 	void sendGetDevInfo(uint8_t par);
 	void sendDoReset();
 	void sendStartMeasure();
@@ -134,6 +129,9 @@ public:
 	virtual void setPower(bool on);
 	virtual HAL_StatusTypeDef Init(SignaledClass *signObj);
 	virtual void tick();
+public:
+	//Unidev
+	//virtual void getDeviceStatusTxt(char *txt, int max);
 
 };
 

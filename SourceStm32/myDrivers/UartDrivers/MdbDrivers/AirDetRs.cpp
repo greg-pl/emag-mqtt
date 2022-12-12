@@ -17,6 +17,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
+#include "Token.h"
 
 extern SHT35Device *sht35;
 extern Bmp338Device *bmp338;
@@ -40,13 +41,10 @@ AirDetRs::AirDetRs(MdbMasterTask *mdbTask, uint8_t mdbAdr, const char *name) :
 float AirDetRs::getGasFactor(int id) {
 	float k = 1.0; //wspołczynnik temperaturowy
 
-	float temperature1, humidity;
-	sht35->getData(&temperature1, &humidity);
-	float temp = temperature1;
+	float temp = NAN;
+	sht35->getMeasValue(ssTEMPERATURE, &temp);
 	if (isnanf(temp)) {
-		float temperature2, pressure;
-		bmp338->getData(&temperature2, &pressure);
-		temp = temperature2;
+		bmp338->getMeasValue(ssTEMPERATURE, &temp);
 	}
 	if (!(isnanf(temp))) {
 		k = 273 / (273 + temp);
@@ -256,7 +254,7 @@ void AirDetRs::loopFunc() {
 				case 1:
 					autoRd.reqCnt++;
 					autoRd.phase = 2;
-					sendMdbFun4(reqSYS, mMdbAdr, 1, 4); //todo było 1,5
+					sendMdbFun4(reqSYS, mMdbAdr, 1, 5);
 					break;
 				case 3:
 					sendMdbFun4(reqSYS, mMdbAdr, 1001, 4 * gasData.devCntTh);
@@ -376,7 +374,6 @@ bool AirDetRs::isAnyConfiguredData() {
 		return true;
 	return false;
 }
-
 
 bool AirDetRs::getMeasValue(MeasType measType, float *val) {
 

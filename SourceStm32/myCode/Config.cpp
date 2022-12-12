@@ -18,6 +18,7 @@
 
 #include <Config.h>
 #include <ShellItem.h>
+#include <Token.h>
 
 extern Config *config;
 extern IWDG_HandleTypeDef hiwdg;
@@ -39,14 +40,14 @@ extern "C" const TcpInterfDef* getTcpDef() {
 
 extern "C" const char* getGpsFormat(int idx);
 
-const CpxDef ConfigDscr[] = { //
+const CpxDescr ConfigDscr[] = { //
 		{ ctype : cpxSTR, ofs: offsetof(CfgRec, P.SerialNr), Name : "SerialNr", sizeof(CfgRec::P.SerialNr) }, //
 				{ ctype : cpxSTR, ofs: offsetof(CfgRec, R.DevInfo), Name : "DevInfo", sizeof(CfgRec::R.DevInfo) }, //
 				{ ctype : cpxINT, ofs: offsetof(CfgRec, R.timeZoneShift), Name : "TimeZoneShift", size : sizeof(CfgRec::R.timeZoneShift) }, //
 				{ ctype : cpxFLOAT, ofs: offsetof(CfgRec, R.gpsLatitude), Name : "GpsLatitude", size : sizeof(CfgRec::R.gpsLatitude), exPtr :(const void*) getGpsFormat }, //
 				{ ctype : cpxFLOAT, ofs: offsetof(CfgRec, R.gpsLongitude), Name : "GpsLongitude", size : sizeof(CfgRec::R.gpsLongitude), exPtr :(const void*) getGpsFormat }, //
 
-				{ ctype : cpxBREAK_LINE, ofs: 0, Name : "Ethernet", 0 }, //
+				//{ ctype : cpxBREAK_LINE, ofs: 0, Name : "Ethernet", 0 }, //
 				{ ctype : cpxBYTE, ofs: offsetof(CfgRec, R.tcp.dhcp), Name : "tcp_dhcp", size: sizeof(CfgRec::R.tcp.dhcp) }, //
 				{ ctype : cpxIP, ofs: offsetof(CfgRec, R.tcp.ip), Name : "tcp_ip", size: sizeof(CfgRec::R.tcp.ip) }, //
 				{ ctype : cpxIP, ofs: offsetof(CfgRec, R.tcp.mask), Name : "tcp_mask", size: sizeof(CfgRec::R.tcp.mask) }, //
@@ -54,7 +55,7 @@ const CpxDef ConfigDscr[] = { //
 				{ ctype : cpxIP, ofs: offsetof(CfgRec, R.tcp.dns1), Name : "tcp_dns1", size: sizeof(CfgRec::R.tcp.dns1) }, //
 				{ ctype : cpxIP, ofs: offsetof(CfgRec, R.tcp.dns2), Name : "tcp_dns2", size: sizeof(CfgRec::R.tcp.dns2) }, //
 
-				{ ctype : cpxBREAK_LINE, ofs: 0, Name : "BG96", 0 }, //
+				//{ ctype : cpxBREAK_LINE, ofs: 0, Name : "BG96", 0 }, //
 				{ ctype : cpxSTR, ofs: offsetof(CfgRec, R.bg96.BgEcho), Name : "BgEcho", size: sizeof(CfgRec::R.bg96.BgEcho) }, //
 				{ ctype : cpxSTR, ofs: offsetof(CfgRec, R.bg96.SimPin), Name : "SimPin", size: sizeof(CfgRec::R.bg96.SimPin) }, //
 				{ ctype : cpxINT, ofs: offsetof(CfgRec, R.bg96.rssiRefreshTime), Name : "RssiRefreshTime", size : sizeof(CfgRec::R.bg96.rssiRefreshTime) }, //
@@ -71,7 +72,7 @@ const CpxDef ConfigDscr[] = { //
 				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.bg96.autoOpenMqttSvr), Name : "AutoOpenMqttSvr", size : sizeof(CfgRec::R.bg96.autoOpenMqttSvr) }, //
 				{ ctype : cpxINT, ofs: offsetof(CfgRec, R.bg96.mqttSendInterval), Name : "MqttSendInterval", size : sizeof(CfgRec::R.bg96.mqttSendInterval) }, //
 
-				{ ctype : cpxBREAK_LINE, ofs: 0, Name : "MQTT", 0 }, //
+				//{ ctype : cpxBREAK_LINE, ofs: 0, Name : "MQTT", 0 }, //
 				{ ctype : cpxSTR, ofs: offsetof(CfgRec, R.mqtt.SvrName), Name : "MqttSvrName", size: sizeof(CfgRec::R.mqtt.SvrName) }, //
 				{ ctype : cpxWORD, ofs: offsetof(CfgRec, R.mqtt.SvrPortNoSSL), Name : "MqttPortNoSSL", size : sizeof(CfgRec::R.mqtt.SvrPortNoSSL) }, //
 				{ ctype : cpxWORD, ofs: offsetof(CfgRec, R.mqtt.SvrPortSSL), Name : "MqttPortSSL", size: sizeof(CfgRec::R.mqtt.SvrPortSSL) }, //
@@ -87,7 +88,7 @@ const CpxDef ConfigDscr[] = { //
 				{ ctype : cpxSTR, ofs: offsetof(CfgRec, R.mqtt.varNamePub), Name : "MqttSendVarName", size : sizeof(CfgRec::R.mqtt.varNamePub) }, //
 				{ ctype : cpxSTR, ofs: offsetof(CfgRec, R.mqtt.varNamePub2), Name : "MqttSendVar2Name", size : sizeof(CfgRec::R.mqtt.varNamePub2) }, //
 
-				{ ctype : cpxBREAK_LINE, ofs: 0, Name : "Inne", 0 }, //
+				//{ ctype : cpxBREAK_LINE, ofs: 0, Name : "Inne", 0 }, //
 
 				{ ctype : cpxBYTE, ofs: offsetof(CfgRec, P.dustInpType), Name : "DustInpType" }, //
 				{ ctype : cpxBYTE, ofs: offsetof(CfgRec, P.dustSensorType), Name : "DustSensorType" }, //
@@ -98,7 +99,7 @@ const CpxDef ConfigDscr[] = { //
 				{ ctype : cpxINT, ofs: offsetof(CfgRec, R.rest.gasDevMdbNr), Name : "GasDevMdbNr", size : sizeof(CfgRec::R.rest.gasDevMdbNr) }, //
 				{ ctype : cpxINT, ofs: offsetof(CfgRec, R.rest.dustDevMdbNr), Name : "DustDevMdbNr", size : sizeof(CfgRec::R.rest.dustDevMdbNr) }, //
 
-				{ ctype : cpxBREAK_LINE, ofs: 0, Name : "Sensors", 0 }, //
+				//{ ctype : cpxBREAK_LINE, ofs: 0, Name : "Sensors", 0 }, //
 				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.exDev.sensExist[ssTEMPERATURE]), Name : "existSensTemper", size : sizeof(bool) }, //
 				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.exDev.sensExist[ssHUMIDITY]), Name : "existSensHumidity", size: sizeof(bool) }, //
 				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.exDev.sensExist[ssPRESSURE]), Name : "existSensPressure", size: sizeof(bool) }, //
@@ -121,7 +122,7 @@ const CpxDef ConfigDscr[] = { //
 				{ ctype : cpxINT, ofs: offsetof(CfgRec, R.exDev.noiseFiltrFIRLength), Name : "NoiseFiltrFIRLength", size : sizeof(CfgRec::R.exDev.noiseFiltrFIRLength) }, //
 				{ ctype : cpxFLOAT, ofs: offsetof(CfgRec, R.exDev.noiseFiltrIRConst), Name : "NoiseFiltrIRConst", size : sizeof(CfgRec::R.exDev.noiseFiltrIRConst) }, //
 
-				{ ctype : cpxBREAK_LINE, ofs: 0, Name : "Heater", 0 }, //
+				//{ ctype : cpxBREAK_LINE, ofs: 0, Name : "Heater", 0 }, //
 				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.exDev.heater.useNTCtemp), Name : "heater_useNtcTemp", size: sizeof(bool) }, //
 				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.exDev.heater.runExternal), Name : "heater_runExternal", size: sizeof(bool) }, //
 				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.exDev.heater.runInternal), Name : "heater_runInternal", size: sizeof(bool) }, //
@@ -133,7 +134,7 @@ const CpxDef ConfigDscr[] = { //
 				{ ctype : cpxFLOAT, ofs: offsetof(CfgRec, R.exDev.heater.humidityOFF), Name : "heater_humidityOFF", size : sizeof(CfgRec::R.exDev.heater.humidityOFF) }, //
 				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.exDev.heater2.humidityEnab), Name : "heater_humidityENAB", size : sizeof(CfgRec::R.exDev.heater2.humidityEnab) }, //
 
-				{ ctype : cpxBREAK_LINE, ofs: 0, Name : "LedMatrix", 0 }, //
+				//{ ctype : cpxBREAK_LINE, ofs: 0, Name : "LedMatrix", 0 }, //
 
 				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.rest.ledMatrixRun), Name : "ledMatrix_run", size : sizeof(CfgRec::R.rest.ledMatrixRun) }, //
 				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.rest.faceAutoSend), Name : "ledMatrix_auto", size : sizeof(CfgRec::R.rest.faceAutoSend) }, //
