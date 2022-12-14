@@ -314,6 +314,7 @@ void GlobData::showJson(OutStream *strm) {
 		jsonbuf = new CxString(JSON_SIZE);
 	}
 	if (jsonbuf != NULL) {
+		jsonbuf->clear();
 		Fill();
 		Cpx cpx;
 		cpx.init(GlobDataDscr, &dt);

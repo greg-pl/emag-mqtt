@@ -37,12 +37,11 @@ private:
 protected:
 	int mDebug;
 	uint32_t mAlivePeriod;
+	uint32_t loopFlag;
 	virtual void ThreadFunc();
 	void imAlive();
 	bool isAlive();
-
 	void wakeUpMe();
-
 public:
 	TaskClass(const char *name, osPriority aPriority, int stacksize);
 	virtual ~TaskClass() {
@@ -65,6 +64,10 @@ public:
 	bool isSuspended(){
 		return mSuspend;
 	}
+	uint32_t getLoopFlag(){
+		return loopFlag;
+	}
+
 };
 
 

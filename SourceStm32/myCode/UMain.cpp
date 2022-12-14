@@ -709,7 +709,7 @@ void WdgTask::ThreadFunc() {
 			HAL_IWDG_Refresh(&hiwdg);
 			upCnt = 0;
 		} else {
-			getOutStream()->oMsgX(colRED, "DEAD_TASK:%s", deadTask->getThreadName());
+			getOutStream()->oMsgX(colRED, "DEAD_TASK:%s [LF=0x%06X]", deadTask->getThreadName(), deadTask->getLoopFlag());
 			if (upCnt++ < 5) {
 				HAL_IWDG_Refresh(&hiwdg);
 			}
