@@ -168,9 +168,9 @@ int LedMatrix::getFaceNr(int prevNr, float pm2) {
 		prevNr -= (1 + face_grin_beam);
 
 		for (int i = 0; i < FACE_LIMIT_TAB_LEN; i++) {
-			float lim = config->data.R.rest.faceLimitTab[i];
+			float lim = config->data.R.ledMatrix.limitTab[i];
 			if (i <= prevNr)
-				lim -= config->data.R.rest.faceHistereza;
+				lim -= config->data.R.ledMatrix.histereza;
 			if (pm2 > lim) {
 				res = i + 1 + face_grin_beam;
 			}
@@ -196,7 +196,7 @@ void LedMatrix::tick() {
 		execNewFrame();
 		rxRec.rxPtr = 0;
 	}
-	if (config->data.R.rest.faceAutoSend) {
+	if (config->data.R.ledMatrix.autoSend) {
 
 		switch (state.autoSend.state) {
 		case 0:
@@ -236,7 +236,7 @@ void LedMatrix::tick() {
 			break;
 
 		case 4:
-			sendCommand(CMD_SET_LIGHT_LEVEL, config->data.R.rest.faceLevel);
+			sendCommand(CMD_SET_LIGHT_LEVEL, config->data.R.ledMatrix.lightLevel);
 			setState(5);
 			break;
 

@@ -403,7 +403,7 @@ void DefaultTask::heaterTick() {
 	float humidity;
 	bool measOk = false;
 
-	if (config->data.R.exDev.heater.runInternal) {
+	if (config->data.R.heater.runInternal) {
 		uint32_t tt = HAL_GetTick();
 		if (tt - heater.lastRunTick > 2000) {
 			heater.lastRunTick = tt;
@@ -418,23 +418,23 @@ void DefaultTask::heaterTick() {
 				sht35->getMeasValue(ssTEMPERATURE, &temp);
 				sht35->getMeasValue(ssHUMIDITY, &humidity);
 
-				if (config->data.R.exDev.heater.useNTCtemp)
+				if (config->data.R.heater.useNTCtemp)
 					temp = NTC::temp;
 				measOk = true;
 
 				bool qr = heater.regTempOut;
 				uint32_t dd = 0;
-				if (config->data.R.exDev.heater2.humidityEnab) {
+				if (config->data.R.heater.humidityEnab) {
 					dd |= 0x000001;
 					if (!qr) {
 						dd |= 0x000002;
-						if ((temp < config->data.R.exDev.heater.tempON) || (humidity > config->data.R.exDev.heater.humidityON)) {
+						if ((temp < config->data.R.heater.tempON) || (humidity > config->data.R.heater.humidityON)) {
 							qr = true;
 							dd |= 0x000004;
 						}
 					} else {
 						dd |= 0x000010;
-						if ((temp > config->data.R.exDev.heater.tempOFF) && (humidity < config->data.R.exDev.heater.humidityOFF)) {
+						if ((temp > config->data.R.heater.tempOFF) && (humidity < config->data.R.heater.humidityOFF)) {
 							qr = false;
 							dd |= 0x000020;
 						}
@@ -443,13 +443,13 @@ void DefaultTask::heaterTick() {
 					dd |= 0x000100;
 					if (!qr) {
 						dd |= 0x000200;
-						if (temp < config->data.R.exDev.heater.tempON) {
+						if (temp < config->data.R.heater.tempON) {
 							qr = true;
 							dd |= 0x000400;
 						}
 					} else {
 						dd |= 0x000800;
-						if (temp > config->data.R.exDev.heater.tempOFF) {
+						if (temp > config->data.R.heater.tempOFF) {
 							qr = false;
 							dd |= 0x001000;
 						}
@@ -457,9 +457,9 @@ void DefaultTask::heaterTick() {
 
 				}
 
-				if (config->data.R.exDev.heater.showMsg >= 2) {
+				if (config->data.R.heater.showMsg >= 2) {
 					getOutStream()->oMsgX(colYELLOW, "HEATER-%s, REG-%s QR-%s T=%.1f[*C] H=%.0f[%%] useNTC=%u tempOFF=%.1f[*C] DD=0x%08X", OnOff(heater.on), OnOff(heater.regTempOut), OnOff(qr), //
-					temp, humidity, config->data.R.exDev.heater.useNTCtemp, config->data.R.exDev.heater.tempOFF, dd);
+					temp, humidity, config->data.R.heater.useNTCtemp, config->data.R.heater.tempOFF, dd);
 				}
 
 				heater.regTempOut = qr;
@@ -478,7 +478,7 @@ void DefaultTask::heaterTick() {
 		heater.on = qw;
 		Hdw::heaterOn(heater.on);
 
-		if (config->data.R.exDev.heater.showMsg >= 1) {
+		if (config->data.R.heater.showMsg >= 1) {
 			char buf[20];
 			TDATE tm;
 			if (Rtc::ReadOnlyTime(&tm))
@@ -496,7 +496,7 @@ void DefaultTask::heaterTick() {
 
 bool DefaultTask::getHdwError() {
 	bool q = false;
-	if (config->data.P.dustInpType == dust_Intern) {
+	if (config->data.R.dev.dustInpType == dust_Intern) {
 		q |= dustInternSensor->isDataError();
 	} else {
 		q |= dustExternSensor->isDataError();
@@ -518,7 +518,7 @@ void DefaultTask::led3ColTick() {
 
 	if (HAL_GetTick() - ledTT > 250) {
 		ledTT = HAL_GetTick();
-		if (!config->data.R.rest.ledOff) {
+		if (!config->data.R.dev.pcbLedOff) {
 
 			bool ledR = false;
 			bool ledG = false;
@@ -604,14 +604,14 @@ void DefaultTask::ThreadFunc() {
 	bg96 = new Bg96Driver();
 	bg96->Start();
 
-	if (config->data.R.rest.ledMatrixRun) {
+	if (config->data.R.ledMatrix.run) {
 		ledMatrix = new LedMatrix(TUart::myUART4);
 		ledMatrix->Init();
 	}
 
-	if (config->data.P.dustInpType == dust_Intern) {
+	if (config->data.R.dev.dustInpType == dust_Intern) {
 
-		switch (config->data.P.dustSensorType) {
+		switch (config->data.R.dev.dustSensorType) {
 		case dustT_PMSA:  	//Chińczyk
 			dustInternSensor = new DustPMSA(false);
 			break;
@@ -665,7 +665,7 @@ void DefaultTask::ThreadFunc() {
 
 		}
 		i2cBus1->tick();
-		if (config->data.P.dustInpType == dust_Intern) {
+		if (config->data.R.dev.dustInpType == dust_Intern) {
 			dustInternSensor->tick();
 		}
 		lcdTick();
@@ -709,7 +709,7 @@ void WdgTask::ThreadFunc() {
 			HAL_IWDG_Refresh(&hiwdg);
 			upCnt = 0;
 		} else {
-			getOutStream()->oMsgX(colRED, "DEAD_TASK:%s [LF=0x%06X]", deadTask->getThreadName(), deadTask->getLoopFlag());
+			//getOutStream()->oMsgX(colRED, "DEAD_TASK:%s [LF=0x%06X]", deadTask->getThreadName(), deadTask->getLoopFlag());
 			if (upCnt++ < 5) {
 				HAL_IWDG_Refresh(&hiwdg);
 			}

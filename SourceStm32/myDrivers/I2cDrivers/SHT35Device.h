@@ -92,7 +92,6 @@ private:
 	};
 	DtFilter filterTemp;
 	DtFilter filterHumidity;
-	uint32_t mLastRdDataTick;
 	uint32_t mLastTryRdTick;
 	HAL_StatusTypeDef readData();
 protected:

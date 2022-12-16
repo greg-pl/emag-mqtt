@@ -122,7 +122,7 @@ private:
 
 	void showDef(OutStream *strm, const CpxDescr *def, char *wBuf, char *space);
 	void info(OutStream *strm, CxString *wstr, CxString *front, IdHist *keyHist, int idx);
-	void list(OutStream *strm, CxString *wstr, CxString *front, IdHist *keyHist, int idx);
+	void list(OutStream *strm, CxString *wstr, CxString *front, IdHist *keyHist, int idx, int frontSize);
 	void buildjson(CxString *out, char *space, int idx, uint8_t flags);
 	void buildBinCfg(CxBuf *cxBuf, IdHist *idHist);
 	static bool getSelectVal(const void *exPtr, const char *txt, int *ret);

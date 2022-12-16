@@ -43,7 +43,7 @@ extern LedMatrix *ledMatrix;
 extern I2cBus *i2cBus1;
 extern GasS873 *gasS873;
 extern NoiseDetector *noiseDet;
-
+extern ShellTask *shellTask;
 
 //-------------------------------------------------------------------------------------------------------------------------
 // ShellConnection
@@ -187,7 +187,7 @@ bool USBConnection::isReady() {
 	if (!mReady)
 		return false;
 	if (mTransmitTick != 0) {
-		if (HAL_GetTick() - mTransmitTick > 1000) {
+		if (HAL_GetTick() - mTransmitTick > 5000) {
 			mTransmitTick = 0;
 			mReady = false;
 			return false;
@@ -224,6 +224,7 @@ void USBConnection::inpDataFun(uint8_t *Buf, uint32_t Len) {
 		if (mThreadId != NULL) {
 			osSignalSet(mThreadId, ShellTask::SIGNAL_CHAR);
 		}
+		mReady = true;
 	}
 
 }
@@ -234,7 +235,7 @@ void USBConnection::inpDataFun(uint8_t *Buf, uint32_t Len) {
 ShellTask *ShellTask::Me = NULL;
 
 ShellTask::ShellTask() :
-		TaskClass::TaskClass("Shell", osPriorityNormal, 1024) {
+		TaskClass::TaskClass("Shell", osPriorityNormal, 1024), OutStream::OutStream() {
 
 	Me = this;
 
@@ -246,7 +247,7 @@ ShellTask::ShellTask() :
 	ST3 pin0 = Hdw::getPinCfg0();
 
 	// jeśli załaczona obsługa LedMatrix to nie może być obsługi shell na UART4
-	if (config->data.R.rest.ledMatrixRun) {
+	if (config->data.R.ledMatrix.run) {
 		if (pin0 == posGND) {
 			pin0 = posFREE;
 		}
@@ -263,15 +264,6 @@ ShellTask::ShellTask() :
 	}
 	term = new EscTerminal(this);
 	myConnection->Init();
-}
-
-void ShellTask::_Msg(TermColor color, const char *pFormat, ...) {
-	if (Me != NULL) {
-		va_list ap;
-		va_start(ap, pFormat);
-		Me->oMsgX(color, pFormat, ap);
-		va_end(ap);
-	}
 }
 
 void ShellTask::putOut(const void *mem, int len) {
@@ -297,12 +289,15 @@ void ShellTask::putOut(const void *mem, int len) {
 void ShellTask::putOutStr(const char *str) {
 	flgSendAny = true;
 	putOut(str, strlen(str));
-
 }
 
 bool ShellTask::openOutMutex(int tm) {
-	return (osMutexWait(mOutTxtMutex, tm) == osOK);
+	bool q = (osMutexWait(mOutTxtMutex, tm) == osOK);
+	if (!q)
+		mNoTermSmfCnt++;
+	return q;
 }
+
 void ShellTask::closeOutMutex() {
 	osMutexRelease(mOutTxtMutex);
 }
@@ -354,63 +349,6 @@ void ShellTask::ThreadFunc() {
 	}
 }
 
-void ShellTask::oFormatX(TermColor color, const char *pFormat, va_list ap) {
-	if (oOpen(color)) {
-		int len = vsnprintf(outBuf, sizeof(outBuf), pFormat, ap);
-		putOut(outBuf, len);
-		putOutStr("\r\n");
-		oClose();
-	} else {
-		mNoTermSmfCnt++;
-	}
-
-}
-
-void ShellTask::oMsgX(TermColor color, const char *pFormat, ...) {
-	va_list ap;
-	va_start(ap, pFormat);
-	oFormatX(color, pFormat, ap);
-	va_end(ap);
-}
-
-bool ShellTask::oOpen(TermColor color) {
-	bool q = openOutMutex(OutHdStream::STD_TIME);
-	if (q) {
-		putOutStr(TERM_CLEAR_LINE);
-		putOutStr(term->getColorStr(color));
-	}
-	return q;
-}
-void ShellTask::oClose() {
-	term->showLineNoMx();
-	closeOutMutex();
-}
-
-void ShellTask::oWr(const char *txt) {
-	int len = strlen(txt);
-	putOut(txt, len);
-	putOutStr("\r\n");
-}
-
-void ShellTask::oMsg(const char *pFormat, ...) {
-	va_list ap;
-	va_start(ap, pFormat);
-	int len = vsnprintf(outBuf, sizeof(outBuf), pFormat, ap);
-	va_end(ap);
-	putOut(outBuf, len);
-	putOutStr("\r\n");
-}
-
-void ShellTask::dumpBuf(TermColor color, const char *buf) {
-	if (oOpen(color)) {
-		int len = strlen(buf);
-		putOut(buf, len);
-		oClose();
-	} else {
-		mNoTermSmfCnt++;
-	}
-}
-
 void ShellTask::execAltChar(char altChar) {
 	char buf[40];
 	snprintf(buf, sizeof(buf), "AltChar=%u [%c]", altChar, altChar);
@@ -423,7 +361,7 @@ static void funShowHardware(OutStream *strm, const char *cmd, void *arg);
 
 void ShellTask::execCmdLineEx(const char *cmd) {
 	char txt[100];
-	snprintf(txt, sizeof(txt), "AIR-PRO: MainMenu, NS=%s", config->data.P.SerialNr);
+	snprintf(txt, sizeof(txt), "AIR-PRO: MainMenu, NS=%s", config->data.R.dev.SerialNr);
 
 	execMenuCmd(this, mainMenuFx, cmd, this, txt);
 }
@@ -445,6 +383,12 @@ void ShellTask::execFunKey(FunKey funKey) {
 	}
 }
 
+void ShellTask::showStat(OutStream *strm) {
+	strm->oMsg("Term no semafor :%u", shellTask->mNoTermSmfCnt);
+	strm->oMsg("Term full TX buf:%u", shellTask->mFullTxCnt);
+	strm->oMsg("RestartRxCnt    :%u", myConnection->mReStartCnt);
+}
+
 //-----------------------------------------------------------------------------------------------------------------------
 // Main Menu
 //-----------------------------------------------------------------------------------------------------------------------
@@ -457,12 +401,12 @@ static void funShowState(OutStream *strm, const char *cmd, void *arg) {
 		TimeTools::DtTmStr(buf, &mSoftVer.time);
 		strm->oMsg("Ver             :%u.%03u - %s", mSoftVer.ver, mSoftVer.rev, buf);
 		strm->oMsg("RtcInitStatus   :%s", HAL_getErrStr(Rtc::mRtcStatus));
-		if (config->data.P.dustInpType == dust_Intern) {
+		if (config->data.R.dev.dustInpType == dust_Intern) {
 			strm->oMsg("DustInternSensor:%s", ErrOk(dustInternSensor->isDataError()));
 		} else {
 			strm->oMsg("DustExternSensor:%s", ErrOk(dustExternSensor->isDataError()));
 		}
-		if (noiseDet!=NULL) {
+		if (noiseDet != NULL) {
 			strm->oMsg("NoiseSensor     :%s", ErrOk(noiseDet->isDataError()));
 		}
 		if (gasS873->isAnyConfiguredData()) {
@@ -475,10 +419,9 @@ static void funShowState(OutStream *strm, const char *cmd, void *arg) {
 		strm->oMsg("Network IP rdy  :%s", YN(bg96->isIPready()));
 		strm->oMsg("MQTT svr opened :%s", YN(bg96->isMqttSvrOpened()));
 		strm->oMsg("MQTT Send       :%s", YN(bg96->isMqttSendingOk()));
+
 		strm->oMsg("-----");
-		//strm->oMsg("Term no semafor :%u", mNoTermSmfCnt);
-		//strm->oMsg("Term full TX buf:%u", mFullTxCnt);
-		//strm->oMsg("RestartRxCnt    :%u", myConnection->mReStartCnt);
+		shellTask->showStat(strm);
 
 		strm->oClose();
 	}
@@ -533,7 +476,7 @@ static void funMenuI2C(OutStream *strm, const char *cmd, void *arg) {
 	i2cBus1->shell(strm, cmd);
 }
 static void funMenuDust(OutStream *strm, const char *cmd, void *arg) {
-	if (config->data.P.dustInpType == dust_Intern) {
+	if (config->data.R.dev.dustInpType == dust_Intern) {
 		dustInternSensor->shell(strm, cmd);
 	} else {
 		//dustExternSensor->shell(strm, cmd);
@@ -752,9 +695,9 @@ static void funShowTimeInfo(OutStream *strm, const char *cmd, void *arg) {
 	} else {
 		strm->oMsgX(colRED, "Błąd pobrania czasu");
 	}
-	TimeTools::DtTmStrZZ(buf, &config->data.R.rtcSetUpTime);
+	TimeTools::DtTmStrZZ(buf, &config->data.R.dev.rtcSetUpTime);
 	strm->oMsgX(colGREEN, "Czas ustawienia czasu: %s", buf);
-	strm->oMsgX(colGREEN, "Zródło ustawienia czasu: %s", getTmSrcName(config->data.R.rtcSetUpTime.timeSource));
+	strm->oMsgX(colGREEN, "Zródło ustawienia czasu: %s", getTmSrcName(config->data.R.dev.rtcSetUpTime.timeSource));
 
 }
 static void funSetTime(OutStream *strm, const char *cmd, void *arg) {
@@ -763,7 +706,7 @@ static void funSetTime(OutStream *strm, const char *cmd, void *arg) {
 		if (Rtc::SetTime(&tm)) {
 			Rtc::ReadTime(&tm);
 			tm.timeSource = tmSrcNTP;
-			config->data.R.rtcSetUpTime = tm;
+			config->data.R.dev.rtcSetUpTime = tm;
 			config->saveRtc();
 			strm->oMsgX(colGREEN, "Ok");
 		} else
@@ -778,7 +721,7 @@ static void funSetDate(OutStream *strm, const char *cmd, void *arg) {
 		if (Rtc::SetDate(&tm)) {
 			Rtc::ReadTime(&tm);
 			tm.timeSource = tmSrcNTP;
-			config->data.R.rtcSetUpTime = tm;
+			config->data.R.dev.rtcSetUpTime = tm;
 			config->saveRtc();
 			strm->oMsgX(colGREEN, "Ok");
 		} else
@@ -841,9 +784,9 @@ void dns_found_cb(const char *name, const ip_addr_t *ipaddr, void *callback_arg)
 	if (ipaddr != NULL && ipaddr->addr != 0) {
 		char txt[20];
 		ipaddr_ntoa_r(ipaddr, txt, sizeof(txt));
-		ShellTask::_Msg(colGREEN, "%s -> %s", name, txt);
+		getOutStream()->oMsgX(colGREEN, "%s -> %s", name, txt);
 	} else {
-		ShellTask::_Msg(colRED, "%s -> ???", name);
+		getOutStream()->oMsgX(colRED, "%s -> ???", name);
 	}
 }
 
@@ -965,7 +908,7 @@ int Ping(ip4_addr_t addr, int length)
 					osDelay(5);
 					err = recvfrom(hSocket, reply, sizeof(reply), 0, (struct sockaddr* ) &from, (socklen_t* ) &fromlen);
 
-				} while ((err > 0) && ((pechoreply->id != pecho->id) || (pechoreply->seqno != pecho->seqno)) && (sys_stop_tickcount(ulTickCount) <= (u32_t)timeout));
+				} while ((err > 0) && ((pechoreply->id != pecho->id) || (pechoreply->seqno != pecho->seqno)) && (sys_stop_tickcount(ulTickCount) <= (u32_t) timeout));
 				ulTickCount = sys_stop_tickcount(ulTickCount);
 
 				/* Si le "ping" est bien reçu... */

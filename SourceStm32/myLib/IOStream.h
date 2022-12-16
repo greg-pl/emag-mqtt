@@ -11,18 +11,36 @@
 #include "stdarg.h"
 #include "EscTerminal.h"
 
+enum {
+	MSG_ERR = 1, //
+	MSG_WARN = 2, //
+	MSG_INFO = 3, //
+	MSG_DATA = 4, //
+};
 
-class OutStream {
+class OutStream: public OutHdStream {
+private:
+	char outBuf[200];  //dost�p do bufora tylko po otwarciu semafora
 public:
-	virtual void oFormatX(TermColor color, const char *pFormat, va_list ap)=0;
-	virtual void oMsgX(TermColor color, const char *pFormat, ...)=0;
+	OutStream();
+	virtual void closeTerm() {
+	}
+	void oFormatX(TermColor color, const char *pFormat, va_list ap);
+	void oMsgX(TermColor color, const char *pFormat, ...);
+	void oBufX(TermColor color, const void *buf, int len);
+	void oWrX(TermColor color, const char *buf);
+	void oBinBufX(TermColor color, const void *buf, int len);
+	void oBinBufHex(const void *buf, int len);
+	void oBinBufHexX(TermColor color, const void *buf, int len);
 
-
-	virtual bool oOpen(TermColor color)= 0;
-	virtual void oClose()= 0;
-	virtual void oMsg(const char *pFormat, ...)= 0;
-	virtual void oWr(const char *txt)=0;
-	virtual void dumpBuf(TermColor color, const char *buf)=0;
+	bool oOpen(TermColor color);
+	void oClose();
+	void oMsgNN(const char *pFormat, ...);
+	void oMsg(const char *pFormat, ...);
+	void oWr(const char *txt);
+	void oBuf(const void *mem, int len);
+	void oSetColor(TermColor color);
+	void oBinBuf(const void *buf, int len);
 
 };
 

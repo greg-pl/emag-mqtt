@@ -31,7 +31,7 @@ protected:
 
 	virtual bool isConnSending() =0;
 	virtual void sendBuf(const void *ptr, int len)=0;
-	virtual bool isReady(){
+	virtual bool isReady() {
 		return true;
 	}
 	void startSendNextPart();
@@ -95,7 +95,7 @@ public:
 
 //------------------------------------------------------------------------------------------------------------
 
-class ShellTask: public TaskClass, public OutHdStream, public OutStream {
+class ShellTask: public TaskClass, public OutStream {
 public:
 	enum {
 		SIGNAL_CHAR = 0x01, //
@@ -117,7 +117,7 @@ private:
 	void execFunKey(FunKey funKey);
 
 protected:
-	//TermStream
+	//OutStream (OutHdStream)
 	virtual void putOut(const void *mem, int len);
 	virtual bool openOutMutex(int tm);
 	virtual void closeOutMutex();
@@ -126,19 +126,10 @@ protected:
 protected:
 	//TaskClass
 	virtual void ThreadFunc();
-private:
-public:
-	//MsgStream
-	virtual void oFormatX(TermColor color, const char *pFormat, va_list ap);
-	virtual void oMsgX(TermColor color, const char *pFormat, ...);
-	virtual bool oOpen(TermColor color);
-	virtual void oClose();
-	virtual void oWr(const char *txt);
-	virtual void oMsg(const char *pFormat, ...);
-	virtual void dumpBuf(TermColor color, const char *buf);
+
 public:
 	ShellTask();
-	static void _Msg(TermColor color, const char *pFormat, ...);
+	void showStat(OutStream *strm);
 
 };
 

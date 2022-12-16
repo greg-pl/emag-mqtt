@@ -33,11 +33,11 @@ bool DustSensorBase::isDataError() {
 
 bool DustSensorBase::isAnyConfiguredData() {
 	bool q = false;
-	q |= config->data.R.exDev.sensExist[ssPM1_0];
-	q |= config->data.R.exDev.sensExist[ssPM2_5];
-	q |= config->data.R.exDev.sensExist[ssPM10];
+	q |= config->data.R.sensExist[ssPM1_0];
+	q |= config->data.R.sensExist[ssPM2_5];
+	q |= config->data.R.sensExist[ssPM10];
 	if (isFormaldehyde())
-		q |= config->data.R.exDev.sensExist[ssCh2o];
+		q |= config->data.R.sensExist[ssCh2o];
 	return q;
 }
 

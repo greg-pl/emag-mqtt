@@ -476,11 +476,11 @@ void Bg96Driver::parseNtpTime(const char *ptr) {
 	Token::remooveQuota(buf);
 
 	if (parseTimeStr(buf, &state.ntpTime.reciveTime)) {
-		if (TimeTools::AddHour(&state.ntpTime.reciveTime, config->data.R.timeZoneShift)) {
+		if (TimeTools::AddHour(&state.ntpTime.reciveTime, config->data.R.dev.timeZoneShift)) {
 			state.ntpTime.reciveTime.timeSource = tmSrcNTP;
 			Rtc::SetTime(&state.ntpTime.reciveTime);
 			Rtc::SetDate(&state.ntpTime.reciveTime);
-			config->data.R.rtcSetUpTime = state.ntpTime.reciveTime;
+			config->data.R.dev.rtcSetUpTime = state.ntpTime.reciveTime;
 			config->saveRtc();
 		}
 		state.ntpTime.recived = true;
@@ -503,7 +503,7 @@ void Bg96Driver::parseNetworkTime(const char *ptr) {
 		if (TimeTools::AddHour(&state.gsmTime.reciveTime, dHour)) {
 			Rtc::SetTime(&state.gsmTime.reciveTime);
 			Rtc::SetDate(&state.gsmTime.reciveTime);
-			config->data.R.rtcSetUpTime = state.gsmTime.reciveTime;
+			config->data.R.dev.rtcSetUpTime = state.gsmTime.reciveTime;
 			config->saveRtc();
 		}
 		state.gsmTime.recived = true;
@@ -540,11 +540,11 @@ void Bg96Driver::parseGpsData(const char *ptr) {
 	state.gps.reciveTick = HAL_GetTick();
 	state.gps.gpsFix = true;
 	if (config->data.R.bg96.gps.setRtcTime) {
-		if (TimeTools::AddHour(&state.gps.reciveTime, config->data.R.timeZoneShift)) {
+		if (TimeTools::AddHour(&state.gps.reciveTime, config->data.R.dev.timeZoneShift)) {
 			state.gps.reciveTime.timeSource = tmSrcGPS;
 			Rtc::SetTime(&state.gps.reciveTime);
 			Rtc::SetDate(&state.gps.reciveTime);
-			config->data.R.rtcSetUpTime = state.gps.reciveTime;
+			config->data.R.dev.rtcSetUpTime = state.gps.reciveTime;
 			config->saveRtc();
 		}
 	}
@@ -927,6 +927,7 @@ int Bg96Driver::openMqqtConnection() {
 
 //Logowanie urn:im40:123456781234567
 	writeCmdF("at+qmtconn=%d,\"urn:im40:%s\",\"%s\",\"%s\"", MQTT_IDX, bgParam.imei, config->data.R.mqtt.userName, config->data.R.mqtt.password);
+	//writeCmdF("at+qmtconn=%d,\"plytka:1\",\"%s\",\"%s\"", MQTT_IDX, config->data.R.mqtt.userName, config->data.R.mqtt.password);
 	st = getReplOk(300);
 	if (st < 0) {
 		state.mqtt.errorOpenCnt++;
@@ -968,8 +969,10 @@ int Bg96Driver::sendMqqtData(const char *varName, const char *data, bool doDataC
 		return st;
 
 	writeCmdNoEcho(data, doDataCpy);
-	if (mEcho.tx)
-		getOutStream()->oMsgX(colMAGENTA, "%u:*Dane*", HAL_GetTick() - mSendTick);
+	if (mEcho.tx) {
+		int n = strlen(data);
+		getOutStream()->oMsgX(colMAGENTA, "%u:*Dane* :Len=%u", HAL_GetTick() - mSendTick, n);
+	}
 
 	st = getReplWithErr(nnQmtPub, 20000); //todo: dorobić zależności od pkt_timeout i retry_times
 	if (st != stOK)
@@ -1418,7 +1421,7 @@ void Bg96Driver::mqttLoopFun() {
 	if (strlen(config->data.R.mqtt.varNamePub) == 0)
 		return;
 
-	if (config->data.R.bg96.mqttSendInterval <= 0)
+	if (config->data.R.mqtt.mqttSendInterval <= 0)
 		return;
 
 	if (!state.rdy.iAct) {
@@ -1428,7 +1431,7 @@ void Bg96Driver::mqttLoopFun() {
 	int st = stOK;
 
 	if (!state.mqtt.svrOpened) {
-		if (config->data.R.bg96.autoOpenMqttSvr) {
+		if (config->data.R.mqtt.autoOpenMqttSvr) {
 			st = openMqqtConnection();
 		}
 	}
@@ -1437,7 +1440,7 @@ void Bg96Driver::mqttLoopFun() {
 		return;
 	}
 
-	if ((state.mqtt.sentTick == 0) || (HAL_GetTick() - state.mqtt.sentTick > (uint32_t) (1000 * config->data.R.bg96.mqttSendInterval))) {
+	if ((state.mqtt.sentTick == 0) || (HAL_GetTick() - state.mqtt.sentTick > (uint32_t) (1000 * config->data.R.mqtt.mqttSendInterval))) {
 
 		if (GlobData::buildExportJson() >= 0) {
 
@@ -1525,12 +1528,12 @@ void Bg96Driver::smsSendLoopFun() {
 bool Bg96Driver::isMqttSendingOk() {
 	if (state.mqtt.sentTick == 0)
 		return false;
-	return (HAL_GetTick() - state.mqtt.sentTick < (uint32_t) (1000 * (20 + config->data.R.bg96.mqttSendInterval)));
+	return (HAL_GetTick() - state.mqtt.sentTick < (uint32_t) (1000 * (20 + config->data.R.mqtt.mqttSendInterval)));
 }
 
 // czy ma byś cykliczne wysyłanie pakietów MQTT
 bool Bg96Driver::isMqttAutoRun() {
-	return (config->data.R.bg96.autoOpenMqttSvr) && (config->data.R.bg96.mqttSendInterval >= 0) && (strlen(config->data.R.mqtt.varNamePub) > 0);
+	return (config->data.R.mqtt.autoOpenMqttSvr) && (config->data.R.mqtt.mqttSendInterval >= 0) && (strlen(config->data.R.mqtt.varNamePub) > 0);
 }
 
 SSL_Cfg mySslCfg = { //
@@ -1578,7 +1581,7 @@ void Bg96Driver::runLoop() {
 
 			logT(vvTEXT, "BG RunLoop");
 
-			if (config->data.R.bg96.autoOpenMqttSvr)
+			if (config->data.R.mqtt.autoOpenMqttSvr)
 				asynch.doOpenMqtt = true;
 
 			while (asynch.mRunning) {
@@ -1640,7 +1643,7 @@ void Bg96Driver::runLoop() {
 				}
 				if (isMqttAutoRun()) {
 					dword tt = HAL_GetTick() - state.mqtt.sentAckTick;
-					dword tz = (config->data.R.bg96.mqttSendInterval + 180) * 1000;
+					dword tz = (config->data.R.mqtt.mqttSendInterval + 180) * 1000;
 					if (tt > tz) {
 						logT(vvERROR, "MQTT nie wysłane w zadanym czasie. Restart BG96.");
 						break;

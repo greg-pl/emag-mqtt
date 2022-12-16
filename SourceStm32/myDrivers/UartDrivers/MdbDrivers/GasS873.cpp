@@ -98,9 +98,9 @@ void GasS873::onReciveData(bool replOK, uint8_t mdbFun, const uint8_t *tab, int 
 					sensor->valueHd = vl | (vh << 16);
 					sensor->valueFiz = sensor->valueHd * getMeasFactor(sensor->measType);
 					if (sensor->filtrIR == NULL)
-						sensor->filtrIR = new FiltrIR(config->data.R.exDev.filtrIRConst);
+						sensor->filtrIR = new FiltrIR(config->data.R.rest.filtrIRConst);
 					if (sensor->filtrFIR == NULL)
-						sensor->filtrFIR = new FiltrFIR(config->data.R.exDev.filtrFIRLength);
+						sensor->filtrFIR = new FiltrFIR(config->data.R.rest.filtrFIRLength);
 					sensor->filtrIR->inp(sensor->valueFiz);
 					sensor->filtrFIR->inp(sensor->valueFiz);
 				}
@@ -178,15 +178,15 @@ const char* GasS873::getSensValidStr(uint16_t status) {
 
 
 bool GasS873::isAnyConfiguredData() {
-	if (config->data.R.exDev.sensExist[ssCO])
+	if (config->data.R.sensExist[ssCO])
 		return true;
-	if (config->data.R.exDev.sensExist[ssCO2])
+	if (config->data.R.sensExist[ssCO2])
 		return true;
-	if (config->data.R.exDev.sensExist[ssTEMPERATURE])
+	if (config->data.R.sensExist[ssTEMPERATURE])
 		return true;
-	if (config->data.R.exDev.sensExist[ssHUMIDITY])
+	if (config->data.R.sensExist[ssHUMIDITY])
 		return true;
-	if (config->data.R.exDev.sensExist[ssPRESSURE])
+	if (config->data.R.sensExist[ssPRESSURE])
 		return true;
 	return false;
 }
@@ -202,7 +202,7 @@ bool GasS873::getMeasValue(MeasType measType, float *val) {
 		*val = NAN;
 		return false;
 	}
-	int filtrType =  config->data.R.exDev.gasFiltrType;
+	int filtrType =  config->data.R.rest.gasFiltrType;
 
 	for (int i = 0; i < gasData.devCntTh; i++) {
 		if (measType == gasData.sensorTab[i].measType) {

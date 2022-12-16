@@ -52,19 +52,19 @@ void ExtDustsensor::loopFunc() {
 				}
 			}
 		}
-		if (config->data.R.exDev.heater.runExternal) {
+		if (config->data.R.heater.runExternal) {
 			if (autoRd.phase == 0) {
 				if (isMeasValid()) {
 					bool sendOrder = false;
 					bool doOn = false;
 
-					if (dustData.temperature > config->data.R.exDev.heater.tempOFF) {
+					if (dustData.temperature > config->data.R.heater.tempOFF) {
 						if (dustData.heaterOn) {
 							sendOrder = true;
 							doOn = false;
 						}
 					}
-					if (dustData.temperature < config->data.R.exDev.heater.tempON) {
+					if (dustData.temperature < config->data.R.heater.tempON) {
 						if (!dustData.heaterOn) {
 							sendOrder = true;
 							doOn = true;
@@ -75,7 +75,7 @@ void ExtDustsensor::loopFunc() {
 						if (HAL_GetTick() - autoRd.heaterOrderLastSendTick > 5000) {
 							autoRd.heaterOrderLastSendTick = HAL_GetTick();
 							setHeater(reqSYS, doOn);
-							if (config->data.R.exDev.heater.showMsg >= 1) {
+							if (config->data.R.heater.showMsg >= 1) {
 								getOutStream()->oMsgX(colGREEN, "MDB%u:T=%u SetHeater:%u temp=%.1f[*C]", getMdbNr(), autoRd.heaterOrderLastSendTick, doOn, dustData.temperature);
 							}
 						}
@@ -166,7 +166,7 @@ bool ExtDustsensor::isMeasValid() {
 }
 
 bool ExtDustsensor::isAnyConfiguredData() {
-	return (config->data.R.exDev.sensExist[ssPM1_0] || config->data.R.exDev.sensExist[ssPM2_5] || config->data.R.exDev.sensExist[ssPM10]);
+	return (config->data.R.sensExist[ssPM1_0] || config->data.R.sensExist[ssPM2_5] || config->data.R.sensExist[ssPM10]);
 }
 
 bool ExtDustsensor::isDataError() {

@@ -48,6 +48,11 @@ OutHdStream::~OutHdStream() {
 
 }
 
+
+void OutHdStream::escTermShowLineNoMx() {
+	escTerminal->showLineNoMx();
+}
+
 void OutHdStream::putChar(char ch) {
 	putOut(&ch, 1);
 }
@@ -69,6 +74,7 @@ void OutHdStream::putStrMx(const char *txt) {
 		closeOutMutex();
 	}
 }
+
 
 //----------------------------------------------------------------------------------------
 HistCmd::HistCmd() {
@@ -430,11 +436,13 @@ FunKey CsiEng::getFunKey() {
 
 EscTerminal::EscTerminal(OutHdStream *outStream) {
 	mOut = outStream;
-	mHistCmd = new HistCmd();
+	outStream->escTerminal = this;
+
 	cLine = new EditLine(mOut);
+	mHistCmd = new HistCmd();
 	csi = new CsiEng();
 	mWasESC = false;
-	cLine->setPrompt("$>");
+	setStdPrompt();
 }
 void EscTerminal::showLineNoMx() {
 	cLine->sendCLine();
@@ -443,7 +451,14 @@ void EscTerminal::showLineMx(){
 	cLine->sendCLineMx();
 }
 
+void EscTerminal::setStdPrompt() {
+	setPrompt("$>");
+}
 
+void EscTerminal::setPrompt(const char *txt) {
+	cLine->setPrompt(txt);
+	cLine->sendCLineMx();
+}
 
 TermAct EscTerminal::inpChar(char ch) {
 	if (!mWasESC) {
@@ -453,6 +468,8 @@ TermAct EscTerminal::inpChar(char ch) {
 		} else {
 			if (ch == 8 || ch == 127) {
 				cLine->bkSpace();
+			} else if (ch == 10) {
+
 			} else if (ch == 13) {
 				cLine->getCmd(mCmd);
 				cLine->newLine();
@@ -536,8 +553,8 @@ TermAct EscTerminal::inpChar(char ch) {
 
 	}
 	return actNOTHING;
-}
 
+}
 
 const char* EscTerminal::getColorStr(TermColor color) {
 	switch (color) {
@@ -558,4 +575,3 @@ const char* EscTerminal::getColorStr(TermColor color) {
 		return TERM_COLOR_CYAN;
 	}
 }
-

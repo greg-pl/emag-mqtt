@@ -8,25 +8,33 @@
 #ifndef ESCTERMINAL_H_
 #define ESCTERMINAL_H_
 
+
+class EscTerminal;
+class EditLine;
+
 class OutHdStream {
 	friend class EscTerminal;
 	friend class EditLine;
 private:
+	EscTerminal *escTerminal;
 	int mNoTermSmfCnt;
 
-public:
-	OutHdStream();
-	virtual ~OutHdStream();
-	enum {
-		STD_TIME = 1000,
-	};
+protected:
+	void escTermShowLineNoMx();
 	virtual bool openOutMutex(int tm){
 		return true;
 	}
 	virtual void closeOutMutex(){
-
+		return;
 	}
 	virtual void putOut(const void *mem, int len) = 0;
+public:
+	enum {
+		STD_TIME = 1000,
+	};
+public:
+	OutHdStream();
+	virtual ~OutHdStream();
 	void putChar(char ch);
 	void putStr(const char *txt);
 	void putStrMx(const char *txt);
@@ -74,7 +82,7 @@ private:
 	int mPtr;
 	int mCurs; //pozycja kursora
 	char mBuf[MAX_LINE_SIZE];
-	char mPrompt[4];
+	char mPrompt[20];
 	int mPromptLen;
 	void sendCursPos();
 	void sendCursPosMx();
@@ -187,11 +195,15 @@ public:
 	char mCmd[MAX_LINE_SIZE + 1];
 	char mAltChar;
 	FunKey mFunKey;
+public:
 	EscTerminal(OutHdStream *outStream);
 	TermAct inpChar(char ch);
 	void showLineNoMx();
 	void showLineMx();
 	static const char* getColorStr(TermColor color);
+	void setPrompt(const char *txt);
+	void setStdPrompt();
+
 
 };
 

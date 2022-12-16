@@ -40,9 +40,9 @@ void NoiseDetector::onReciveData(bool replOK, uint8_t mdbFun, const uint8_t *tab
 				noiseData.valueFiz = noiseData.valueHd / 10.0;
 
 				if (noiseData.filtrIR == NULL)
-					noiseData.filtrIR = new FiltrIR(config->data.R.exDev.noiseFiltrIRConst);
+					noiseData.filtrIR = new FiltrIR(config->data.R.rest.noiseFiltrIRConst);
 				if (noiseData.filtrFIR == NULL)
-					noiseData.filtrFIR = new FiltrFIR(config->data.R.exDev.noiseFiltrFIRLength);
+					noiseData.filtrFIR = new FiltrFIR(config->data.R.rest.noiseFiltrFIRLength);
 				noiseData.filtrIR->inp(noiseData.valueFiz);
 				noiseData.filtrFIR->inp(noiseData.valueFiz);
 
@@ -128,7 +128,7 @@ void NoiseDetector::showMeas(OutStream *strm) {
 }
 
 bool NoiseDetector::isAnyConfiguredData(){
-	return config->data.R.exDev.sensExist[ssNOISE];
+	return config->data.R.sensExist[ssNOISE];
 }
 
 bool NoiseDetector::isDataError() {
@@ -143,7 +143,7 @@ bool NoiseDetector::getMeasValue(MeasType measType, float *val) {
 	if (isDataError()) {
 		return false;
 	}
-	int filtrType = config->data.R.exDev.noiseFiltrType;
+	int filtrType = config->data.R.rest.noiseFiltrType;
 
 	float v = noiseData.valueFiz;
 	switch (filtrType) {

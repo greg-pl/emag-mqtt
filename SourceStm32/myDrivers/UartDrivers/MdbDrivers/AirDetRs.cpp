@@ -144,9 +144,9 @@ void AirDetRs::onReciveData(bool replOK, uint8_t mdbFun, const uint8_t *tab, int
 					float factor = getGasFactor(sensor->SensorType);
 					sensor->valueFiz = factor * v;
 					if (sensor->filtrIR == NULL)
-						sensor->filtrIR = new FiltrIR(config->data.R.exDev.filtrIRConst);
+						sensor->filtrIR = new FiltrIR(config->data.R.rest.filtrIRConst);
 					if (sensor->filtrFIR == NULL)
-						sensor->filtrFIR = new FiltrFIR(config->data.R.exDev.filtrFIRLength);
+						sensor->filtrFIR = new FiltrFIR(config->data.R.rest.filtrFIRLength);
 					sensor->filtrIR->inp(sensor->valueFiz);
 					sensor->filtrFIR->inp(sensor->valueFiz);
 				}
@@ -364,13 +364,13 @@ bool AirDetRs::isDataError() {
 }
 
 bool AirDetRs::isAnyConfiguredData() {
-	if (config->data.R.exDev.sensExist[ssCO])
+	if (config->data.R.sensExist[ssCO])
 		return true;
-	if (config->data.R.exDev.sensExist[ssSO2])
+	if (config->data.R.sensExist[ssSO2])
 		return true;
-	if (config->data.R.exDev.sensExist[ssO3])
+	if (config->data.R.sensExist[ssO3])
 		return true;
-	if (config->data.R.exDev.sensExist[ssNO2])
+	if (config->data.R.sensExist[ssNO2])
 		return true;
 	return false;
 }
@@ -382,7 +382,7 @@ bool AirDetRs::getMeasValue(MeasType measType, float *val) {
 		return false;
 	}
 
-	int filtrType = config->data.R.exDev.gasFiltrType;
+	int filtrType = config->data.R.rest.gasFiltrType;
 
 	int gasCode = 0;
 	switch (measType) {

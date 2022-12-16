@@ -185,7 +185,7 @@ HAL_StatusTypeDef Bmp338Device::measure(double *temp, double *press) {
 }
 
 bool Bmp338Device::isAnyConfiguredData() {
-	return config->data.R.exDev.sensExist[ssTEMPERATURE] || config->data.R.exDev.sensExist[ssPRESSURE];
+	return config->data.R.sensExist[ssTEMPERATURE] || config->data.R.sensExist[ssPRESSURE];
 }
 
 bool Bmp338Device::isDataError() {

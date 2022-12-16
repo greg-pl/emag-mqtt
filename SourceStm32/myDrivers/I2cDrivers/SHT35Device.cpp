@@ -67,7 +67,7 @@ void SHT35Device::init() {
 	DisableHeater();
 	filterTemp.init(FILTR_FACTOR);
 	filterHumidity.init(FILTR_FACTOR);
-	mLastRdDataTick = 0;
+	meas.mReadTick= 0;
 	mLastTryRdTick = 0;
 
 }
@@ -287,11 +287,11 @@ HAL_StatusTypeDef SHT35Device::StartPeriodicMeasurment(etRepeatability repeatabi
 }
 
 bool SHT35Device::isDataError() {
-	return (HAL_GetTick() - mLastRdDataTick > TIME_DT_VALID);
+	return (HAL_GetTick() - meas.mReadTick > TIME_DT_VALID);
 }
 
 bool SHT35Device::isAnyConfiguredData() {
-	return config->data.R.exDev.sensExist[ssTEMPERATURE] || config->data.R.exDev.sensExist[ssHUMIDITY];
+	return config->data.R.sensExist[ssTEMPERATURE] || config->data.R.sensExist[ssHUMIDITY];
 }
 
 bool SHT35Device::getMeasValue(MeasType measType, float *val) {
@@ -330,6 +330,7 @@ HAL_StatusTypeDef SHT35Device::readData() {
 				meas.temp = CalcTemperature(rawTemp);
 				meas.humi = CalcHumidity(rawHumi);
 				meas.mReadTick = HAL_GetTick();
+				st = HAL_OK;
 			} else {
 				st = HAL_CRC_ERR;
 			}
@@ -343,12 +344,10 @@ HAL_StatusTypeDef SHT35Device::readData() {
 
 void SHT35Device::tick() {
 	uint32_t tt = HAL_GetTick();
-	if (tt - mLastRdDataTick > TIME_DT_RD) {
+	if (tt - meas.mReadTick > TIME_DT_RD) {
 		if (tt - mLastTryRdTick > 200) {
 			mLastTryRdTick = tt;
-			if (readData() == HAL_OK) {
-				mLastRdDataTick = tt;
-			}
+			readData();
 		}
 	}
 }
@@ -428,7 +427,6 @@ void SHT35Device::showState(OutStream *strm) {
 	if (mDevExist) {
 		strm->oMsg("SerialNb=0x%08X", serialNr);
 		strm->oMsg("MeasStart=%s", HAL_getErrStr(mMeasStart));
-		showDevExist(strm);
 		showStatus(strm);
 		showMeas(strm);
 	}

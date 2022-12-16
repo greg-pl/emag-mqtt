@@ -38,120 +38,205 @@ extern "C" const TcpInterfDef* getTcpDef() {
 #define CFG_ADDR_RTCRAM   (BKPSRAM_BASE+0)
 #define CFG_ADDR_FLASH    0x080E0000
 
-extern "C" const char* getGpsFormat(int idx);
+extern "C" const char* getGpsFormat(int idx) {
+	return "%.5f";
+}
+
+const CpxFloatDefItem floatGpsLatitudeDef = { min:-90, //
+		max:90, //
+		getFrm: getGpsFormat //
+		};
+
+const CpxFloatDefItem floatGpsLongitudeDef = { min:-180, //
+		max:180, //
+		getFrm: getGpsFormat //
+		};
+
+const CpxDescr SensorOnOffDscr[] = { //
+		{ ctype : cpxBOOL, id:1, ofs: ssTEMPERATURE, Name : "existSensTemper", size : sizeof(bool) }, //
+				{ ctype : cpxBOOL, id:2, ofs: ssHUMIDITY, Name : "existSensHumidity", size: sizeof(bool) }, //
+				{ ctype : cpxBOOL, id:3, ofs: ssPRESSURE, Name : "existSensPressure", size: sizeof(bool) }, //
+				{ ctype : cpxBOOL, id:4, ofs: ssPM1_0, Name : "existSensPM1_0", size: sizeof(bool) }, //
+				{ ctype : cpxBOOL, id:5, ofs: ssPM2_5, Name : "existSensPM2_5", size: sizeof(bool) }, //
+				{ ctype : cpxBOOL, id:6, ofs: ssPM10, Name : "existSensPM10", size : sizeof(bool) }, //
+				{ ctype : cpxBOOL, id:7, ofs: ssNO2, Name : "existSensNO2", size: sizeof(bool) }, //
+				{ ctype : cpxBOOL, id:8, ofs: ssO3, Name : "existSensO3", size: sizeof(bool) }, //
+				{ ctype : cpxBOOL, id:9, ofs: ssCO, Name : "existSensCO", size: sizeof(bool) }, //
+				{ ctype : cpxBOOL, id:10, ofs: ssCO2, Name : "existSensCO2", size: sizeof(bool) }, //
+				{ ctype : cpxBOOL, id:11, ofs: ssSO2, Name : "existSensSO2", size: sizeof(bool) }, //
+				{ ctype : cpxBOOL, id:12, ofs: ssCh2o, Name : "existSensCH2O", size: sizeof(bool) }, //
+				{ ctype : cpxBOOL, id:13, ofs: ssNOISE, Name : "existSensNoise", size: sizeof(bool) }, //
+				{ ctype : cpxNULL } };
+
+const CpxChildInfo sensorOnOffGroup = { //
+		itemCnt: 1, //
+				itemSize : sizeof(CfgRec::R.sensExist), //
+				defs: SensorOnOffDscr, //
+		};
+
+const CpxDescr LedMatrixDescr[] = { //
+
+		{ ctype : cpxBOOL, id:1, ofs: offsetof(LedMatrixCfg, run), Name : "run", size : sizeof(LedMatrixCfg::run) }, //
+				{ ctype : cpxBOOL, id:2, ofs: offsetof(LedMatrixCfg, autoSend), Name : "auto", size : sizeof(LedMatrixCfg::autoSend) }, //
+				{ ctype : cpxINT, id:3, ofs: offsetof(LedMatrixCfg, lightLevel), Name : "level", size : sizeof(LedMatrixCfg::lightLevel) }, //
+				{ ctype : cpxFLOAT, id:4, ofs: offsetof(LedMatrixCfg, histereza), Name : "histereza", size : sizeof(LedMatrixCfg::histereza) }, //
+				{ ctype : cpxFLOAT, id:5, ofs: offsetof(LedMatrixCfg, limitTab[0]), Name : "lev1", size : sizeof(LedMatrixCfg::limitTab[0]) }, //
+				{ ctype : cpxFLOAT, id:6, ofs: offsetof(LedMatrixCfg, limitTab[1]), Name : "lev2", size : sizeof(LedMatrixCfg::limitTab[1]) }, //
+				{ ctype : cpxFLOAT, id:7, ofs: offsetof(LedMatrixCfg, limitTab[2]), Name : "lev3", size : sizeof(LedMatrixCfg::limitTab[2]) }, //
+				{ ctype : cpxFLOAT, id:8, ofs: offsetof(LedMatrixCfg, limitTab[3]), Name : "lev4", size : sizeof(LedMatrixCfg::limitTab[3]) }, //
+				{ ctype : cpxFLOAT, id:9, ofs: offsetof(LedMatrixCfg, limitTab[4]), Name : "lev5", size : sizeof(LedMatrixCfg::limitTab[4]) }, //
+				{ ctype : cpxNULL } };
+
+const CpxChildInfo ledMatrixGroup = { //
+		itemCnt: 1, //
+				itemSize : sizeof(LedMatrixCfg), //
+				defs: LedMatrixDescr, //
+		};
+
+const CpxDescr HeaterDescr[] = { //
+
+		{ ctype : cpxBOOL, id:1, ofs: offsetof(HeaterCfg, useNTCtemp), Name : "useNtcTemp", size: sizeof(bool) }, //
+				{ ctype : cpxBOOL, id:2, ofs: offsetof(HeaterCfg, runExternal), Name : "runExternal", size: sizeof(bool) }, //
+				{ ctype : cpxBOOL, id:3, ofs: offsetof(HeaterCfg, runInternal), Name : "runInternal", size: sizeof(bool) }, //
+				{ ctype : cpxBYTE, id:4, ofs: offsetof(HeaterCfg, showMsg), Name : "showMsg", size: sizeof(bool) }, //
+				{ ctype : cpxFLOAT, id:5, ofs: offsetof(HeaterCfg, tempON), Name : "tempON", size : sizeof(HeaterCfg::tempON) }, //
+				{ ctype : cpxFLOAT, id:6, ofs: offsetof(HeaterCfg, tempOFF), Name : "tempOFF", size : sizeof(HeaterCfg::tempOFF) }, //
+				{ ctype : cpxFLOAT, id:7, ofs: offsetof(HeaterCfg, humidityON), Name : "humidityON", size : sizeof(HeaterCfg::humidityON) }, //
+				{ ctype : cpxFLOAT, id:8, ofs: offsetof(HeaterCfg, humidityOFF), Name : "humidityOFF", size : sizeof(HeaterCfg::humidityOFF) }, //
+				{ ctype : cpxBOOL, id:9, ofs: offsetof(HeaterCfg, humidityEnab), Name : "humidityENAB", size : sizeof(HeaterCfg::humidityEnab) }, //
+				{ ctype : cpxNULL } };
+
+const CpxChildInfo heaterGroup = { //
+		itemCnt: 1, //
+				itemSize : sizeof(HeaterCfg), //
+				defs: HeaterDescr, //
+		};
+
+const CpxDescr MqttDescr[] = { //
+		{ ctype : cpxBOOL, id:1, ofs: offsetof(MqttCfg, autoOpenMqttSvr), Name : "AutoOpenSvr", size : sizeof(MqttCfg::autoOpenMqttSvr) }, //
+				{ ctype : cpxINT, id:2, ofs: offsetof(MqttCfg, mqttSendInterval), Name : "SendInterval", size : sizeof(MqttCfg::mqttSendInterval) }, //
+				{ ctype : cpxSTR, id:3, ofs: offsetof(MqttCfg, SvrName), Name : "SvrName", size: sizeof(MqttCfg::SvrName) }, //
+				{ ctype : cpxWORD, id:4, ofs: offsetof(MqttCfg, SvrPortNoSSL), Name : "PortNoSSL", size : sizeof(MqttCfg::SvrPortNoSSL) }, //
+				{ ctype : cpxWORD, id:5, ofs: offsetof(MqttCfg, SvrPortSSL), Name : "PortSSL", size: sizeof(MqttCfg::SvrPortSSL) }, //
+				{ ctype : cpxWORD, id:6, ofs: offsetof(MqttCfg, SvrPortPSK), Name : "PortPSK", size: sizeof(MqttCfg::SvrPortPSK) }, //
+				{ ctype : cpxSTR, id:7, ofs: offsetof(MqttCfg, userName), Name : "UserName", size: sizeof(MqttCfg::userName) }, //
+				{ ctype : cpxSTR, id:8, ofs: offsetof(MqttCfg, password), Name : "UserPassword", size : sizeof(MqttCfg::password) }, //
+				{ ctype : cpxBOOL, id:9, ofs: offsetof(MqttCfg, useSSL), Name : "UseSSL", size: sizeof(MqttCfg::useSSL) }, //
+				{ ctype : cpxBOOL, id:10, ofs: offsetof(MqttCfg, usePSK), Name : "UsePSK", size: sizeof(MqttCfg::usePSK) }, //
+				{ ctype : cpxINT, id:11, ofs: offsetof(MqttCfg, maxLoginTime), Name : "MaxLoginTime", size : sizeof(MqttCfg::maxLoginTime) }, //
+				{ ctype : cpxINT, id:12, ofs: offsetof(MqttCfg, keepAlive), Name : "KeepAlive", size : sizeof(MqttCfg::keepAlive) }, //
+				{ ctype : cpxINT, id:13, ofs: offsetof(MqttCfg, qos), Name : "QOS", size: sizeof(MqttCfg::qos) }, //
+				{ ctype : cpxBOOL, id:14, ofs: offsetof(MqttCfg, retain), Name : "Retain", size: sizeof(MqttCfg::retain) }, //
+				{ ctype : cpxSTR, id:15, ofs: offsetof(MqttCfg, varNamePub), Name : "SendVarName", size : sizeof(MqttCfg::varNamePub) }, //
+				{ ctype : cpxSTR, id:16, ofs: offsetof(MqttCfg, varNamePub2), Name : "SendVar2Name", size : sizeof(MqttCfg::varNamePub2) }, //
+				{ ctype : cpxNULL } };
+
+const CpxChildInfo mqttGroup = { //
+		itemCnt: 1, //
+				itemSize : sizeof(MqttCfg), //
+				defs: MqttDescr, //
+		};
+
+const CpxDescr DevInfoDescr[] = { //
+
+		{ ctype : cpxSTR, id:1, ofs: offsetof(DevCfg, SerialNr), Name : "SerialNr", size : sizeof(DevCfg::SerialNr) }, //
+				{ ctype : cpxSTR, id:2, ofs: offsetof(DevCfg, DevInfo), Name : "Info", size : sizeof(DevCfg::DevInfo) }, //
+				{ ctype : cpxINT, id:3, ofs: offsetof(DevCfg, timeZoneShift), Name : "TimeZoneShift", size : sizeof(DevCfg::timeZoneShift) }, //
+				{ ctype : cpxFLOAT, id:4, ofs: offsetof(DevCfg, gpsLatitude), Name : "GpsLatitude", size : sizeof(DevCfg::gpsLatitude), exPtr :(const void*) &floatGpsLatitudeDef }, //
+				{ ctype : cpxFLOAT, id:5, ofs: offsetof(DevCfg, gpsLongitude), Name : "GpsLongitude", size : sizeof(DevCfg::gpsLongitude), exPtr :(const void*) &floatGpsLongitudeDef }, //
+				{ ctype : cpxBYTE, id:6, ofs: offsetof(DevCfg, dustInpType), Name : "DustInpType" }, //
+				{ ctype : cpxBYTE, id:7, ofs: offsetof(DevCfg, dustSensorType), Name : "DustSensorType" }, //
+				{ ctype : cpxBOOL, id:8, ofs: offsetof(DevCfg, pcbLedOff), Name : "PcbLedOff", size: sizeof(DevCfg::pcbLedOff) }, //
+
+				{ ctype : cpxNULL } };
+
+const CpxChildInfo devInfoGroup = { //
+		itemCnt: 1, //
+				itemSize : sizeof(DevCfg), //
+				defs: DevInfoDescr, //
+		};
+
+const CpxDescr TcpDescr[] = { //
+		{ ctype : cpxBYTE, id:1, ofs: offsetof(TcpInterfDef, dhcp), Name : "dhcp", size: sizeof(TcpInterfDef::dhcp) }, //
+				{ ctype : cpxIP, id:2, ofs: offsetof(TcpInterfDef, ip), Name : "ip", size: sizeof(TcpInterfDef::ip) }, //
+				{ ctype : cpxIP, id:3, ofs: offsetof(TcpInterfDef, mask), Name : "mask", size: sizeof(TcpInterfDef::mask) }, //
+				{ ctype : cpxIP, id:4, ofs: offsetof(TcpInterfDef, gw), Name : "gw", size: sizeof(TcpInterfDef::gw) }, //
+				{ ctype : cpxIP, id:5, ofs: offsetof(TcpInterfDef, dns1), Name : "dns1", size: sizeof(TcpInterfDef::dns1) }, //
+				{ ctype : cpxIP, id:6, ofs: offsetof(TcpInterfDef, dns2), Name : "dns2", size: sizeof(TcpInterfDef::dns2) }, //
+
+				{ ctype : cpxNULL } };
+
+const CpxChildInfo tcpGroup = { //
+		itemCnt: 1, //
+				itemSize : sizeof(TcpCfg), //
+				defs: TcpDescr, //
+		};
+
+const CpxDescr BgDescr[] = { //
+		{ ctype : cpxBOOL, id:1, ofs: offsetof(Bg96Cfg, autoStart), Name : "AutoStart", size: sizeof(Bg96Cfg::autoStart) }, //
+				{ ctype : cpxSTR, id:2, ofs: offsetof(Bg96Cfg, BgEcho), Name : "BgEcho", size: sizeof(Bg96Cfg::BgEcho) }, //
+				{ ctype : cpxSTR, id:3, ofs: offsetof(Bg96Cfg, SimPin), Name : "SimPin", size: sizeof(Bg96Cfg::SimPin) }, //
+				{ ctype : cpxSTR, id:4, ofs: offsetof(Bg96Cfg, ApnName), Name : "ApnName", size: sizeof(Bg96Cfg::ApnName) }, //
+				{ ctype : cpxINT, id:5, ofs: offsetof(Bg96Cfg, rssiRefreshTime), Name : "RssiRefreshTime", size : sizeof(Bg96Cfg::rssiRefreshTime) }, //
+				{ ctype : cpxINT, id:6, ofs: offsetof(Bg96Cfg, gps.Mode), Name : "GpsMode", size: sizeof(Bg96Cfg::gps.Mode) }, //
+				{ ctype : cpxINT, id:7, ofs: offsetof(Bg96Cfg, gps.refreshTime), Name : "GpsRefreshTime", size : sizeof(Bg96Cfg::gps.refreshTime) }, //
+				{ ctype : cpxBOOL, id:8, ofs: offsetof(Bg96Cfg, gps.setRtcTime), Name : "GpsSetRtcTime", size : sizeof(Bg96Cfg::gps.setRtcTime) }, //
+				{ ctype : cpxSTR, id:9, ofs: offsetof(Bg96Cfg, ntp.SvrName), Name : "NtpSvrName", size: sizeof(Bg96Cfg::ntp.SvrName) }, //
+				{ ctype : cpxINT, id:10, ofs: offsetof(Bg96Cfg, ntp.WaitTime), Name : "NtpWaitTime", size : sizeof(Bg96Cfg::ntp.WaitTime) }, //
+				{ ctype : cpxINT, id:11, ofs: offsetof(Bg96Cfg, ntp.RefreshTime), Name : "NtpRefreshTime", size : sizeof(Bg96Cfg::ntp.RefreshTime) }, //
+				{ ctype : cpxNULL } };
+
+const CpxChildInfo bgGroup = { //
+		itemCnt: 1, //
+				itemSize : sizeof(Bg96Cfg), //
+				defs: BgDescr, //
+		};
+
+const CpxDescr RestCfgDescr[] = { //
+		{ ctype : cpxINT, id:1, ofs: offsetof(RestCfg, mdb1dbgLevel), Name : "Mdb1DbgLevel", size : sizeof(RestCfg::mdb1dbgLevel) }, //
+				{ ctype : cpxINT, id:2, ofs: offsetof(RestCfg, mdb2dbgLevel), Name : "Mdb2DbgLevel", size : sizeof(RestCfg::mdb2dbgLevel) }, //
+				{ ctype : cpxINT, id:3, ofs: offsetof(RestCfg, mdb3dbgLevel), Name : "Mdb3DbgLevel", size : sizeof(RestCfg::mdb3dbgLevel) }, //
+				{ ctype : cpxINT, id:4, ofs: offsetof(RestCfg, gasDevMdbNr), Name : "GasDevMdbNr", size : sizeof(RestCfg::gasDevMdbNr) }, //
+				{ ctype : cpxINT, id:5, ofs: offsetof(RestCfg, dustDevMdbNr), Name : "DustDevMdbNr", size : sizeof(RestCfg::dustDevMdbNr) }, //
+				{ ctype : cpxINT, id:6, ofs: offsetof(RestCfg, gasFiltrType), Name : "GasFiltrType", size : sizeof(RestCfg::gasFiltrType) }, //
+				{ ctype : cpxINT, id:7, ofs: offsetof(RestCfg, filtrFIRLength), Name : "GasFiltrFIRLength", size : sizeof(RestCfg::filtrFIRLength) }, //
+				{ ctype : cpxFLOAT, id:8, ofs: offsetof(RestCfg, filtrIRConst), Name : "GasFiltrIRConst", size : sizeof(RestCfg::filtrIRConst) }, //
+				{ ctype : cpxINT, id:9, ofs: offsetof(RestCfg, noiseFiltrType), Name : "NoiseFiltrType", size : sizeof(RestCfg::noiseFiltrType) }, //
+				{ ctype : cpxINT, id:10, ofs: offsetof(RestCfg, noiseFiltrFIRLength), Name : "NoiseFiltrFIRLength", size : sizeof(RestCfg::noiseFiltrFIRLength) }, //
+				{ ctype : cpxFLOAT, id:11, ofs: offsetof(RestCfg, noiseFiltrIRConst), Name : "NoiseFiltrIRConst", size : sizeof(RestCfg::noiseFiltrIRConst) }, //
+				{ ctype : cpxNULL } };
+
+const CpxChildInfo restCfgGroup = { //
+		itemCnt: 1, //
+				itemSize : sizeof(RestCfg), //
+				defs: RestCfgDescr, //
+		};
 
 const CpxDescr ConfigDscr[] = { //
-		{ ctype : cpxSTR, ofs: offsetof(CfgRec, P.SerialNr), Name : "SerialNr", sizeof(CfgRec::P.SerialNr) }, //
-				{ ctype : cpxSTR, ofs: offsetof(CfgRec, R.DevInfo), Name : "DevInfo", sizeof(CfgRec::R.DevInfo) }, //
-				{ ctype : cpxINT, ofs: offsetof(CfgRec, R.timeZoneShift), Name : "TimeZoneShift", size : sizeof(CfgRec::R.timeZoneShift) }, //
-				{ ctype : cpxFLOAT, ofs: offsetof(CfgRec, R.gpsLatitude), Name : "GpsLatitude", size : sizeof(CfgRec::R.gpsLatitude), exPtr :(const void*) getGpsFormat }, //
-				{ ctype : cpxFLOAT, ofs: offsetof(CfgRec, R.gpsLongitude), Name : "GpsLongitude", size : sizeof(CfgRec::R.gpsLongitude), exPtr :(const void*) getGpsFormat }, //
-
-				//{ ctype : cpxBREAK_LINE, ofs: 0, Name : "Ethernet", 0 }, //
-				{ ctype : cpxBYTE, ofs: offsetof(CfgRec, R.tcp.dhcp), Name : "tcp_dhcp", size: sizeof(CfgRec::R.tcp.dhcp) }, //
-				{ ctype : cpxIP, ofs: offsetof(CfgRec, R.tcp.ip), Name : "tcp_ip", size: sizeof(CfgRec::R.tcp.ip) }, //
-				{ ctype : cpxIP, ofs: offsetof(CfgRec, R.tcp.mask), Name : "tcp_mask", size: sizeof(CfgRec::R.tcp.mask) }, //
-				{ ctype : cpxIP, ofs: offsetof(CfgRec, R.tcp.gw), Name : "tcp_gw", size: sizeof(CfgRec::R.tcp.gw) }, //
-				{ ctype : cpxIP, ofs: offsetof(CfgRec, R.tcp.dns1), Name : "tcp_dns1", size: sizeof(CfgRec::R.tcp.dns1) }, //
-				{ ctype : cpxIP, ofs: offsetof(CfgRec, R.tcp.dns2), Name : "tcp_dns2", size: sizeof(CfgRec::R.tcp.dns2) }, //
-
-				//{ ctype : cpxBREAK_LINE, ofs: 0, Name : "BG96", 0 }, //
-				{ ctype : cpxSTR, ofs: offsetof(CfgRec, R.bg96.BgEcho), Name : "BgEcho", size: sizeof(CfgRec::R.bg96.BgEcho) }, //
-				{ ctype : cpxSTR, ofs: offsetof(CfgRec, R.bg96.SimPin), Name : "SimPin", size: sizeof(CfgRec::R.bg96.SimPin) }, //
-				{ ctype : cpxINT, ofs: offsetof(CfgRec, R.bg96.rssiRefreshTime), Name : "RssiRefreshTime", size : sizeof(CfgRec::R.bg96.rssiRefreshTime) }, //
-				{ ctype : cpxINT, ofs: offsetof(CfgRec, R.bg96.gps.Mode), Name : "GpsMode", size: sizeof(CfgRec::R.bg96.gps.Mode) }, //
-				{ ctype : cpxINT, ofs: offsetof(CfgRec, R.bg96.gps.refreshTime), Name : "GpsRefreshTime", size : sizeof(CfgRec::R.bg96.gps.refreshTime) }, //
-				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.bg96.gps.setRtcTime), Name : "GpsSetRtcTime", size : sizeof(CfgRec::R.bg96.gps.setRtcTime) }, //
-
-				{ ctype : cpxSTR, ofs: offsetof(CfgRec, R.bg96.ApnName), Name : "ApnName", size: sizeof(CfgRec::R.bg96.ApnName) }, //
-				{ ctype : cpxSTR, ofs: offsetof(CfgRec, R.bg96.ntp.SvrName), Name : "NtpSvrName", size: sizeof(CfgRec::R.bg96.ntp.SvrName) }, //
-				{ ctype : cpxINT, ofs: offsetof(CfgRec, R.bg96.ntp.WaitTime), Name : "NtpWaitTime", size : sizeof(CfgRec::R.bg96.ntp.WaitTime) }, //
-				{ ctype : cpxINT, ofs: offsetof(CfgRec, R.bg96.ntp.RefreshTime), Name : "NtpRefreshTime", size : sizeof(CfgRec::R.bg96.ntp.RefreshTime) }, //
-
-				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.bg96.autoStart), Name : "AutoStart", size: sizeof(CfgRec::R.bg96.autoStart) }, //
-				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.bg96.autoOpenMqttSvr), Name : "AutoOpenMqttSvr", size : sizeof(CfgRec::R.bg96.autoOpenMqttSvr) }, //
-				{ ctype : cpxINT, ofs: offsetof(CfgRec, R.bg96.mqttSendInterval), Name : "MqttSendInterval", size : sizeof(CfgRec::R.bg96.mqttSendInterval) }, //
-
-				//{ ctype : cpxBREAK_LINE, ofs: 0, Name : "MQTT", 0 }, //
-				{ ctype : cpxSTR, ofs: offsetof(CfgRec, R.mqtt.SvrName), Name : "MqttSvrName", size: sizeof(CfgRec::R.mqtt.SvrName) }, //
-				{ ctype : cpxWORD, ofs: offsetof(CfgRec, R.mqtt.SvrPortNoSSL), Name : "MqttPortNoSSL", size : sizeof(CfgRec::R.mqtt.SvrPortNoSSL) }, //
-				{ ctype : cpxWORD, ofs: offsetof(CfgRec, R.mqtt.SvrPortSSL), Name : "MqttPortSSL", size: sizeof(CfgRec::R.mqtt.SvrPortSSL) }, //
-				{ ctype : cpxWORD, ofs: offsetof(CfgRec, R.mqtt.SvrPortPSK), Name : "MqttPortPSK", size: sizeof(CfgRec::R.mqtt.SvrPortPSK) }, //
-				{ ctype : cpxSTR, ofs: offsetof(CfgRec, R.mqtt.userName), Name : "MqttUserName", size: sizeof(CfgRec::R.mqtt.userName) }, //
-				{ ctype : cpxSTR, ofs: offsetof(CfgRec, R.mqtt.password), Name : "MqttUserPassword", size : sizeof(CfgRec::R.mqtt.password) }, //
-				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.mqtt.useSSL), Name : "MqttUseSSL", size: sizeof(CfgRec::R.mqtt.useSSL) }, //
-				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.mqtt.usePSK), Name : "MqttUsePSK", size: sizeof(CfgRec::R.mqtt.usePSK) }, //
-				{ ctype : cpxINT, ofs: offsetof(CfgRec, R.mqtt.maxLoginTime), Name : "MqttMaxLoginTime", size : sizeof(CfgRec::R.mqtt.maxLoginTime) }, //
-				{ ctype : cpxINT, ofs: offsetof(CfgRec, R.mqtt.keepAlive), Name : "MqttKeepAlive", size : sizeof(CfgRec::R.mqtt.keepAlive) }, //
-				{ ctype : cpxINT, ofs: offsetof(CfgRec, R.mqtt.qos), Name : "MqttQOS", size: sizeof(CfgRec::R.mqtt.qos) }, //
-				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.mqtt.retain), Name : "MqttRetain", size: sizeof(CfgRec::R.mqtt.retain) }, //
-				{ ctype : cpxSTR, ofs: offsetof(CfgRec, R.mqtt.varNamePub), Name : "MqttSendVarName", size : sizeof(CfgRec::R.mqtt.varNamePub) }, //
-				{ ctype : cpxSTR, ofs: offsetof(CfgRec, R.mqtt.varNamePub2), Name : "MqttSendVar2Name", size : sizeof(CfgRec::R.mqtt.varNamePub2) }, //
-
-				//{ ctype : cpxBREAK_LINE, ofs: 0, Name : "Inne", 0 }, //
-
-				{ ctype : cpxBYTE, ofs: offsetof(CfgRec, P.dustInpType), Name : "DustInpType" }, //
-				{ ctype : cpxBYTE, ofs: offsetof(CfgRec, P.dustSensorType), Name : "DustSensorType" }, //
-				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.rest.ledOff), Name : "PcbLedOff", size: sizeof(CfgRec::R.rest.ledOff) }, //
-				{ ctype : cpxINT, ofs: offsetof(CfgRec, R.rest.mdb1dbgLevel), Name : "Mdb1DbgLevel", size : sizeof(CfgRec::R.rest.mdb1dbgLevel) }, //
-				{ ctype : cpxINT, ofs: offsetof(CfgRec, R.rest.mdb2dbgLevel), Name : "Mdb2DbgLevel", size : sizeof(CfgRec::R.rest.mdb2dbgLevel) }, //
-				{ ctype : cpxINT, ofs: offsetof(CfgRec, R.rest.mdb3dbgLevel), Name : "Mdb3DbgLevel", size : sizeof(CfgRec::R.rest.mdb3dbgLevel) }, //
-				{ ctype : cpxINT, ofs: offsetof(CfgRec, R.rest.gasDevMdbNr), Name : "GasDevMdbNr", size : sizeof(CfgRec::R.rest.gasDevMdbNr) }, //
-				{ ctype : cpxINT, ofs: offsetof(CfgRec, R.rest.dustDevMdbNr), Name : "DustDevMdbNr", size : sizeof(CfgRec::R.rest.dustDevMdbNr) }, //
-
-				//{ ctype : cpxBREAK_LINE, ofs: 0, Name : "Sensors", 0 }, //
-				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.exDev.sensExist[ssTEMPERATURE]), Name : "existSensTemper", size : sizeof(bool) }, //
-				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.exDev.sensExist[ssHUMIDITY]), Name : "existSensHumidity", size: sizeof(bool) }, //
-				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.exDev.sensExist[ssPRESSURE]), Name : "existSensPressure", size: sizeof(bool) }, //
-				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.exDev.sensExist[ssPM1_0]), Name : "existSensPM1_0", size: sizeof(bool) }, //
-				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.exDev.sensExist[ssPM2_5]), Name : "existSensPM2_5", size: sizeof(bool) }, //
-				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.exDev.sensExist[ssPM10]), Name : "existSensPM10", size : sizeof(bool) }, //
-				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.exDev.sensExist[ssNO2]), Name : "existSensNO2", size: sizeof(bool) }, //
-				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.exDev.sensExist[ssO3]), Name : "existSensO3", size: sizeof(bool) }, //
-				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.exDev.sensExist[ssCO]), Name : "existSensCO", size: sizeof(bool) }, //
-				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.exDev.sensExist[ssCO2]), Name : "existSensCO2", size: sizeof(bool) }, //
-				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.exDev.sensExist[ssSO2]), Name : "existSensSO2", size: sizeof(bool) }, //
-				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.exDev.sensExist[ssCh2o]), Name : "existSensCH2O", size: sizeof(bool) }, //
-				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.exDev.sensExist[ssNOISE]), Name : "existSensNoise", size: sizeof(bool) }, //
-
-				{ ctype : cpxINT, ofs: offsetof(CfgRec, R.exDev.gasFiltrType), Name : "GasFiltrType", size : sizeof(CfgRec::R.exDev.gasFiltrType) }, //
-				{ ctype : cpxINT, ofs: offsetof(CfgRec, R.exDev.filtrFIRLength), Name : "GasFiltrFIRLength", size : sizeof(CfgRec::R.exDev.filtrFIRLength) }, //
-				{ ctype : cpxFLOAT, ofs: offsetof(CfgRec, R.exDev.filtrIRConst), Name : "GasFiltrIRConst", size : sizeof(CfgRec::R.exDev.filtrIRConst) }, //
-
-				{ ctype : cpxINT, ofs: offsetof(CfgRec, R.exDev.noiseFiltrType), Name : "NoiseFiltrType", size : sizeof(CfgRec::R.exDev.noiseFiltrType) }, //
-				{ ctype : cpxINT, ofs: offsetof(CfgRec, R.exDev.noiseFiltrFIRLength), Name : "NoiseFiltrFIRLength", size : sizeof(CfgRec::R.exDev.noiseFiltrFIRLength) }, //
-				{ ctype : cpxFLOAT, ofs: offsetof(CfgRec, R.exDev.noiseFiltrIRConst), Name : "NoiseFiltrIRConst", size : sizeof(CfgRec::R.exDev.noiseFiltrIRConst) }, //
-
-				//{ ctype : cpxBREAK_LINE, ofs: 0, Name : "Heater", 0 }, //
-				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.exDev.heater.useNTCtemp), Name : "heater_useNtcTemp", size: sizeof(bool) }, //
-				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.exDev.heater.runExternal), Name : "heater_runExternal", size: sizeof(bool) }, //
-				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.exDev.heater.runInternal), Name : "heater_runInternal", size: sizeof(bool) }, //
-				{ ctype : cpxBYTE, ofs: offsetof(CfgRec, R.exDev.heater.showMsg), Name : "heater_showMsg", size: sizeof(bool) }, //
-
-				{ ctype : cpxFLOAT, ofs: offsetof(CfgRec, R.exDev.heater.tempON), Name : "heater_tempON", size : sizeof(CfgRec::R.exDev.heater.tempON) }, //
-				{ ctype : cpxFLOAT, ofs: offsetof(CfgRec, R.exDev.heater.tempOFF), Name : "heater_tempOFF", size : sizeof(CfgRec::R.exDev.heater.tempOFF) }, //
-				{ ctype : cpxFLOAT, ofs: offsetof(CfgRec, R.exDev.heater.humidityON), Name : "heater_humidityON", size : sizeof(CfgRec::R.exDev.heater.humidityON) }, //
-				{ ctype : cpxFLOAT, ofs: offsetof(CfgRec, R.exDev.heater.humidityOFF), Name : "heater_humidityOFF", size : sizeof(CfgRec::R.exDev.heater.humidityOFF) }, //
-				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.exDev.heater2.humidityEnab), Name : "heater_humidityENAB", size : sizeof(CfgRec::R.exDev.heater2.humidityEnab) }, //
-
-				//{ ctype : cpxBREAK_LINE, ofs: 0, Name : "LedMatrix", 0 }, //
-
-				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.rest.ledMatrixRun), Name : "ledMatrix_run", size : sizeof(CfgRec::R.rest.ledMatrixRun) }, //
-				{ ctype : cpxBOOL, ofs: offsetof(CfgRec, R.rest.faceAutoSend), Name : "ledMatrix_auto", size : sizeof(CfgRec::R.rest.faceAutoSend) }, //
-				{ ctype : cpxINT, ofs: offsetof(CfgRec, R.rest.faceLevel), Name : "ledMatrix_level", size : sizeof(CfgRec::R.rest.faceLevel) }, //
-
-				{ ctype : cpxFLOAT, ofs: offsetof(CfgRec, R.rest.faceHistereza), Name : "ledMatrix_histereza", size : sizeof(CfgRec::R.rest.faceHistereza) }, //
-				{ ctype : cpxFLOAT, ofs: offsetof(CfgRec, R.rest.faceLimitTab[0]), Name : "ledMatrix_lev1", size : sizeof(CfgRec::R.rest.faceLimitTab[0]) }, //
-				{ ctype : cpxFLOAT, ofs: offsetof(CfgRec, R.rest.faceLimitTab[1]), Name : "ledMatrix_lev2", size : sizeof(CfgRec::R.rest.faceLimitTab[1]) }, //
-				{ ctype : cpxFLOAT, ofs: offsetof(CfgRec, R.rest.faceLimitTab[2]), Name : "ledMatrix_lev3", size : sizeof(CfgRec::R.rest.faceLimitTab[2]) }, //
-				{ ctype : cpxFLOAT, ofs: offsetof(CfgRec, R.rest.faceLimitTab[3]), Name : "ledMatrix_lev4", size : sizeof(CfgRec::R.rest.faceLimitTab[3]) }, //
-				{ ctype : cpxFLOAT, ofs: offsetof(CfgRec, R.rest.faceLimitTab[4]), Name : "ledMatrix_lev5", size : sizeof(CfgRec::R.rest.faceLimitTab[4]) }, //
-
+		//dev
+				{ ctype : cpxCHILD, id:1, ofs: offsetof(CfgRec, R.dev), Name : "dev", 1, exPtr :&devInfoGroup }, //
+				//tcp
+				{ ctype : cpxCHILD, id:2, ofs: offsetof(CfgRec, R.tcp), Name : "tcp", 1, exPtr :&tcpGroup }, //
+				//bg
+				{ ctype : cpxCHILD, id:3, ofs: offsetof(CfgRec, R.bg96), Name : "bg", 1, exPtr :&bgGroup }, //
+				//mqtt
+				{ ctype : cpxCHILD, id:4, ofs: offsetof(CfgRec, R.mqtt), Name : "mqtt", 1, exPtr :&mqttGroup }, //
+				//rest
+				{ ctype : cpxCHILD, id:5, ofs: offsetof(CfgRec, R.rest), Name : "ex", 1, exPtr :&restCfgGroup }, //
+				//sensors
+				{ ctype : cpxCHILD, id:6, ofs: offsetof(CfgRec, R.sensExist), Name : "tab", 1, exPtr :&sensorOnOffGroup }, //
+				//heater
+				{ ctype : cpxCHILD, id:7, ofs: offsetof(CfgRec, R.heater), Name : "heater", 1, exPtr :&heaterGroup }, //
+				//LedMatrix
+				{ ctype : cpxCHILD, id:8, ofs: offsetof(CfgRec, R.ledMatrix), Name : "led_matrix", 1, exPtr :&ledMatrixGroup }, //
 				{ ctype : cpxNULL }
 
 		};
 
+CxString *Config::jsonbuf;
+
 Config::Config() {
+	jsonbuf = NULL;
 
 }
 
@@ -171,8 +256,6 @@ void Config::prepareToSave() {
 	data.Sign = CFG_SIGN;
 	data.size = sizeof(data);
 	data.ver = 1;
-	data.P.Sign = CFG_SIGN_P;
-	data.P.size = CFG_REC_SIZE_PRODUCER;
 	data.R.Sign = CFG_SIGN_U;
 	data.R.size = CFG_REC_SIZE_USER;
 	MdbCrc::Set(data.tab_b, sizeof(data) - 2);
@@ -293,64 +376,64 @@ bool Config::checkRange(int v, int min, int max) {
 bool Config::Korekt() {
 	bool r = false;
 
-	if (data.R.exDev.gasFiltrType < 0 || data.R.exDev.gasFiltrType >= 3) {
-		data.R.exDev.gasFiltrType = 0;
+	if (data.R.rest.gasFiltrType < 0 || data.R.rest.gasFiltrType >= 3) {
+		data.R.rest.gasFiltrType = 0;
 		r = true;
 	}
 
-	if (checkRange(data.R.exDev.filtrFIRLength, 0, 120)) {
-		data.R.exDev.filtrFIRLength = 120;
+	if (checkRange(data.R.rest.filtrFIRLength, 0, 120)) {
+		data.R.rest.filtrFIRLength = 120;
 		r = true;
 	}
 
-	if (checkRange(data.R.exDev.filtrIRConst, 0.0, 1.0)) {
-		data.R.exDev.filtrIRConst = 0.05;
+	if (checkRange(data.R.rest.filtrIRConst, 0.0, 1.0)) {
+		data.R.rest.filtrIRConst = 0.05;
 		r = true;
 	}
 
 	//NOISE
-	if (data.R.exDev.noiseFiltrType < 0 || data.R.exDev.noiseFiltrType >= 3) {
-		data.R.exDev.noiseFiltrType = 0;
+	if (data.R.rest.noiseFiltrType < 0 || data.R.rest.noiseFiltrType >= 3) {
+		data.R.rest.noiseFiltrType = 0;
 		r = true;
 	}
 
-	if (checkRange(data.R.exDev.noiseFiltrFIRLength, 0, 120)) {
-		data.R.exDev.filtrFIRLength = 120;
+	if (checkRange(data.R.rest.noiseFiltrFIRLength, 0, 120)) {
+		data.R.rest.filtrFIRLength = 120;
 		r = true;
 	}
 
-	if (checkRange(data.R.exDev.noiseFiltrIRConst, 0.0, 1.0)) {
-		data.R.exDev.filtrIRConst = 0.05;
+	if (checkRange(data.R.rest.noiseFiltrIRConst, 0.0, 1.0)) {
+		data.R.rest.filtrIRConst = 0.05;
 		r = true;
 	}
 
-	if (checkRange(data.R.exDev.heater.humidityON, 0.0, 100.0)) {
-		data.R.exDev.heater.humidityON = 75;
+	if (checkRange(data.R.heater.humidityON, 0.0, 100.0)) {
+		data.R.heater.humidityON = 75;
 		r = true;
 	}
-	if (checkRange(data.R.exDev.heater.humidityOFF, 0.0, 100.0)) {
-		data.R.exDev.heater.humidityOFF = 50;
-		r = true;
-	}
-
-	if (data.R.exDev.heater.humidityON <= data.R.exDev.heater.humidityOFF) {
-		data.R.exDev.heater.humidityON = 75;
-		data.R.exDev.heater.humidityOFF = 50;
+	if (checkRange(data.R.heater.humidityOFF, 0.0, 100.0)) {
+		data.R.heater.humidityOFF = 50;
 		r = true;
 	}
 
-	if (checkRange(data.R.exDev.heater.tempON, -30.0, 50.0)) {
-		data.R.exDev.heater.tempON = 2;
-		r = true;
-	}
-	if (checkRange(data.R.exDev.heater.tempOFF, -30.0, 50.0)) {
-		data.R.exDev.heater.tempOFF = 2;
+	if (data.R.heater.humidityON <= data.R.heater.humidityOFF) {
+		data.R.heater.humidityON = 75;
+		data.R.heater.humidityOFF = 50;
 		r = true;
 	}
 
-	if (data.R.exDev.heater.tempON >= data.R.exDev.heater.tempOFF) {
-		data.R.exDev.heater.tempON = 2;
-		data.R.exDev.heater.tempOFF = 10;
+	if (checkRange(data.R.heater.tempON, -30.0, 50.0)) {
+		data.R.heater.tempON = 2;
+		r = true;
+	}
+	if (checkRange(data.R.heater.tempOFF, -30.0, 50.0)) {
+		data.R.heater.tempOFF = 2;
+		r = true;
+	}
+
+	if (data.R.heater.tempON >= data.R.heater.tempOFF) {
+		data.R.heater.tempON = 2;
+		data.R.heater.tempOFF = 10;
 		r = true;
 	}
 
@@ -363,13 +446,13 @@ bool Config::Korekt() {
 		r = true;
 	}
 
-	if (data.P.dustInpType != dust_Intern && data.P.dustInpType != dust_Extern) {
-		data.P.dustInpType = dust_Intern;
+	if (data.R.dev.dustInpType != dust_Intern && data.R.dev.dustInpType != dust_Extern) {
+		data.R.dev.dustInpType = dust_Intern;
 		r = true;
 	}
 
-	if (data.R.exDev.sensExist[ssUNKNOWN]) {
-		data.R.exDev.sensExist[ssUNKNOWN] = 0;
+	if (data.R.sensExist[ssUNKNOWN]) {
+		data.R.sensExist[ssUNKNOWN] = 0;
 		r = true;
 	}
 
@@ -378,16 +461,14 @@ bool Config::Korekt() {
 
 void Config::Default() {
 	memset(&data, 0, sizeof(data));
-	strcpy(data.P.SerialNr, "W00001");
-	data.R.timeZoneShift = 1;
-	data.P.dustSensorType = dustT_SPS30;
-	data.P.dustInpType = dust_Intern;
+	strcpy(data.R.dev.SerialNr, "W00001");
+	data.R.dev.timeZoneShift = 1;
+	data.R.dev.dustSensorType = dustT_SPS30;
+	data.R.dev.dustInpType = dust_Intern;
 
 	strcpy(data.R.bg96.SimPin, "");
 	strcpy(data.R.bg96.ApnName, "playmetric");
 	data.R.bg96.autoStart = true;
-	data.R.bg96.autoOpenMqttSvr = true;
-	data.R.bg96.mqttSendInterval = 120;  //2 minuty
 	data.R.bg96.rssiRefreshTime = 60;
 	data.R.bg96.gps.refreshTime = 30;
 	data.R.bg96.gps.Mode = 1;
@@ -397,6 +478,9 @@ void Config::Default() {
 	data.R.bg96.ntp.WaitTime = 5000;
 	data.R.bg96.ntp.RefreshTime = 600;
 
+	//mqtt
+	data.R.mqtt.autoOpenMqttSvr = true;
+	data.R.mqtt.mqttSendInterval = 120;  //2 minuty
 	strcpy(data.R.mqtt.SvrName, "iot-endpoint.syngeos.pl");
 	strcpy(data.R.mqtt.userName, "iot");
 	strcpy(data.R.mqtt.password, "sensorI0t");
@@ -411,46 +495,45 @@ void Config::Default() {
 	data.R.mqtt.retain = 1;
 	data.R.mqtt.qos = 1;
 
-	data.R.gpsLatitude = 0;
-	data.R.gpsLongitude = 0;
+	data.R.dev.gpsLatitude = 0;
+	data.R.dev.gpsLongitude = 0;
 	data.R.rest.gasDevMdbNr = 73;
 	data.R.rest.dustDevMdbNr = 73;
 	data.R.rest.mdb1dbgLevel = 0;
 	data.R.rest.mdb2dbgLevel = 0;
 	data.R.rest.mdb3dbgLevel = 0;
 
-	data.R.exDev.gasFiltrType = 0;
-	data.R.exDev.filtrFIRLength = 120;
-	data.R.exDev.filtrIRConst = 0.05;
+	data.R.rest.gasFiltrType = 0;
+	data.R.rest.filtrFIRLength = 120;
+	data.R.rest.filtrIRConst = 0.05;
 
-	data.R.exDev.heater.useNTCtemp = true;
-	data.R.exDev.heater.runExternal = 0;
-	data.R.exDev.heater.runInternal = 1;
-	data.R.exDev.heater.showMsg = 0;
-	data.R.exDev.heater.tempON = 10;
-	data.R.exDev.heater.tempOFF = 20;
-	data.R.exDev.heater.humidityON = 99;
-	data.R.exDev.heater.humidityOFF = 50;
-	data.R.exDev.heater2.humidityEnab = false;
+	data.R.heater.useNTCtemp = true;
+	data.R.heater.runExternal = 0;
+	data.R.heater.runInternal = 1;
+	data.R.heater.showMsg = 0;
+	data.R.heater.tempON = 10;
+	data.R.heater.tempOFF = 20;
+	data.R.heater.humidityON = 99;
+	data.R.heater.humidityOFF = 50;
+	data.R.heater.humidityEnab = false;
 
-	data.R.exDev.sensExist[ssTEMPERATURE] = 1;
-	data.R.exDev.sensExist[ssHUMIDITY] = 1;
-	data.R.exDev.sensExist[ssPRESSURE] = 1;
-	data.R.exDev.sensExist[ssPM1_0] = 1;
-	data.R.exDev.sensExist[ssPM2_5] = 1;
-	data.R.exDev.sensExist[ssPM10] = 1;
-	data.R.exDev.sensExist[ssNO2] = 0;
-	data.R.exDev.sensExist[ssO3] = 0;
+	data.R.sensExist[ssTEMPERATURE] = 1;
+	data.R.sensExist[ssHUMIDITY] = 1;
+	data.R.sensExist[ssPRESSURE] = 1;
+	data.R.sensExist[ssPM1_0] = 1;
+	data.R.sensExist[ssPM2_5] = 1;
+	data.R.sensExist[ssPM10] = 1;
+	data.R.sensExist[ssNO2] = 0;
+	data.R.sensExist[ssO3] = 0;
 
-	data.R.rest.faceLimitTab[0] = 13;
-	data.R.rest.faceLimitTab[1] = 35;
-	data.R.rest.faceLimitTab[2] = 55;
-	data.R.rest.faceLimitTab[3] = 75;
-	data.R.rest.faceLimitTab[4] = 110;
-
-	data.R.rest.ledMatrixRun = true;
-	data.R.rest.faceAutoSend = true;
-	data.R.rest.faceHistereza = 2;
+	data.R.ledMatrix.limitTab[0] = 13;
+	data.R.ledMatrix.limitTab[1] = 35;
+	data.R.ledMatrix.limitTab[2] = 55;
+	data.R.ledMatrix.limitTab[3] = 75;
+	data.R.ledMatrix.limitTab[4] = 110;
+	data.R.ledMatrix.run = true;
+	data.R.ledMatrix.autoSend = true;
+	data.R.ledMatrix.histereza = 2;
 
 	saveRtc();
 }
@@ -490,13 +573,7 @@ HAL_StatusTypeDef Config::Init(OutStream *strm) {
 	return HAL_ERROR;
 }
 
-/*
-
-
- }
-
- */
-void Config::funList(OutStream *strm, const char *cmd, void *arg) {
+void Config::funListUni(OutStream *strm, const char *cmd, void *arg, bool withK) {
 	Config *cfg = (Config*) arg;
 	char tok[20];
 
@@ -512,12 +589,23 @@ void Config::funList(OutStream *strm, const char *cmd, void *arg) {
 			strm->oMsgX(colYELLOW, "FLASH");
 		}
 	}
-	cpx.list(strm);
+	if (!withK)
+		cpx.list(strm);
+	else
+		cpx.listk(strm);
+}
+
+void Config::funList(OutStream *strm, const char *cmd, void *arg) {
+	funListUni(strm, cmd, arg, false);
+}
+
+void Config::funListK(OutStream *strm, const char *cmd, void *arg) {
+	funListUni(strm, cmd, arg, true);
 }
 
 void Config::funSet(OutStream *strm, const char *cmd, void *arg) {
 	Config *cfg = (Config*) arg;
-	char tok[20];
+	char tok[30];
 
 	if (Token::get(&cmd, tok, sizeof(tok))) {
 		char valB[60];
@@ -573,13 +661,38 @@ void Config::funShowDef(OutStream *strm, const char *cmd, void *arg) {
 	cpx.showDef(strm);
 }
 
+void Config::funShowInfo(OutStream *strm, const char *cmd, void *arg) {
+	Config *cfg = (Config*) arg;
+
+	Cpx cpx;
+	cpx.init(ConfigDscr, &cfg->data);
+	cpx.info(strm);
+}
+
+void Config::funShowJson(OutStream *strm, const char *cmd, void *arg) {
+	Config *cfg = (Config*) arg;
+
+	if (jsonbuf == NULL) {
+		jsonbuf = new CxString(JSON_SIZE);
+	}
+	if (jsonbuf != NULL) {
+		jsonbuf->clear();
+
+		Cpx cpx;
+		cpx.init(ConfigDscr, &cfg->data);
+
+		cpx.buildjson(jsonbuf);
+		strm->oMsgX(colWHITE, "Len=%d", jsonbuf->len());
+		strm->oBufX(colYELLOW, jsonbuf->p(), jsonbuf->len());
+	}
+}
+
 void Config::funHelp(OutStream *strm, const char *cmd, void *arg) {
 	if (strm->oOpen(colWHITE)) {
 		strm->oMsg("Cfg Help");
 		strm->oMsg("--------------------");
 		strm->oMsg("DustSensorType: 0-SPS30(Sensirion), 1-HPMA(Honeywel), 2-PMSA003, 3-PMS5003ST");
 		strm->oMsg("GasFiltrType: 0-OFF, 1-FIR, 2-IR");
-
 		strm->oClose();
 	}
 
@@ -587,13 +700,16 @@ void Config::funHelp(OutStream *strm, const char *cmd, void *arg) {
 
 const ShellItemFx menuCfgFx[] = { //
 		{ "list", "pokaż ustawienia, parametr [ |rtc|flash]", Config::funList }, //
+				{ "listk", "pokaż ustawienia, parametr [ |rtc|flash]", Config::funListK }, //
 				{ "set", "ustaw wartość", Config::funSet }, //
 				{ "default", "wartości domyślne", Config::funDefault }, //
 				{ "save", "save to Rtc RAM", Config::funSave }, //
 				{ "saveflash", "save to Flash", Config::funSaveFlash }, //
 				{ "init", "reload cfg from RtcRAM", Config::funInit }, //
 				{ "initflash", "reload cfg from Flash", Config::funInitFlash }, //
+				{ "json", "pokaż definicje", Config::funShowJson }, //
 				{ "def", "pokaż definicje", Config::funShowDef }, //
+				{ "info", "pokaż informacje", Config::funShowInfo }, //
 				{ "help", "znaczenie nirktórych nastaw", Config::funHelp }, //
 				{ NULL, NULL } };
 

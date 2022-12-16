@@ -99,13 +99,12 @@ bool Cpx::next() {
 }
 
 bool Cpx::isEof() {
-	return  (mDef->ctype == cpxNULL);
+	return (mDef->ctype == cpxNULL);
 }
 
-const char *Cpx::getDscrName(){
+const char* Cpx::getDscrName() {
 	return mDef->Name;
 }
-
 
 bool Cpx::CheckFloatItem(float *pf, const CpxFloatDefItem *def, float defau) {
 	if (*pf < def->min || *pf > def->max) {
@@ -235,8 +234,8 @@ bool Cpx::set(const char *name, const char *val, int *fndItemId) {
 	return set(&fndRes, val);
 }
 
-bool Cpx::setItem(const char *val){
-	return set(this,val);
+bool Cpx::setItem(const char *val) {
+	return set(this, val);
 }
 
 bool Cpx::set(const char *name, const char *val) {
@@ -312,6 +311,10 @@ bool Cpx::setBin(const Cpx *itemToSet, const uint8_t *src, uint8_t dt_sz) {
 		break;
 	case cpxFLOAT:
 		*(float*) dst = *(float*) src;
+		break;
+
+	case cpxIP:
+		*(ip4_addr_t*) dst = *(ip4_addr_t*) src;
 		break;
 
 	case cpxTIME:
@@ -482,6 +485,12 @@ bool Cpx::set(const Cpx *itemToSet, const char *txt) {
 	}
 		break;
 
+	case cpxIP: {
+		ip4_addr_t *pf = (ip4_addr_t*) ptr;
+		return ipaddr_aton(txt, pf);
+	}
+		break;
+
 	case cpxTIME: {
 		TDATE *tm = (TDATE*) ptr;
 		const char *ptr = txt;
@@ -489,9 +498,11 @@ bool Cpx::set(const Cpx *itemToSet, const char *txt) {
 		TimeTools::parseTime(&ptr, tm);
 	}
 		break;
+
 	case cpxCHILD:
 		//CHILD nie powinien tu dotrzeć
 		break;
+
 	}
 
 	return ret;
@@ -604,6 +615,10 @@ void Cpx::getAsTxt(const CpxDescr *def, const void *data, char *buf, int max) {
 	}
 		break;
 
+	case cpxIP:
+		ipaddr_ntoa_r((ip4_addr_t* ) ptr, buf, max);
+		break;
+
 	case cpxTIME: {
 		const TDATE *tm = (const TDATE*) ptr;
 		char tmBuf[20];
@@ -702,6 +717,10 @@ void Cpx::info(OutStream *strm, CxString *wstr, CxString *front, IdHist *idHist,
 				wstr->addFormat("float");
 			break;
 
+		case cpxIP:
+			wstr->add("IP np. 192.168.1.1");
+			break;
+
 		case cpxTIME:
 			wstr->add("yyyy.mm.dd hh:nn:ss");
 			break;
@@ -762,58 +781,57 @@ void Cpx::info(OutStream *strm) {
 	}
 }
 
-
-void Cpx::list(OutStream *strm, CxString *wstr, CxString *front, IdHist *idHist, int idx) {
+void Cpx::list(OutStream *strm, CxString *frontStr, CxString *capStr, IdHist *idHist, int idx, int frontSize) {
 
 	const CpxDescr *def = mDef;
-	int m1 = front->len();
+	int m1 = capStr->len();
 
 	while (def->ctype != cpxNULL) {
-		front->setLen(m1);
+		capStr->setLen(m1);
 
 		idHist->add(def->id);
 
-		wstr->clear();
+		frontStr->clear();
 		if (idHist->isAdd()) {
-			idHist->buildStr(wstr);
-			wstr->fillSpaces(11);
+			idHist->buildStr(frontStr);
+			frontStr->fillSpaces(frontSize);
 		}
 
-		front->add(def->Name);
-		wstr->add(front);
-		wstr->add(":");
+		capStr->add(def->Name);
+		frontStr->add(capStr);
+		frontStr->add(":");
 
 		void *ptr = (void*) ((uint32_t) mData + def->ofs);
 
 		bool showWstr = true;
 		switch (def->ctype) {
 		case cpxSTR:
-			wstr->add((char*) ptr);
+			frontStr->add((char*) ptr);
 			break;
 		case cpxQUOTASTR:
-			wstr->addQuota((const char*) ptr);
+			frontStr->addQuota((const char*) ptr);
 			break;
 
 		case cpxBOOL:
-			wstr->addFormat("%u", (int) (*(bool*) ptr));
+			frontStr->addFormat("%u", (int) (*(bool*) ptr));
 			break;
 		case cpxBYTE:
-			wstr->addFormat("%u", (int) (*(uint8_t*) ptr));
+			frontStr->addFormat("%u", (int) (*(uint8_t*) ptr));
 			break;
 		case cpxWORD:
-			wstr->addFormat("%u", (int) (*(uint16_t*) ptr));
+			frontStr->addFormat("%u", (int) (*(uint16_t*) ptr));
 			break;
 		case cpxHEXWORD:
-			wstr->addFormat("0X%04X", (int) (*(uint16_t*) ptr));
+			frontStr->addFormat("0X%04X", (int) (*(uint16_t*) ptr));
 			break;
 		case cpxINT:
-			wstr->addFormat("%d", (int) (*(int*) ptr));
+			frontStr->addFormat("%d", (int) (*(int*) ptr));
 			break;
 		case cpxSELECT:
-			wstr->add(getSelectTxtPtr(def->exPtr, (int) (*(int*) ptr)));
+			frontStr->add(getSelectTxtPtr(def->exPtr, (int) (*(int*) ptr)));
 			break;
 		case cpxSELECT_BYTE:
-			wstr->add(getSelectTxtPtr(def->exPtr, (int) (*(uint8_t*) ptr)));
+			frontStr->add(getSelectTxtPtr(def->exPtr, (int) (*(uint8_t*) ptr)));
 			break;
 		case cpxFLOAT: {
 			const char *frm = "%f";
@@ -821,15 +839,21 @@ void Cpx::list(OutStream *strm, CxString *wstr, CxString *front, IdHist *idHist,
 				const CpxFloatDefItem *defFloat = (const CpxFloatDefItem*) (def->exPtr);
 				frm = defFloat->getFrm(idx);
 			}
-			wstr->addFormat(frm, (*(float*) ptr));
+			frontStr->addFormat(frm, (*(float*) ptr));
 		}
 			break;
-
+		case cpxIP: {
+			ip4_addr_t *pf = (ip4_addr_t*) ptr;
+			char txt[20];
+			ipaddr_ntoa_r(pf, txt, sizeof(txt));
+			frontStr->add(txt);
+		}
+			break;
 		case cpxTIME: {
 			const TDATE *tm = (const TDATE*) ptr;
 			char txt[20];
 			TimeTools::DtTmStr(txt, tm);
-			wstr->add(txt);
+			frontStr->add(txt);
 		}
 			break;
 
@@ -841,20 +865,20 @@ void Cpx::list(OutStream *strm, CxString *wstr, CxString *front, IdHist *idHist,
 				strm->oMsg("--- %s ----------------------", def->Name);
 			}
 
-			int m2 = front->len();
+			int m2 = capStr->len();
 			uint8_t *dt = (uint8_t*) ptr;
 			for (int k = 0; k < chInfo->itemCnt; k++) {
-				front->setLen(m2);
+				capStr->setLen(m2);
 				if (chInfo->itemCnt > 1) {
-					front->addFormat("[%u].", k);
+					capStr->addFormat("[%u].", k);
 					idHist->add(k + 1);
 				} else {
-					front->add(".");
+					capStr->add(".");
 				}
 
 				Cpx child;
 				child.init(chInfo->defs, dt);
-				child.list(strm, wstr, front, idHist, k);
+				child.list(strm, frontStr, capStr, idHist, k, frontSize);
 
 				if (chInfo->itemCnt > 1) {
 					idHist->delLast();
@@ -869,7 +893,7 @@ void Cpx::list(OutStream *strm, CxString *wstr, CxString *front, IdHist *idHist,
 			break;
 		}
 		if (showWstr)
-			strm->oMsg(wstr->p());
+			strm->oMsg(frontStr->p());
 
 		idHist->delLast();
 		def++;
@@ -881,7 +905,7 @@ void Cpx::list(OutStream *strm) {
 		CxString *front = new CxString(200);
 		CxString *wstr = new CxString(300);
 		IdHist *idHist = new IdHist(false, 10);
-		list(strm, wstr, front, idHist, 0);
+		list(strm, wstr, front, idHist, 0, 0);
 		delete idHist;
 		delete wstr;
 		delete front;
@@ -894,7 +918,7 @@ void Cpx::listk(OutStream *strm) {
 		CxString *front = new CxString(200);
 		CxString *wstr = new CxString(300);
 		IdHist *idHist = new IdHist(true, 10);
-		list(strm, wstr, front, idHist, 0);
+		list(strm, wstr, front, idHist, 0, 7);
 		delete idHist;
 		delete wstr;
 		delete front;
@@ -936,6 +960,7 @@ void Cpx::buildBinCfg(CxBuf *cxBuf, IdHist *idHist) {
 			case cpxINT:
 			case cpxFLOAT:
 			case cpxSELECT:
+			case cpxIP:
 				cxBuf->add(ptr, 4);
 				break;
 			case cpxTIME:
@@ -1126,6 +1151,14 @@ void Cpx::buildjson(CxString *out, char *space, int idx, uint8_t flags) {
 				}
 				float *pf = (float*) ptr;
 				out->addFormat(frm, *pf);
+			}
+				break;
+
+			case cpxIP: {
+				ip4_addr_t *pf = (ip4_addr_t*) ptr;
+				char txt[20];
+				ipaddr_ntoa_r(pf, txt, sizeof(txt));
+				out->add(txt);
 			}
 				break;
 
