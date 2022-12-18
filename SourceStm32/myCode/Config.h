@@ -197,14 +197,26 @@ typedef union {
 typedef union {
 	char buf[0x100];
 	struct {
+#if (MDB1_EXIST)
 		int mdb1dbgLevel; //poziom komunikatów na Modbus 1
+#endif
+#if (MDB2_EXIST)
 		int mdb2dbgLevel; //poziom komunikatów na Modbus 2
-		int gasDevMdbNr; //numer Modbusa dla komory gazów
+#endif
+#if (MDB3_EXIST)
 		int mdb3dbgLevel; //poziom komunikatów na Modbus 3
+#endif
+
+#if (DEV_DUST_MDB)
 		int dustDevMdbNr; //numer Modbusa dla zewnętrznego czujnika pyłów
+#endif
+
+#if (DEV_GAS)
+		int gasDevMdbNr; //numer Modbusa dla komory gazów
 		int gasFiltrType; // 0-OFF, 1-FIR,  2-IR
 		int filtrFIRLength;
 		float filtrIRConst;
+#endif
 #if(SENSOR_NOISE)
 		int noiseFiltrType; // 0-OFF, 1-FIR,  2-IR
 		int noiseFiltrFIRLength;

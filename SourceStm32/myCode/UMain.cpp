@@ -718,7 +718,7 @@ void DefaultTask::ThreadFunc() {
    q1 = true;
 #endif
 	if (q1) {
-		dustExternSensor = new ExtDustsensor(mdbMaster_3, config->data.R.rest.gasDevMdbNr, "dust");
+		dustExternSensor = new ExtDustsensor(mdbMaster_3, config->data.R.rest.dustDevMdbNr, "dust");
 	}
 #endif //DEV_DUST_MDB
 

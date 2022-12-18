@@ -228,14 +228,25 @@ const CpxChildInfo bgGroup = { //
 		};
 
 const CpxDescr RestCfgDescr[] = { //
+#if (MDB1_EXIST)
 		{ ctype : cpxINT, id:1, ofs: offsetof(RestCfg, mdb1dbgLevel), Name : "Mdb1DbgLevel", size : sizeof(RestCfg::mdb1dbgLevel) }, //
+#endif
+#if (MDB2_EXIST)
 				{ ctype : cpxINT, id:2, ofs: offsetof(RestCfg, mdb2dbgLevel), Name : "Mdb2DbgLevel", size : sizeof(RestCfg::mdb2dbgLevel) }, //
+#endif
+#if (MDB3_EXIST)
 				{ ctype : cpxINT, id:3, ofs: offsetof(RestCfg, mdb3dbgLevel), Name : "Mdb3DbgLevel", size : sizeof(RestCfg::mdb3dbgLevel) }, //
-				{ ctype : cpxINT, id:4, ofs: offsetof(RestCfg, gasDevMdbNr), Name : "GasDevMdbNr", size : sizeof(RestCfg::gasDevMdbNr) }, //
+#endif
+#if (DEV_DUST_MDB)
 				{ ctype : cpxINT, id:5, ofs: offsetof(RestCfg, dustDevMdbNr), Name : "DustDevMdbNr", size : sizeof(RestCfg::dustDevMdbNr) }, //
+#endif
+
+#if (DEV_GAS)
+				{ ctype : cpxINT, id:4, ofs: offsetof(RestCfg, gasDevMdbNr), Name : "GasDevMdbNr", size : sizeof(RestCfg::gasDevMdbNr) }, //
 				{ ctype : cpxINT, id:6, ofs: offsetof(RestCfg, gasFiltrType), Name : "GasFiltrType", size : sizeof(RestCfg::gasFiltrType) }, //
 				{ ctype : cpxINT, id:7, ofs: offsetof(RestCfg, filtrFIRLength), Name : "GasFiltrFIRLength", size : sizeof(RestCfg::filtrFIRLength) }, //
 				{ ctype : cpxFLOAT, id:8, ofs: offsetof(RestCfg, filtrIRConst), Name : "GasFiltrIRConst", size : sizeof(RestCfg::filtrIRConst) }, //
+#endif
 #if(SENSOR_NOISE)
 				{ ctype : cpxINT, id:9, ofs: offsetof(RestCfg, noiseFiltrType), Name : "NoiseFiltrType", size : sizeof(RestCfg::noiseFiltrType) }, //
 				{ ctype : cpxINT, id:10, ofs: offsetof(RestCfg, noiseFiltrFIRLength), Name : "NoiseFiltrFIRLength", size : sizeof(RestCfg::noiseFiltrFIRLength) }, //
@@ -417,20 +428,6 @@ bool Config::checkRange(int v, int min, int max) {
 bool Config::Korekt() {
 	bool r = false;
 
-	if (data.R.rest.gasFiltrType < 0 || data.R.rest.gasFiltrType >= 3) {
-		data.R.rest.gasFiltrType = 0;
-		r = true;
-	}
-
-	if (checkRange(data.R.rest.filtrFIRLength, 0, 120)) {
-		data.R.rest.filtrFIRLength = 120;
-		r = true;
-	}
-
-	if (checkRange(data.R.rest.filtrIRConst, 0.0, 1.0)) {
-		data.R.rest.filtrIRConst = 0.05;
-		r = true;
-	}
 
 #if(SENSOR_NOISE)
 	if (data.R.rest.noiseFiltrType < 0 || data.R.rest.noiseFiltrType >= 3) {
@@ -481,14 +478,33 @@ bool Config::Korekt() {
 	}
 #endif
 
+#if (DEV_GAS)
 	if (data.R.rest.gasDevMdbNr == 0) {
 		data.R.rest.gasDevMdbNr = 73;
 		r = true;
 	}
+	if (data.R.rest.gasFiltrType < 0 || data.R.rest.gasFiltrType >= 3) {
+		data.R.rest.gasFiltrType = 0;
+		r = true;
+	}
+
+	if (checkRange(data.R.rest.filtrFIRLength, 0, 120)) {
+		data.R.rest.filtrFIRLength = 120;
+		r = true;
+	}
+
+	if (checkRange(data.R.rest.filtrIRConst, 0.0, 1.0)) {
+		data.R.rest.filtrIRConst = 0.05;
+		r = true;
+	}
+#endif
+
+#if (DEV_DUST_MDB)
 	if (data.R.rest.dustDevMdbNr == 0) {
 		data.R.rest.dustDevMdbNr = 73;
 		r = true;
 	}
+#endif
 
 #if (DEV_DUST_INT_EXT)
 	if (data.R.dev.dustInpType != dust_Intern && data.R.dev.dustInpType != dust_Extern) {
@@ -552,14 +568,24 @@ void Config::Default() {
 	data.R.mqtt.retain = 1;
 	data.R.mqtt.qos = 1;
 
+#if (DEV_GAS)
 	data.R.rest.gasDevMdbNr = 73;
-	data.R.rest.dustDevMdbNr = 73;
-	data.R.rest.mdb1dbgLevel = 0;
-	data.R.rest.mdb2dbgLevel = 0;
-	data.R.rest.mdb3dbgLevel = 0;
 	data.R.rest.gasFiltrType = 0;
 	data.R.rest.filtrFIRLength = 120;
 	data.R.rest.filtrIRConst = 0.05;
+#endif
+#if (DEV_DUST_MDB)
+	data.R.rest.dustDevMdbNr = 73;
+#endif
+#if (MDB1_EXIST)
+	data.R.rest.mdb1dbgLevel = 0;
+#endif
+#if (MDB2_EXIST)
+	data.R.rest.mdb2dbgLevel = 0;
+#endif
+#if (MDB3_EXIST)
+	data.R.rest.mdb3dbgLevel = 0;
+#endif
 #if (HEATER)
 	data.R.heater.useNTCtemp = true;
 	data.R.heater.runExternal = 0;

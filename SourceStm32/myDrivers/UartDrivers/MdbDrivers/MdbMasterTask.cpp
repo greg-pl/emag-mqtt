@@ -439,16 +439,23 @@ void MdbMasterTask::ThreadFunc() {
 	xEventGroupWaitBits(sysEvents, EVENT_CREATE_DEVICES, false, false, 1000000);
 
 	switch (mMdbNr) {
+#if (MDB1_EXIST)
 	case MDB_1:
 		mDbgLevel = config->data.R.rest.mdb1dbgLevel;
 		break;
+#endif
+#if (MDB2_EXIST)
 	case MDB_2:
 		mDbgLevel = config->data.R.rest.mdb2dbgLevel;
 		break;
+#endif
+#if (MDB3_EXIST)
 	case MDB_3:
 		mDbgLevel = config->data.R.rest.mdb3dbgLevel;
 		break;
-
+#endif
+	default:
+		mDbgLevel = 0;
 	}
 
 	while (1) {

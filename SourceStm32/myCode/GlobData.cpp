@@ -183,7 +183,7 @@ void GlobData::FillMeas(float *tab) {
 		UniDevTab::getMeasValue((MeasType) i, &tab[i]);
 	}
 
-#if (FORCE_S873)
+#if (DEV_S873 && FORCE_S873)
 	for (int i = 0; i < SENSOR_CNT; i++) {
 		if (gasS873->isMeasServiced((MeasType) i)) {
 			float val;

@@ -12,6 +12,9 @@
 #define DEV_AIR_DET_RS			0
 #define DEV_NOISE       		0
 
+#define DEV_GAS                 (DEV_S873 || DEV_AIR_DET_RS)
+
+
 #define DEV_DUST_PMSA   	    0
 #define DEV_DUST_PMS5003ST  	0  // with Formaldehyde sensor
 #define DEV_DUST_SPS30    		0
