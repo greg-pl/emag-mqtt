@@ -8,6 +8,10 @@
 #ifndef MDBDUSTSENSOR_H_
 #define MDBDUSTSENSOR_H_
 
+#include "ProjectConfig.h"
+
+#if (DEV_DUST_MDB)
+
 #include "MdbMasterTask.h"
 
 class ExtDustsensor: public MdbDev {
@@ -78,5 +82,7 @@ public:
 
 
 };
+
+#endif
 
 #endif /* MDBDUSTSENSOR_H_ */

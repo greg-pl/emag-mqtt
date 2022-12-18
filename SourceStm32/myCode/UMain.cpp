@@ -36,20 +36,36 @@ MdbMasterTask *mdbMaster_1;
 MdbMasterTask *mdbMaster_2;
 MdbMasterTask *mdbMaster_3;
 
-LedMatrix *ledMatrix;
-GasS873 *gasS873;
-GasS873 *gasS873X;
-NoiseDetector *noiseDet;
-
 Config *config;
 Bg96Driver *bg96;
+I2cBus *i2cBus1;
+VerInfo mSoftVer;
+
+#if (LED_MATRIX)
+LedMatrix *ledMatrix;
+#endif
+
+GasS873 *gasS873;
+
+#if (SENSOR_NOISE)
+NoiseDetector *noiseDet;
+#endif
+
+#if (SSD1306)
+SSD1306Dev *lcd;
+#endif
+
 SHT35Device *sht35;
 Bmp338Device *bmp338;
+
+#if (DEV_DUST_INTERN)
 DustSensorBase *dustInternSensor;
+#endif
+
+#if (DEV_DUST_MDB)
 ExtDustsensor *dustExternSensor;
-I2cBus *i2cBus1;
-SSD1306Dev *lcd;
-VerInfo mSoftVer;
+#endif
+
 AirDetRs *airDetRs = NULL;
 
 #define SIGN_NO_INIT1  0x34568923
@@ -74,6 +90,7 @@ extern "C" OutStream* getOutStream() {
 	return shellTask;
 }
 
+#if (TEMP_NTC)
 //-------------------------------------------------------------------------------------------------------------------------
 // NTC
 //-------------------------------------------------------------------------------------------------------------------------
@@ -173,7 +190,7 @@ float NTC::liczTemp(float rt) {
 	double t = w - 273.15;
 	return t;
 }
-
+#endif
 //-------------------------------------------------------------------------------------------------------------------------
 // DefaultTask
 //-------------------------------------------------------------------------------------------------------------------------
@@ -184,7 +201,11 @@ private:
 		SIGNAL_TICK = 0x01, //
 	};
 
+#if (ETHERNET)
 	void doNetStatusChg();
+#endif
+
+#if (SSD1306)
 	enum {
 		scrNoDef = 0, //
 		scrWelcome, //
@@ -203,35 +224,44 @@ private:
 		uint32_t scrStartTick; // czas włączenia danego okienka
 		bool showSms;
 	} lcdState;
+#endif
 
+#if (HEATER)
 	struct {
 		uint32_t lastRunTick;
 		bool waitNtcMeasure;
 		bool on;
 		bool regTempOut;
 	} heater;
+	void heaterTick();
+#endif
+
+#if (SSD1306)
 	void showIpScr();
 	void showMeasureScr();
 	void showStateScr();
 	void lcdTick();
+#endif
+
 	void led3ColTick();
 	bool getHdwError();
-	void heaterTick();
-
 protected:
 
 	virtual void ThreadFunc();
 public:
 	DefaultTask();
 	virtual void setSignal();
+#if (SSD1306)
 	void setLcdScrNr(int nr);
 	void setLcdTime(int time);
-
+#endif
 };
 
 DefaultTask::DefaultTask() :
 		TaskClass::TaskClass("AIR-PRO", osPriorityNormal, 1024) {
+#if (HEATER)
 	heater.on = false;
+#endif
 }
 
 struct {
@@ -244,6 +274,8 @@ void DefaultTask::setSignal() {
 	osSignalSet(getThreadId(), SIGNAL_TICK);
 }
 
+#if (ETHERNET)
+
 void setStatusNetIf(netif_status_callback_fn status_callback);
 
 volatile uint8_t mNetIfStatusChg;
@@ -255,6 +287,9 @@ void NetIfStatusCallBack(struct netif *netif) {
 void ethernetif_notify_conn_changed(struct netif *netif) {
 	mNetIfStatusChg = 1;
 }
+#endif
+
+#if (ETHERNET)
 
 void DefaultTask::doNetStatusChg() {
 	getOutStream()->oMsgX(colYELLOW, "Net interface status changed.");
@@ -271,7 +306,9 @@ void DefaultTask::doNetStatusChg() {
 		}
 	}
 }
+#endif
 
+#if (SSD1306)
 void DefaultTask::setLcdScrNr(int nr) {
 	if (nr >= scrWelcome && nr <= scr__MAX) {
 		lcdState.cfgScrNr = nr;
@@ -284,6 +321,9 @@ void DefaultTask::setLcdTime(int time) {
 		lcdState.cfgSwitchTime = time;
 	}
 }
+#endif
+
+#if (SSD1306)
 
 void DefaultTask::showIpScr() {
 	NetState netState;
@@ -397,7 +437,9 @@ void DefaultTask::lcdTick() {
 		lcd->updateScr();
 	}
 }
+#endif
 
+#if (HEATER)
 void DefaultTask::heaterTick() {
 	float temp;
 	float humidity;
@@ -493,19 +535,22 @@ void DefaultTask::heaterTick() {
 		}
 	}
 }
+#endif
 
 bool DefaultTask::getHdwError() {
 	bool q = false;
-	if (config->data.R.dev.dustInpType == dust_Intern) {
-		q |= dustInternSensor->isDataError();
-	} else {
-		q |= dustExternSensor->isDataError();
-	}
+
+#if (DEV_DUST)
+	q |= GlobData::getDustSensor()->isDataError();
+#endif
+
 	q |= i2cBus1->isDataError();
 
+#if (SENSOR_NOISE)
 	if (noiseDet != NULL) {
 		q |= noiseDet->isDataError();
 	}
+#endif
 	if (mdbMaster_2->isAnyConfiguredData()) {
 		q |= mdbMaster_2->isDataError();
 	}
@@ -566,7 +611,10 @@ void DefaultTask::ThreadFunc() {
 
 	sht35 = new SHT35Device(i2cBus1, 0x88, "sht");
 	bmp338 = new Bmp338Device(i2cBus1, 0xEC, "bmp");
+
+#if (SSD1306)
 	lcd = new SSD1306Dev(i2cBus1, 0x78, "ssd");
+#endif
 
 	HAL_IWDG_Refresh(&hiwdg);
 
@@ -582,21 +630,23 @@ void DefaultTask::ThreadFunc() {
 	mdbMaster_3->Start(9600, TUart::parityEVEN);
 	mdbMaster_3->setPower(true);
 
+#if (SENSOR_NOISE)
 	noiseDet = new NoiseDetector(mdbMaster_1, config->data.R.rest.gasDevMdbNr, "noise");
-
+#endif
 	gasS873 = new GasS873(mdbMaster_2, config->data.R.rest.gasDevMdbNr, "gas");
-	gasS873X = new GasS873(mdbMaster_2, config->data.R.rest.gasDevMdbNr, "g2");
 
 	HAL_IWDG_Refresh(&hiwdg);
 
 	Rtc::Init();
 	HAL_IWDG_Refresh(&hiwdg);
 
+#if (ETHERNET)
 	/* init code for LWIP */
 	MX_LWIP_Init();
 	HAL_IWDG_Refresh(&hiwdg);
 
 	setStatusNetIf(&NetIfStatusCallBack);
+#endif
 
 	/* init code for USB_DEVICE */
 	MX_USB_DEVICE_Init();
@@ -604,25 +654,72 @@ void DefaultTask::ThreadFunc() {
 	bg96 = new Bg96Driver();
 	bg96->Start();
 
+#if (LED_MATRIX)
+
 	if (config->data.R.ledMatrix.run) {
 		ledMatrix = new LedMatrix(TUart::myUART4);
 		ledMatrix->Init();
 	}
+#endif
 
-	if (config->data.R.dev.dustInpType == dust_Intern) {
+#if (DEV_DUST)
 
-		switch (config->data.R.dev.dustSensorType) {
-		case dustT_PMSA:  	//Chińczyk
-			dustInternSensor = new DustPMSA(false);
-			break;
-		case dustT_PMS5003ST:
-			dustInternSensor = new DustPMSA(true);
-			break;
+#if (DEV_DUST_MDB)
+	bool q1 = false;
+#if (DEV_DUST_INT_EXT)
+	q1 = (config->data.R.dev.dustInpType == dust_Extern);
+#else
+   q1 = true;
+#endif
+	if (q1) {
+		mdbMaster_3 = new MdbMasterTask(MdbMasterTask::MDB_3, TUart::myUART5);
+		mdbMaster_3->Start(9600, TUart::parityEVEN);
+		mdbMaster_3->setPower(true);
+		dustExternSensor = new ExtDustsensor(mdbMaster_3, config->data.R.rest.gasDevMdbNr, "dust");
+	}
+#endif //DEV_DUST_MDB
+
+
+#if (DEV_DUST_INTERN)
+	bool q2 = false;
+#if (DEV_DUST_INT_EXT)
+	q2 = (config->data.R.dev.dustInpType == dust_Intern);
+#else
+	q2 = true;
+#endif
+	if (q2) {
+		uint8_t dustTyp = dustT_SPS30;
+#if(DEV_DUST_SPS30)
+		dustTyp = dustT_SPS30;
+#endif
+#if(DEV_DUST_PMSA)
+		dustTyp = dustT_PMSA;
+#endif
+#if(DEV_DUST_PMS5003ST)
+		dustTyp = dustT_PMS5003ST;
+#endif
+
+#if (DEV_DUST_INTERN_TYP)
+		dustTyp = config->data.R.dev.dustSensorIntType;
+#endif
+
+		switch (dustTyp) {
+#if(DEV_DUST_SPS30)
 		case dustT_SPS30: //Siemens
 			dustInternSensor = new SPS30();
 			break;
+#endif
 
-		case dustT_HPMA: 	//Honeywell
+#if(DEV_DUST_PMSA)
+		case dustT_PMSA:  	//Chińczyk
+			dustInternSensor = new DustPMSA(false);
+			break;
+#endif
+#if(DEV_DUST_PMS5003ST)
+		case dustT_PMS5003ST:
+			dustInternSensor = new DustPMSA(true);
+			break;
+#endif
 		default:
 			dustInternSensor = new DustSensorNull();
 			break;
@@ -630,22 +727,24 @@ void DefaultTask::ThreadFunc() {
 		dustInternSensor->Init(this);
 		dustInternSensor->StartMeas();
 	} else {
-		mdbMaster_3 = new MdbMasterTask(MdbMasterTask::MDB_3, TUart::myUART5);
-		mdbMaster_3->Start(9600, TUart::parityEVEN);
-		mdbMaster_3->setPower(true);
-
-		dustExternSensor = new ExtDustsensor(mdbMaster_3, config->data.R.rest.gasDevMdbNr, "dust");
 	}
+#endif //DEV_DUST_INTERN
+
+#endif  //DEV_DUST
+
 	HAL_IWDG_Refresh(&hiwdg);
 
 	xEventGroupSetBits(sysEvents, EVENT_CREATE_DEVICES);
 
+#if (SSD1306)
 	memset(&lcdState, 0, sizeof(lcdState));
-	memset(&heater, 0, sizeof(heater));
-
 	lcdState.cfgSwitchTime = 2000;
 	lcdState.cfgScrNr = 1;
 	lcdState.scrNr = lcdState.cfgScrNr;
+#endif
+#if (HEATER)
+	memset(&heater, 0, sizeof(heater));
+#endif
 
 	while (1) {
 		osSignalWait(SIGNAL_TICK, 50);
@@ -659,19 +758,37 @@ void DefaultTask::ThreadFunc() {
 
 		led3ColTick();
 
+#if (ETHERNET)
 		if (mNetIfStatusChg) {
 			mNetIfStatusChg = 0;
 			doNetStatusChg();
 
 		}
+#endif
+
 		i2cBus1->tick();
-		if (config->data.R.dev.dustInpType == dust_Intern) {
+#if (DEV_DUST_INTERN)
+		bool q = 0;
+#if (DEV_DUST_INT_EXT)
+		q = (config->data.R.dev.dustInpType == dust_Intern);
+#else
+		q = true;
+#endif
+		if (q)
 			dustInternSensor->tick();
-		}
+#endif
+
+#if (SSD1306)
 		lcdTick();
+#endif
+#if (HEATER)
 		heaterTick();
+#endif
+
+#if (LED_MATRIX)
 		if (ledMatrix != NULL)
 			ledMatrix->tick();
+#endif
 
 	}
 }
@@ -738,12 +855,15 @@ extern "C" void callResCubeMX();
 DefaultTask *defaultTask;
 WdgTask *wdgTask;
 
+#if (SSD1306)
+
 void setLcdScrNr(int nr) {
 	defaultTask->setLcdScrNr(nr);
 }
 void setLcdTime(int time) {
 	defaultTask->setLcdTime(time);
 }
+#endif
 
 extern int _snoinit;
 extern int _enoinit;

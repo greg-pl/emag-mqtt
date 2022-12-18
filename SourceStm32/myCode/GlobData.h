@@ -8,11 +8,14 @@
 #ifndef GLOBDATA_H_
 #define GLOBDATA_H_
 
+#include "Projectconfig.h"
+
 #include "cpx.h"
 #include "config.h"
 #include "cmsis_os.h"
 #include <DustSensorBase.h>
 #include <IOStream.h>
+#include <UniDev.h>
 
 
 typedef struct {
@@ -36,7 +39,9 @@ typedef struct {
 	char info[SIZE_DEV_INFO];
 	int pktNr;
 	char komoraSt[80];
+#if (TEMP_NTC)
 	float tempNTC;
+#endif
 	char hsn[SIZE_SERIAL_NR];
 
 	TDATE time;
@@ -70,9 +75,9 @@ public:
 	static void showJson(OutStream *strm);
 	static int buildExportJson();
 	static bool getData(float *data);
+#if(SENSOR_DUST)
 	static UniDev *getDustSensor();
-
-
+#endif
 
 };
 

@@ -7,6 +7,8 @@
 
 #include "MdbDustSensor.h"
 
+#if (DEV_DUST_MDB)
+
 #include "utils.h"
 #include "main.h"
 #include "UMain.h"
@@ -52,6 +54,8 @@ void ExtDustsensor::loopFunc() {
 				}
 			}
 		}
+
+#if (HEATER)
 		if (config->data.R.heater.runExternal) {
 			if (autoRd.phase == 0) {
 				if (isMeasValid()) {
@@ -79,12 +83,12 @@ void ExtDustsensor::loopFunc() {
 								getOutStream()->oMsgX(colGREEN, "MDB%u:T=%u SetHeater:%u temp=%.1f[*C]", getMdbNr(), autoRd.heaterOrderLastSendTick, doOn, dustData.temperature);
 							}
 						}
-
 					}
 				}
 			}
 
 		}
+#endif
 	}
 
 }
@@ -246,4 +250,6 @@ const ShellItemFx menuExternDustFx[] = { //
 void ExtDustsensor::shell(OutStream *strm, const char *cmd) {
 	execMenuCmd(strm, menuExternDustFx, cmd, this, "Extern Dust Menu");
 }
+
+#endif
 

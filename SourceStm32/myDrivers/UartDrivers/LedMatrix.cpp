@@ -5,6 +5,8 @@
  *      Author: Grzegorz
  */
 
+#if (LED_MATRIX)
+
 #include <LedMatrix.h>
 #include <utils.h>
 #include <string.h>
@@ -341,3 +343,5 @@ const ShellItemFx menuLedMatrixFx[] = { //
 void LedMatrix::shell(OutStream *strm, const char *cmd) {
 	execMenuCmd(strm, menuLedMatrixFx, cmd, this, "LedMatrix Menu");
 }
+
+#endif

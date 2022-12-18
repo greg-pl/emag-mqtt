@@ -5,13 +5,19 @@
  *      Author: Grzegorz
  */
 
+
 #include "SPS30.h"
+
+#if (DEV_DUST_SPS30)
+
 #include "utils.h"
 #include "ShellItem.h"
 #include "Hal.h"
 #include "Token.h"
 
 #include <string.h>
+
+
 
 
 //kody błędów zwracane przez SPS30
@@ -434,3 +440,6 @@ const ShellItemFx menuDustSPS30Fx[] = { //
 void SPS30::shell(OutStream *strm, const char *cmd) {
 	execMenuCmd(strm, menuDustSPS30Fx, cmd, this, "Dust sensor SPS30 Menu");
 }
+
+#endif
+

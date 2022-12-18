@@ -102,7 +102,6 @@ public:
 		SIGNAL_MSG = 0x02, //
 	};
 private:
-	static ShellTask *Me;
 	ShellConnection *myConnection;
 	EscTerminal *term;
 
@@ -128,6 +127,7 @@ protected:
 	virtual void ThreadFunc();
 
 public:
+	static ShellTask *Me;
 	ShellTask();
 	void showStat(OutStream *strm);
 

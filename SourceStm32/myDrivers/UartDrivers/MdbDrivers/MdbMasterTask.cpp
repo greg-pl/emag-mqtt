@@ -135,6 +135,9 @@ float MdbDev::GetFloat(const uint8_t *p) {
 uint8_t MdbDev::getMdbNr() {
 	return mMdb->mMdbNr;
 }
+int MdbDev::getDbgLevel() {
+	return mMdb->mDbgLevel;
+}
 
 uint32_t MdbDev::getSentTick() {
 	return mMdb->state.sent.tick;

@@ -6,6 +6,10 @@
  */
 
 #include <DustSensorBase.h>
+
+#if (DEV_DUST_INTERN)
+
+
 #include <math.h>
 #include <config.h>
 
@@ -36,8 +40,10 @@ bool DustSensorBase::isAnyConfiguredData() {
 	q |= config->data.R.sensExist[ssPM1_0];
 	q |= config->data.R.sensExist[ssPM2_5];
 	q |= config->data.R.sensExist[ssPM10];
+#if(SENSOR_CH_SO)
 	if (isFormaldehyde())
 		q |= config->data.R.sensExist[ssCh2o];
+#endif
 	return q;
 }
 
@@ -58,12 +64,14 @@ bool DustSensorBase::getMeasValue(MeasType measType, float *val) {
 		case ssPM10:
 			*val = exportDt.filterPM10.get();
 			break;
+#if(SENSOR_CH_SO)
 		case ssCh2o:
 			if (isFormaldehyde())
 				*val = exportDt.filterFormaldehyde.get();
 			else
 				ret = false;
 			break;
+#endif
 		default:
 			ret = false;
 			break;
@@ -113,3 +121,5 @@ HAL_StatusTypeDef DustSensorNull::Init(SignaledClass *signObj) {
 }
 void DustSensorNull::tick() {
 }
+
+#endif

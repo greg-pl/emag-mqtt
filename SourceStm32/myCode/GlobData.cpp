@@ -22,12 +22,14 @@
 extern Bg96Driver *bg96;
 extern SHT35Device *sht35;
 extern Bmp338Device *bmp338;
-extern DustSensorBase *dustInternSensor;
-extern ExtDustsensor *dustExternSensor;
+
 extern MdbMasterTask *mdbMaster_1;
 extern MdbMasterTask *mdbMaster_2;
 extern GasS873 *gasS873;
+
+#if (SENSOR_NOISE)
 extern NoiseDetector *noiseDet;
+#endif
 
 GlobDtRec GlobData::dt;
 osMutexId GlobData::mGlobMutex = NULL;
@@ -84,7 +86,9 @@ const CpxDescr GlobDataDscr[] = { //
 				{ ctype : cpxINT, ofs: offsetof(GlobDtRec, pktNr), Name : "pktNr", size:sizeof(GlobDtRec::pktNr) }, //
 				{ ctype : cpxTIME, ofs: offsetof(GlobDtRec, time), Name : "time", size:sizeof(GlobDtRec::time) }, //
 				//{ ctype : cpxSTR, ofs: offsetof(GlobDtRec, komoraSt), Name : "status_komora", size:sizeof(GlobDtRec::komoraSt) }, //
+#if (TEMP_NTC)
 				{ ctype : cpxFLOAT, ofs: offsetof(GlobDtRec, tempNTC), Name : "TempNTC", size:sizeof(GlobDtRec::tempNTC) }, //
+#endif
 				{ ctype : cpxSTR, ofs: offsetof(GlobDtRec, hsn), Name : "hsn", size:sizeof(GlobDtRec::hsn) }, //
 				{ ctype : cpxCHILD, ofs: offsetof(GlobDtRec, sensorDt), Name : "sensors", size:(sizeof(GlobDtRec::sensorDt) / sizeof(SensorDt)), exPtr :&sensorGroupInfo }, //
 				{ ctype : cpxNULL } };
@@ -101,16 +105,22 @@ const SensorName sensorNameTab[] = { //
 				{ ssTEMPERATURE, "temperature", "*C", "%.2f" }, //
 				{ ssHUMIDITY, "humidity", "%", "%.2f" }, //
 				{ ssPRESSURE, "pressure", "kPa", "%.1f" }, //
+#if (SENSOR_DUST)
 				{ ssPM1_0, "pm1", "ug/m3", "%.1f" }, //
 				{ ssPM2_5, "pm2.5", "ug/m3", "%.1f" }, //
 				{ ssPM10, "pm10", "ug/m3", "%.1f" }, //
+#endif
 				{ ssNO2, "no2", "xx", "%.2f" }, //
 				{ ssO3, "o3", "xx", "%.2f" }, //
 				{ ssCO, "co", "ppb", "%.0f" }, //
 				{ ssCO2, "co2", "ppm", "%.0f" }, //
 				{ ssSO2, "so2", "xx", "%.2f" }, //
+#if(SENSOR_CH_SO)
 				{ ssCh2o, "ch2o", "xx", "%.2f" }, //
+#endif
+#if (SENSOR_NOISE)
 				{ ssNOISE, "noise", "dB", "%.1f" } //
+#endif
 		};
 
 const char* GlobData::GetMeasName(MeasType meas) {
@@ -184,12 +194,15 @@ void GlobData::FillMeas(float *tab) {
 
 	tab[ssHUMIDITY] = humidity;
 	tab[ssPRESSURE] = pressure;
-
+#if (SENSOR_DUST)
 	UniDev *dustDev = getDustSensor();
 	dustDev->getMeasValue(ssPM1_0, &tab[ssPM1_0]);
 	dustDev->getMeasValue(ssPM2_5, &tab[ssPM2_5]);
 	dustDev->getMeasValue(ssPM10, &tab[ssPM10]);
+#endif
+#if(SENSOR_CH_SO)
 	dustDev->getMeasValue(ssCh2o, &tab[ssCh2o]);
+#endif
 
 	if (mdbMaster_2 != NULL) {
 		//gas
@@ -200,10 +213,11 @@ void GlobData::FillMeas(float *tab) {
 		gasS873->getMeasValue(ssSO2, &tab[ssSO2]);
 	}
 
-	//noise
+#if (SENSOR_NOISE)
 	if (noiseDet != NULL) {
 		noiseDet->getMeasValue(ssNOISE, &tab[ssNOISE]);
 	}
+#endif
 
 }
 
@@ -238,7 +252,9 @@ void GlobData::Fill() {
 		dt.pktNr = bg96->state.mqtt.mSendMsgID;
 		Rtc::ReadTime(&dt.time);
 		gasS873->getDeviceStatusTxt(dt.komoraSt, sizeof(dt.komoraSt));
+#if (TEMP_NTC)
 		dt.tempNTC = NTC::temp;
+#endif
 		strncpy(dt.hsn, config->data.R.dev.SerialNr, sizeof(dt.hsn));
 
 		//pobranie danych pomiarowych
@@ -247,9 +263,20 @@ void GlobData::Fill() {
 		int k = 0;
 		for (int i = 0; i < SENSOR_CNT; i++) {
 			bool exist = config->data.R.sensExist[i];
+#if(SENSOR_CH_SO)
 			if (i == ssCh2o) { //Formaldehyde
-				exist &= ((config->data.R.dev.dustInpType == dust_Intern) && (config->data.R.dev.dustSensorType == dustT_PMS5003ST));
+#if (DEV_DUST_INT_EXT)
+				exist &= ((config->data.R.dev.dustInpType == dust_Intern) && (config->data.R.dev.dustSensorIntType == dustT_PMS5003ST));
+#else
+#if (DEV_DUST_INTERN_TYP)
+				exist &= (config->data.R.dev.dustSensorIntType == dustT_PMS5003ST);
+#else
+
+#endif
+
+#endif
 			}
+#endif //SENSOR_CH_SO
 
 			if (exist) {
 				dt.sensorDt[k].measType = (MeasType) i;
@@ -321,14 +348,24 @@ int GlobData::buildExportJson() {
 		return -1;
 }
 
+#if (SENSOR_DUST)
 UniDev* GlobData::getDustSensor() {
+#if (DEV_DUST_INT_EXT)
 	if (config->data.R.dev.dustInpType == dust_Intern) {
 		return dustInternSensor;
 	} else {
 		return dustExternSensor;
 	}
+#else
+#if (DEV_DUST_INTERN)
+	return dustInternSensor;
+#else
+	return dustExternSensor;
+#endif
 
+#endif
 }
+#endif
 
 /*
  {

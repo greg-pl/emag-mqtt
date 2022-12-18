@@ -65,7 +65,7 @@ UART_HandleTypeDef huart3;
 
 osThreadId defaultTaskHandle;
 /* USER CODE BEGIN PV */
-
+#if 0
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -86,6 +86,12 @@ static void MX_RTC_Init(void);
 void StartDefaultTask(void const * argument);
 
 /* USER CODE BEGIN PFP */
+#endif
+void SystemClock_Config(void);
+static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
+static void MX_I2C3_Init(void);
+static void MX_ADC1_Init(void);
 
 /* USER CODE END PFP */
 
@@ -149,7 +155,7 @@ int main(void)
 // przeskok do uMain
 //------------------------------------------------------------------------------
 	uMainCont();
-
+#if 0
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
@@ -206,7 +212,9 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	}
-  /* USER CODE END 3 */
+#endif
+
+/* USER CODE END 3 */
 }
 
 /**
@@ -307,7 +315,7 @@ static void MX_ADC1_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN ADC1_Init 2 */
-
+#if 0
   /* USER CODE END ADC1_Init 2 */
 
 }
@@ -353,7 +361,7 @@ static void MX_I2C1_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN I2C1_Init 2 */
-
+#endif
   /* USER CODE END I2C1_Init 2 */
 
 }
@@ -399,9 +407,8 @@ static void MX_I2C3_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN I2C3_Init 2 */
-
+#if 0
   /* USER CODE END I2C3_Init 2 */
-
 }
 
 /**
@@ -671,6 +678,7 @@ static void MX_USART3_UART_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN USART3_Init 2 */
+#endif
 
   /* USER CODE END USART3_Init 2 */
 

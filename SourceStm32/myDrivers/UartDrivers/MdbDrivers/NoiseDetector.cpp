@@ -7,6 +7,8 @@
 
 #include <NoiseDetector.h>
 
+#if (SENSOR_NOISE)
+
 #include "utils.h"
 #include "main.h"
 #include "UMain.h"
@@ -173,3 +175,4 @@ void NoiseDetector::shell(OutStream *strm, const char *cmd) {
 	execMenuCmd(strm, menuNoiseFx, cmd, this, "Noise sensor Menu");
 }
 
+#endif

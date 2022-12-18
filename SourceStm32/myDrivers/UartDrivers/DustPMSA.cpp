@@ -4,10 +4,14 @@
  *  Created on: Dec 7, 2020
  *      Author: Grzegorz
  */
+
+#include "DustPMSA.h"
+
+#if (DEV_DUST_PMSA || DEV_DUST_PMS5003ST)
+
 #include <string.h>
 #include <math.h>
 
-#include "DustPMSA.h"
 #include "utils.h"
 #include "ShellItem.h"
 #include "Hal.h"
@@ -411,3 +415,4 @@ void DustPMSA::shell(OutStream *strm, const char *cmd) {
 	execMenuCmd(strm, menuDustFx, cmd, this, "Dust sensor PMSA Menu");
 }
 
+#endif

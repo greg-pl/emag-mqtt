@@ -12,6 +12,8 @@
 #include "myDef.h"
 #include "cpx.h"
 #include "CxString.h"
+#include "ProjectConfig.h"
+
 
 #define CFG_REC_SIZE 0x800
 #define CFG_REC_SIZE_4 (CFG_REC_SIZE/4)
@@ -35,31 +37,41 @@ typedef enum {
 	ssTEMPERATURE, //
 	ssHUMIDITY, //
 	ssPRESSURE, //
+#if (SENSOR_DUST)
 	ssPM1_0, //
 	ssPM2_5, //
 	ssPM10, //
+#endif
 	ssNO2, //
 	ssO3, //
 	ssCO, //8
 	ssCO2, //8
 	ssSO2, //9
+#if(SENSOR_CH_SO)
 	ssCh2o, //10
+#endif
+#if (SENSOR_NOISE)
 	ssNOISE, //11
+#endif
 	SENSOR_CNT
 } MeasType;
 
 
+#if (DEV_DUST_INTERN)
 typedef enum {
 	dustT_SPS30 = 0,  //Siemens
-	dustT_HPMA,  	//Honeywell
 	dustT_PMSA,  	//Chińczyk
 	dustT_PMS5003ST,  	//Chińczyk z Formaldehyde
+	dustT_Cnt
 } DustSensorType;
+#endif
 
+#if (DEV_DUST_INT_EXT)
 typedef enum {
 	dust_Intern = 0, //
 	dust_Extern, //
 } DustInpType;
+#endif
 
 typedef enum {
 	gpsOFF = 0, //
@@ -67,7 +79,7 @@ typedef enum {
 	gpsRUN
 } GpsMode;
 
-
+#if (LED_MATRIX)
 typedef union {
 	char buf[0x30];
 	struct {
@@ -78,7 +90,9 @@ typedef union {
 		int lightLevel; //pozion jasności świecenia panelu
 	};
 } LedMatrixCfg;
+#endif
 
+#if (HEATER)
 typedef union {
 	char buf[0x30];
 	struct {
@@ -93,6 +107,7 @@ typedef union {
 		float humidityOFF;
 	};
 } HeaterCfg;
+#endif
 
 typedef union {
 	char mqttBuf[0x200];
@@ -125,8 +140,13 @@ typedef union {
 		int timeZoneShift;
 		float gpsLatitude;
 		float gpsLongitude;
-		uint8_t dustSensorType;
+#if (DEV_DUST_INTERN_TYP)
+		uint8_t dustSensorIntType;
+#endif
+
+#if (DEV_DUST_INT_EXT)
 		uint8_t dustInpType;
+#endif
 		bool pcbLedOff; // czy wyłaczyć diodę LED na PCB
 	};
 } DevCfg;
@@ -154,10 +174,12 @@ typedef union {
 	};
 } Bg96Cfg;
 
+#if (ETHERNET)
 typedef union {
 	char buf[0x20];
 	TcpInterfDef tcp;
 } TcpCfg;
+#endif
 
 typedef union{
 	char buf[0x100];
@@ -170,12 +192,12 @@ typedef union{
 		int gasFiltrType; // 0-OFF, 1-FIR,  2-IR
 		int filtrFIRLength;
 		float filtrIRConst;
+#if(SENSOR_NOISE)
 		int noiseFiltrType; // 0-OFF, 1-FIR,  2-IR
 		int noiseFiltrFIRLength;
 		float noiseFiltrIRConst;
-
+#endif
 	};
-
 } RestCfg;
 
 
@@ -200,11 +222,17 @@ typedef union __PACKED {
 				uint16_t size;
 				uint16_t free;
 				DevCfg dev;
+#if (ETHERNET)
 				TcpCfg tcp;
+#endif
 				Bg96Cfg bg96;
 				MqttCfg mqtt;
+#if (LED_MATRIX)
 				LedMatrixCfg ledMatrix;
+#endif
+#if (HEATER)
 				HeaterCfg heater;
+#endif
 				bool sensExist[SENSOR_CNT];
 				RestCfg rest;
 			} R;

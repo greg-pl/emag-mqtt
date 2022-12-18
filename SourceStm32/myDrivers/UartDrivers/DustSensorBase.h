@@ -8,11 +8,14 @@
 #ifndef DUSTSENSORBASE_H_
 #define DUSTSENSORBASE_H_
 
+#include "ProjectConfig.h"
+
+#if (DEV_DUST_INTERN)
+
 #include <IOStream.h>
 #include "stm32f4xx_hal.h"
 #include "utils.h"
 #include "UniDev.h"
-
 
 
 class DustSensorBase : public UniDev{
@@ -31,9 +34,11 @@ protected:
 		DtFilter filterPM10;
 		DtFilter filterFormaldehyde;
 	} exportDt;
+#if(SENSOR_CH_SO)
 	virtual bool isFormaldehyde(){
 		return false;
 	}
+#endif
 public:
 	virtual void StartMeas()=0;
 	virtual void StopMeas()=0;
@@ -64,5 +69,7 @@ public:
 	virtual bool isDataError();
 	virtual bool isAnyConfiguredData();
 };
+
+#endif
 
 #endif /* DUSTSENSORBASE_H_ */

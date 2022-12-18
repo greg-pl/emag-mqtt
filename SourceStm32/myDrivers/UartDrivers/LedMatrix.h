@@ -8,8 +8,11 @@
 #ifndef LEDMATRIX_H_
 #define LEDMATRIX_H_
 
+#if (LED_MATRIX)
+
 #include <uart.h>
 #include <IOStream.h>
+
 
 class LedMatrix: public TUart {
 private:
@@ -97,5 +100,7 @@ public:
 	void tick();
 	void shell(OutStream *strm, const char *cmd);
 };
+
+#endif
 
 #endif /* LEDMATRIX_H_ */

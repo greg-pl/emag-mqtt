@@ -8,6 +8,10 @@
 #ifndef SPS30_H_
 #define SPS30_H_
 
+#include "ProjectConfig.h"
+
+#if (DEV_DUST_SPS30)
+
 #include <DustSensorBase.h>
 #include <uart.h>
 #include <ErrorDef.h>
@@ -134,5 +138,7 @@ public:
 	//virtual void getDeviceStatusTxt(char *txt, int max);
 
 };
+
+#endif
 
 #endif /* SPS30_H_ */

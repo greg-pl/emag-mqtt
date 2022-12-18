@@ -31,6 +31,7 @@
 #include "myDef.h"
 #include "netif.h"
 #include "dns.h"
+#include "Projectconfig.h"
 
 
 /* USER CODE END 0 */
@@ -39,7 +40,9 @@
 void Error_Handler(void);
 
 /* USER CODE BEGIN 1 */
+#if (ETHERNET)
 extern const TcpInterfDef* getTcpDef();
+#endif
 
 /* USER CODE END 1 */
 /* Semaphore to signal Ethernet Link state update */
@@ -54,6 +57,8 @@ ip4_addr_t netmask;
 ip4_addr_t gw;
 
 /* USER CODE BEGIN 2 */
+
+#if (ETHERNET)
 
 void setStatusNetIf(netif_status_callback_fn status_callback) {
 	netif_set_status_callback(&gnetif, status_callback);
@@ -114,6 +119,7 @@ void reconfigNet(void) {
 			dhcp_start(&gnetif);
 	}
 }
+#endif
 
 /* USER CODE END 2 */
 
@@ -166,9 +172,10 @@ void MX_LWIP_Init(void)
   dhcp_start(&gnetif);
 
 /* USER CODE BEGIN 3 */
-
+#if (ETHERNET)
 	reconfigNet();
 	dns_init();
+#endif
 
 /* USER CODE END 3 */
 }

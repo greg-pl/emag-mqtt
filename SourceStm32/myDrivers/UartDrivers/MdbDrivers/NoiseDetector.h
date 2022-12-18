@@ -10,6 +10,8 @@
 
 #include <MdbMasterTask.h>
 
+#if (SENSOR_NOISE)
+
 class NoiseDetector: public MdbDev {
 private:
 
@@ -57,5 +59,6 @@ public:
 
 };
 
+#endif
 
 #endif /* NOISEDETECTOR_H_ */

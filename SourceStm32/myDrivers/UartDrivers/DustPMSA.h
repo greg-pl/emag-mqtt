@@ -8,6 +8,10 @@
 #ifndef DUSTPMSA_H_
 #define DUSTPMSA_H_
 
+#include "ProjectConfig.h"
+
+#if (DEV_DUST_PMSA || DEV_DUST_PMS5003ST)
+
 #include <DustSensorBase.h>
 #include <uart.h>
 #include "cmsis_os.h"
@@ -112,10 +116,11 @@ protected:
 	virtual void TxCpltCallback();
 	virtual void RxCpltCallback();
 	virtual void ErrorCallback();
+#if(SENSOR_CH_SO)
 	virtual bool isFormaldehyde(){
-		return true;
+		return mFormaldehydeExist;
 	}
-
+#endif
 public:
 	DustPMSA(bool formal_exist);
 
@@ -138,5 +143,7 @@ public:
 	virtual void tick();
 
 };
+
+#endif
 
 #endif /* DUSTPMSA_H_ */

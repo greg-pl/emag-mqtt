@@ -25,11 +25,13 @@ extern IWDG_HandleTypeDef hiwdg;
 
 //export do jezyka C
 
+#if (ETHERNET)
 extern "C" const TcpInterfDef* getTcpDef() {
 	static TcpInterfDef def;
 	memcpy(&def, &config->data.R.tcp, sizeof(def));
 	return &def;
 }
+#endif
 
 #define  CFG_SIGN  0x2367A3B7
 #define  CFG_SIGN_P  0x2367A3B2
@@ -56,16 +58,23 @@ const CpxDescr SensorOnOffDscr[] = { //
 		{ ctype : cpxBOOL, id:1, ofs: ssTEMPERATURE, Name : "existSensTemper", size : sizeof(bool) }, //
 				{ ctype : cpxBOOL, id:2, ofs: ssHUMIDITY, Name : "existSensHumidity", size: sizeof(bool) }, //
 				{ ctype : cpxBOOL, id:3, ofs: ssPRESSURE, Name : "existSensPressure", size: sizeof(bool) }, //
+#if(SENSOR_DUST)
 				{ ctype : cpxBOOL, id:4, ofs: ssPM1_0, Name : "existSensPM1_0", size: sizeof(bool) }, //
 				{ ctype : cpxBOOL, id:5, ofs: ssPM2_5, Name : "existSensPM2_5", size: sizeof(bool) }, //
 				{ ctype : cpxBOOL, id:6, ofs: ssPM10, Name : "existSensPM10", size : sizeof(bool) }, //
+#endif
 				{ ctype : cpxBOOL, id:7, ofs: ssNO2, Name : "existSensNO2", size: sizeof(bool) }, //
 				{ ctype : cpxBOOL, id:8, ofs: ssO3, Name : "existSensO3", size: sizeof(bool) }, //
 				{ ctype : cpxBOOL, id:9, ofs: ssCO, Name : "existSensCO", size: sizeof(bool) }, //
 				{ ctype : cpxBOOL, id:10, ofs: ssCO2, Name : "existSensCO2", size: sizeof(bool) }, //
 				{ ctype : cpxBOOL, id:11, ofs: ssSO2, Name : "existSensSO2", size: sizeof(bool) }, //
+#if(SENSOR_CH_SO)
 				{ ctype : cpxBOOL, id:12, ofs: ssCh2o, Name : "existSensCH2O", size: sizeof(bool) }, //
+#endif
+#if (SENSOR_NOISE)
+
 				{ ctype : cpxBOOL, id:13, ofs: ssNOISE, Name : "existSensNoise", size: sizeof(bool) }, //
+#endif
 				{ ctype : cpxNULL } };
 
 const CpxChildInfo sensorOnOffGroup = { //
@@ -73,7 +82,7 @@ const CpxChildInfo sensorOnOffGroup = { //
 				itemSize : sizeof(CfgRec::R.sensExist), //
 				defs: SensorOnOffDscr, //
 		};
-
+#if (LED_MATRIX)
 const CpxDescr LedMatrixDescr[] = { //
 
 		{ ctype : cpxBOOL, id:1, ofs: offsetof(LedMatrixCfg, run), Name : "run", size : sizeof(LedMatrixCfg::run) }, //
@@ -92,6 +101,9 @@ const CpxChildInfo ledMatrixGroup = { //
 				itemSize : sizeof(LedMatrixCfg), //
 				defs: LedMatrixDescr, //
 		};
+#endif
+
+#if (HEATER)
 
 const CpxDescr HeaterDescr[] = { //
 
@@ -111,6 +123,7 @@ const CpxChildInfo heaterGroup = { //
 				itemSize : sizeof(HeaterCfg), //
 				defs: HeaterDescr, //
 		};
+#endif
 
 const CpxDescr MqttDescr[] = { //
 		{ ctype : cpxBOOL, id:1, ofs: offsetof(MqttCfg, autoOpenMqttSvr), Name : "AutoOpenSvr", size : sizeof(MqttCfg::autoOpenMqttSvr) }, //
@@ -144,8 +157,12 @@ const CpxDescr DevInfoDescr[] = { //
 				{ ctype : cpxINT, id:3, ofs: offsetof(DevCfg, timeZoneShift), Name : "TimeZoneShift", size : sizeof(DevCfg::timeZoneShift) }, //
 				{ ctype : cpxFLOAT, id:4, ofs: offsetof(DevCfg, gpsLatitude), Name : "GpsLatitude", size : sizeof(DevCfg::gpsLatitude), exPtr :(const void*) &floatGpsLatitudeDef }, //
 				{ ctype : cpxFLOAT, id:5, ofs: offsetof(DevCfg, gpsLongitude), Name : "GpsLongitude", size : sizeof(DevCfg::gpsLongitude), exPtr :(const void*) &floatGpsLongitudeDef }, //
+#if (DEV_DUST_INTERN_TYP)
+				{ ctype : cpxBYTE, id:7, ofs: offsetof(DevCfg, dustSensorIntType), Name : "DustSensorType" }, //
+#endif
+#if (DEV_DUST_INT_EXT)
 				{ ctype : cpxBYTE, id:6, ofs: offsetof(DevCfg, dustInpType), Name : "DustInpType" }, //
-				{ ctype : cpxBYTE, id:7, ofs: offsetof(DevCfg, dustSensorType), Name : "DustSensorType" }, //
+#endif
 				{ ctype : cpxBOOL, id:8, ofs: offsetof(DevCfg, pcbLedOff), Name : "PcbLedOff", size: sizeof(DevCfg::pcbLedOff) }, //
 
 				{ ctype : cpxNULL } };
@@ -156,6 +173,7 @@ const CpxChildInfo devInfoGroup = { //
 				defs: DevInfoDescr, //
 		};
 
+#if (ETHERNET)
 const CpxDescr TcpDescr[] = { //
 		{ ctype : cpxBYTE, id:1, ofs: offsetof(TcpInterfDef, dhcp), Name : "dhcp", size: sizeof(TcpInterfDef::dhcp) }, //
 				{ ctype : cpxIP, id:2, ofs: offsetof(TcpInterfDef, ip), Name : "ip", size: sizeof(TcpInterfDef::ip) }, //
@@ -171,6 +189,7 @@ const CpxChildInfo tcpGroup = { //
 				itemSize : sizeof(TcpCfg), //
 				defs: TcpDescr, //
 		};
+#endif
 
 const CpxDescr BgDescr[] = { //
 		{ ctype : cpxBOOL, id:1, ofs: offsetof(Bg96Cfg, autoStart), Name : "AutoStart", size: sizeof(Bg96Cfg::autoStart) }, //
@@ -201,9 +220,11 @@ const CpxDescr RestCfgDescr[] = { //
 				{ ctype : cpxINT, id:6, ofs: offsetof(RestCfg, gasFiltrType), Name : "GasFiltrType", size : sizeof(RestCfg::gasFiltrType) }, //
 				{ ctype : cpxINT, id:7, ofs: offsetof(RestCfg, filtrFIRLength), Name : "GasFiltrFIRLength", size : sizeof(RestCfg::filtrFIRLength) }, //
 				{ ctype : cpxFLOAT, id:8, ofs: offsetof(RestCfg, filtrIRConst), Name : "GasFiltrIRConst", size : sizeof(RestCfg::filtrIRConst) }, //
+#if(SENSOR_NOISE)
 				{ ctype : cpxINT, id:9, ofs: offsetof(RestCfg, noiseFiltrType), Name : "NoiseFiltrType", size : sizeof(RestCfg::noiseFiltrType) }, //
 				{ ctype : cpxINT, id:10, ofs: offsetof(RestCfg, noiseFiltrFIRLength), Name : "NoiseFiltrFIRLength", size : sizeof(RestCfg::noiseFiltrFIRLength) }, //
 				{ ctype : cpxFLOAT, id:11, ofs: offsetof(RestCfg, noiseFiltrIRConst), Name : "NoiseFiltrIRConst", size : sizeof(RestCfg::noiseFiltrIRConst) }, //
+#endif
 				{ ctype : cpxNULL } };
 
 const CpxChildInfo restCfgGroup = { //
@@ -216,7 +237,9 @@ const CpxDescr ConfigDscr[] = { //
 		//dev
 				{ ctype : cpxCHILD, id:1, ofs: offsetof(CfgRec, R.dev), Name : "dev", 1, exPtr :&devInfoGroup }, //
 				//tcp
+#if (ETHERNET)
 				{ ctype : cpxCHILD, id:2, ofs: offsetof(CfgRec, R.tcp), Name : "tcp", 1, exPtr :&tcpGroup }, //
+#endif
 				//bg
 				{ ctype : cpxCHILD, id:3, ofs: offsetof(CfgRec, R.bg96), Name : "bg", 1, exPtr :&bgGroup }, //
 				//mqtt
@@ -225,10 +248,12 @@ const CpxDescr ConfigDscr[] = { //
 				{ ctype : cpxCHILD, id:5, ofs: offsetof(CfgRec, R.rest), Name : "ex", 1, exPtr :&restCfgGroup }, //
 				//sensors
 				{ ctype : cpxCHILD, id:6, ofs: offsetof(CfgRec, R.sensExist), Name : "tab", 1, exPtr :&sensorOnOffGroup }, //
-				//heater
+#if (HEATER)
 				{ ctype : cpxCHILD, id:7, ofs: offsetof(CfgRec, R.heater), Name : "heater", 1, exPtr :&heaterGroup }, //
-				//LedMatrix
+#endif
+#if (LED_MATRIX)
 				{ ctype : cpxCHILD, id:8, ofs: offsetof(CfgRec, R.ledMatrix), Name : "led_matrix", 1, exPtr :&ledMatrixGroup }, //
+#endif
 				{ ctype : cpxNULL }
 
 		};
@@ -391,7 +416,7 @@ bool Config::Korekt() {
 		r = true;
 	}
 
-	//NOISE
+#if(SENSOR_NOISE)
 	if (data.R.rest.noiseFiltrType < 0 || data.R.rest.noiseFiltrType >= 3) {
 		data.R.rest.noiseFiltrType = 0;
 		r = true;
@@ -406,7 +431,9 @@ bool Config::Korekt() {
 		data.R.rest.filtrIRConst = 0.05;
 		r = true;
 	}
+#endif
 
+#if (HEATER)
 	if (checkRange(data.R.heater.humidityON, 0.0, 100.0)) {
 		data.R.heater.humidityON = 75;
 		r = true;
@@ -436,6 +463,7 @@ bool Config::Korekt() {
 		data.R.heater.tempOFF = 10;
 		r = true;
 	}
+#endif
 
 	if (data.R.rest.gasDevMdbNr == 0) {
 		data.R.rest.gasDevMdbNr = 73;
@@ -446,10 +474,18 @@ bool Config::Korekt() {
 		r = true;
 	}
 
+#if (DEV_DUST_INT_EXT)
 	if (data.R.dev.dustInpType != dust_Intern && data.R.dev.dustInpType != dust_Extern) {
 		data.R.dev.dustInpType = dust_Intern;
 		r = true;
 	}
+#endif
+
+#if (DEV_DUST_INTERN_TYP)
+	if (data.R.dev.dustSensorIntType >= dustT_Cnt) {
+		data.R.dev.dustSensorIntType = dustT_SPS30;
+	}
+#endif
 
 	if (data.R.sensExist[ssUNKNOWN]) {
 		data.R.sensExist[ssUNKNOWN] = 0;
@@ -463,8 +499,14 @@ void Config::Default() {
 	memset(&data, 0, sizeof(data));
 	strcpy(data.R.dev.SerialNr, "W00001");
 	data.R.dev.timeZoneShift = 1;
-	data.R.dev.dustSensorType = dustT_SPS30;
+#if (DEV_DUST_INTERN_TYP)
+	data.R.dev.dustSensorIntType = dustT_SPS30;
+#endif
+#if (DEV_DUST_INT_EXT)
 	data.R.dev.dustInpType = dust_Intern;
+#endif
+	data.R.dev.gpsLatitude = 0;
+	data.R.dev.gpsLongitude = 0;
 
 	strcpy(data.R.bg96.SimPin, "");
 	strcpy(data.R.bg96.ApnName, "playmetric");
@@ -472,8 +514,7 @@ void Config::Default() {
 	data.R.bg96.rssiRefreshTime = 60;
 	data.R.bg96.gps.refreshTime = 30;
 	data.R.bg96.gps.Mode = 1;
-	strcpy(data.R.bg96.BgEcho, "1114");
-
+	strcpy(data.R.bg96.BgEcho, "0000");  //1114
 	strcpy(data.R.bg96.ntp.SvrName, "pool.ntp.org");
 	data.R.bg96.ntp.WaitTime = 5000;
 	data.R.bg96.ntp.RefreshTime = 600;
@@ -495,18 +536,15 @@ void Config::Default() {
 	data.R.mqtt.retain = 1;
 	data.R.mqtt.qos = 1;
 
-	data.R.dev.gpsLatitude = 0;
-	data.R.dev.gpsLongitude = 0;
 	data.R.rest.gasDevMdbNr = 73;
 	data.R.rest.dustDevMdbNr = 73;
 	data.R.rest.mdb1dbgLevel = 0;
 	data.R.rest.mdb2dbgLevel = 0;
 	data.R.rest.mdb3dbgLevel = 0;
-
 	data.R.rest.gasFiltrType = 0;
 	data.R.rest.filtrFIRLength = 120;
 	data.R.rest.filtrIRConst = 0.05;
-
+#if (HEATER)
 	data.R.heater.useNTCtemp = true;
 	data.R.heater.runExternal = 0;
 	data.R.heater.runInternal = 1;
@@ -516,16 +554,10 @@ void Config::Default() {
 	data.R.heater.humidityON = 99;
 	data.R.heater.humidityOFF = 50;
 	data.R.heater.humidityEnab = false;
-
-	data.R.sensExist[ssTEMPERATURE] = 1;
-	data.R.sensExist[ssHUMIDITY] = 1;
-	data.R.sensExist[ssPRESSURE] = 1;
-	data.R.sensExist[ssPM1_0] = 1;
-	data.R.sensExist[ssPM2_5] = 1;
-	data.R.sensExist[ssPM10] = 1;
-	data.R.sensExist[ssNO2] = 0;
-	data.R.sensExist[ssO3] = 0;
-
+#endif
+	for (int i = 1; i < SENSOR_CNT; i++)
+		data.R.sensExist[i] = 1;
+#if (LED_MATRIX)
 	data.R.ledMatrix.limitTab[0] = 13;
 	data.R.ledMatrix.limitTab[1] = 35;
 	data.R.ledMatrix.limitTab[2] = 55;
@@ -534,7 +566,7 @@ void Config::Default() {
 	data.R.ledMatrix.run = true;
 	data.R.ledMatrix.autoSend = true;
 	data.R.ledMatrix.histereza = 2;
-
+#endif
 	saveRtc();
 }
 
@@ -699,7 +731,7 @@ void Config::funHelp(OutStream *strm, const char *cmd, void *arg) {
 }
 
 const ShellItemFx menuCfgFx[] = { //
-		{ "list", "pokaż ustawienia, parametr [ |rtc|flash]", Config::funList }, //
+		{ "list", "[F8] pokaż ustawienia, parametr [ |rtc|flash]", Config::funList }, //
 				{ "listk", "pokaż ustawienia, parametr [ |rtc|flash]", Config::funListK }, //
 				{ "set", "ustaw wartość", Config::funSet }, //
 				{ "default", "wartości domyślne", Config::funDefault }, //

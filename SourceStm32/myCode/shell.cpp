@@ -33,17 +33,12 @@
 #include <stdarg.h>
 
 extern Bg96Driver *bg96;
-extern DustSensorBase *dustInternSensor;
-extern ExtDustsensor *dustExternSensor;
 extern MdbMasterTask *mdbMaster_1;
 extern MdbMasterTask *mdbMaster_2;
 extern SHT35Device *sht35;
 extern Bmp338Device *bmp338;
-extern LedMatrix *ledMatrix;
 extern I2cBus *i2cBus1;
 extern GasS873 *gasS873;
-extern NoiseDetector *noiseDet;
-extern ShellTask *shellTask;
 
 //-------------------------------------------------------------------------------------------------------------------------
 // ShellConnection
@@ -246,12 +241,14 @@ ShellTask::ShellTask() :
 
 	ST3 pin0 = Hdw::getPinCfg0();
 
+#if (LED_MATRIX)
 	// jeśli załaczona obsługa LedMatrix to nie może być obsługi shell na UART4
 	if (config->data.R.ledMatrix.run) {
 		if (pin0 == posGND) {
 			pin0 = posFREE;
 		}
 	}
+#endif
 
 	switch (pin0) {
 	default:
@@ -358,6 +355,7 @@ void ShellTask::execAltChar(char altChar) {
 extern const ShellItemFx mainMenuFx[];
 static void funShowState(OutStream *strm, const char *cmd, void *arg);
 static void funShowHardware(OutStream *strm, const char *cmd, void *arg);
+static void funJGlobData(OutStream *strm, const char *cmd, void *arg);
 
 void ShellTask::execCmdLineEx(const char *cmd) {
 	char txt[100];
@@ -376,6 +374,12 @@ void ShellTask::execFunKey(FunKey funKey) {
 	case fnF2:
 		funShowState(this, NULL, NULL);
 		break;
+	case fnF4:
+		funJGlobData(this, NULL, NULL);
+		break;
+	case fnF8:
+		Config::funList(this, NULL, config);
+		break;
 	case fnF3:
 		funShowHardware(this, NULL, NULL);
 		break;
@@ -384,8 +388,8 @@ void ShellTask::execFunKey(FunKey funKey) {
 }
 
 void ShellTask::showStat(OutStream *strm) {
-	strm->oMsg("Term no semafor :%u", shellTask->mNoTermSmfCnt);
-	strm->oMsg("Term full TX buf:%u", shellTask->mFullTxCnt);
+	strm->oMsg("Term no semafor :%u", mNoTermSmfCnt);
+	strm->oMsg("Term full TX buf:%u", mFullTxCnt);
 	strm->oMsg("RestartRxCnt    :%u", myConnection->mReStartCnt);
 }
 
@@ -401,14 +405,15 @@ static void funShowState(OutStream *strm, const char *cmd, void *arg) {
 		TimeTools::DtTmStr(buf, &mSoftVer.time);
 		strm->oMsg("Ver             :%u.%03u - %s", mSoftVer.ver, mSoftVer.rev, buf);
 		strm->oMsg("RtcInitStatus   :%s", HAL_getErrStr(Rtc::mRtcStatus));
-		if (config->data.R.dev.dustInpType == dust_Intern) {
-			strm->oMsg("DustInternSensor:%s", ErrOk(dustInternSensor->isDataError()));
-		} else {
-			strm->oMsg("DustExternSensor:%s", ErrOk(dustExternSensor->isDataError()));
-		}
+
+#if (DEV_DUST_INTERN)
+		strm->oMsg("DustInternSensor:%s", ErrOk(GlobData::getDustSensor()->isDataError()));
+#endif
+#if (SENSOR_NOISE)
 		if (noiseDet != NULL) {
 			strm->oMsg("NoiseSensor     :%s", ErrOk(noiseDet->isDataError()));
 		}
+#endif
 		if (gasS873->isAnyConfiguredData()) {
 			strm->oMsg("GasSensor       :%s", ErrOk(gasS873->isDataError()));
 		}
@@ -421,7 +426,7 @@ static void funShowState(OutStream *strm, const char *cmd, void *arg) {
 		strm->oMsg("MQTT Send       :%s", YN(bg96->isMqttSendingOk()));
 
 		strm->oMsg("-----");
-		shellTask->showStat(strm);
+		ShellTask::Me->showStat(strm);
 
 		strm->oClose();
 	}
@@ -458,6 +463,7 @@ static void funMenuTime(OutStream *strm, const char *cmd, void *arg) {
 	execMenuCmd(strm, menuTimeFx, cmd, arg, "Time Menu");
 }
 
+#if (ETHERNET)
 extern const ShellItemFx menuEthFx[];
 static void funMenuEth(OutStream *strm, const char *cmd, void *arg) {
 	execMenuCmd(strm, menuEthFx, cmd, arg, "Ethernet Menu");
@@ -467,6 +473,7 @@ extern const ShellItemFx menuNetFx[];
 static void funMenuIP(OutStream *strm, const char *cmd, void *arg) {
 	execMenuCmd(strm, menuNetFx, cmd, arg, "Net Menu");
 }
+#endif
 
 static void funMenuBG96(OutStream *strm, const char *cmd, void *arg) {
 	bg96->shell(strm, cmd);
@@ -475,19 +482,21 @@ static void funMenuBG96(OutStream *strm, const char *cmd, void *arg) {
 static void funMenuI2C(OutStream *strm, const char *cmd, void *arg) {
 	i2cBus1->shell(strm, cmd);
 }
+
+#if (DEV_DUST_INTERN)
 static void funMenuDust(OutStream *strm, const char *cmd, void *arg) {
-	if (config->data.R.dev.dustInpType == dust_Intern) {
-		dustInternSensor->shell(strm, cmd);
-	} else {
-		//dustExternSensor->shell(strm, cmd);
-	}
+	dustInternSensor->shell(strm, cmd);
 }
+#endif
+
 static void funMenuMdb1(OutStream *strm, const char *cmd, void *arg) {
 	mdbMaster_1->shell(strm, cmd);
 }
 static void funMenuMdb2(OutStream *strm, const char *cmd, void *arg) {
 	mdbMaster_2->shell(strm, cmd);
 }
+
+#if (LED_MATRIX)
 static void funMenuLedMatrix(OutStream *strm, const char *cmd, void *arg) {
 	if (ledMatrix != NULL) {
 		ledMatrix->shell(strm, cmd);
@@ -495,6 +504,7 @@ static void funMenuLedMatrix(OutStream *strm, const char *cmd, void *arg) {
 		strm->oMsgX(colRED, "Obsluga LedMatrix wylaczona");
 	}
 }
+#endif
 
 static void funShowTask(OutStream *strm, const char *cmd, void *arg) {
 	if (strm->oOpen(colWHITE)) {
@@ -559,7 +569,7 @@ static void funJGlobData(OutStream *strm, const char *cmd, void *arg) {
 static void funJGlobDef(OutStream *strm, const char *cmd, void *arg) {
 	GlobData::showDef(strm);
 }
-
+#if (SSD1306)
 static void funLcdScr(OutStream *strm, const char *cmd, void *arg) {
 	int v;
 	Token::getAsInt(&cmd, &v);
@@ -570,12 +580,16 @@ static void funLcdTime(OutStream *strm, const char *cmd, void *arg) {
 	Token::getAsInt(&cmd, &v);
 	setLcdTime(v);
 }
+#endif
+
+#if (TEMP_NTC)
 static void funNTC(OutStream *strm, const char *cmd, void *arg) {
 	NTC::StartMeasure();
 	if (NTC::WaitForMeasEnd(500)) {
 		strm->oMsgX(colWHITE, "NTC: U=%.3f[V] R=%.2f[kom] temp=%.1f[deg]", NTC::nap, NTC::rez / 1000, NTC::temp);
 	}
 }
+#endif
 
 const ShellItemFx mainMenuFx[] = { //
 		{ "s", "[F2] status urządzenia", funShowState }, //
@@ -583,94 +597,34 @@ const ShellItemFx mainMenuFx[] = { //
 				{ "reboot", "reboot STM", funReboot }, //
 				{ "cfg", ">> menu konfiguracji", funMenuConfig }, //
 				{ "time", ">> menu czasu", funMenuTime }, //
+#if (ETHERNET)
 				{ "eth", ">> menu etherneta", funMenuEth }, //
 				{ "net", ">> menu tcp/ip", funMenuIP }, //
+#endif
 				{ "bg", ">> menu BG96", funMenuBG96 }, //
 				{ "iic", ">> menu układów i2c", funMenuI2C }, //
+#if (DEV_DUST_INTERN)
 				{ "dust", ">> menu czujnika pyłów", funMenuDust }, //
+#endif
 				{ "mdb1", ">> menu modbus master X7", funMenuMdb1 }, //
 				{ "mdb2", ">> menu modbus master X6", funMenuMdb2 }, //
+#if (LED_MATRIX)
 				{ "matrix", ">> menu LedMatrix", funMenuLedMatrix }, //
+#endif
 				{ "ps", "lista wątków", funShowTask }, //
 				{ "psx", "lista tasków", funShowTaskEx }, //
 				{ "mem", "informacja o pamięci", funShowMemUsage }, //
 				{ "glob", "dane globalne", funGlobData }, //
-				{ "jglob", "dane globalne w postaci json", funJGlobData }, //
+				{ "jglob", "[F4] dane globalne w postaci json", funJGlobData }, //
 				{ "globdef", "definicja danych globalnych", funJGlobDef }, //
+#if (SSD1306)
 				{ "lcd_scr", "ustawienie numer wyświetlanego ekranu", funLcdScr }, //
 				{ "lcd_time", "ustawienie czasu przełaczania ekranów na lcd", funLcdTime }, //
+#endif
+#if (TEMP_NTC)
 				{ "ntc", "pokaż temperaturę z NTC", funNTC }, //
+#endif
 
-				{ NULL, NULL } };
-
-//--------EthMenu-----------------------------------------------------------------
-
-static void funEthStatus(OutStream *strm, const char *cmd, void *arg) {
-
-}
-static void funEthResetPhy(OutStream *strm, const char *cmd, void *arg) {
-	strm->oMsgX(colWHITE, "PHY Reset");
-	Hdw::phyReset(1);
-	osDelay(50);
-	Hdw::phyReset(0);
-}
-static void funEthPhyOnOff(OutStream *strm, const char *cmd, void *arg) {
-	int val;
-	if (Token::getAsInt(&cmd, &val)) {
-		strm->oMsgX(colWHITE, "PHY power = %d", val);
-		Hdw::phyPower(val != 0);
-	}
-}
-
-typedef struct {
-	const char *name;
-	int adr;
-} PhyRegItemDef;
-
-const PhyRegItemDef phyRegTab[] = { //
-		{ "BCR", 0 }, //
-				{ "BSR", 1 }, //
-				{ "ID1", 2 }, //
-				{ "ID2", 3 }, //
-				{ "NegAdver", 4 }, //
-				{ "NegPartner", 5 }, //
-				{ "NegExpan", 6 }, //
-				{ "Mode Control/Status Reg", 17 }, //
-				{ "Special Mode Reg", 18 }, //
-				{ "SymbolErrCntReg", 26 }, //
-				{ "Special Control/Status Indications Register", 27 }, //
-				{ "Interrupt Source Flag Register", 29 }, //
-				{ "Interrupt Mask Register", 30 }, //
-				{ "PHY Special Control/Status Register", 31 }, //
-				{ NULL, -1 }, };
-
-extern "C" void ethGetPhyReg(const uint16_t *adrTab, uint16_t *valTab);
-
-static void funEthShowPhy(OutStream *strm, const char *cmd, void *arg) {
-	uint16_t adrTab[30];
-	uint16_t valTab[30];
-	int k = 0;
-	while (phyRegTab[k].name != NULL) {
-		adrTab[k] = phyRegTab[k].adr;
-		k++;
-	}
-	adrTab[k] = 0xFFFF;
-	ethGetPhyReg(adrTab, valTab);
-	if (strm->oOpen(colWHITE)) {
-		int k = 0;
-		while (phyRegTab[k].name != NULL) {
-			strm->oMsg("%2u. %04X %s", phyRegTab[k].adr, valTab[k], phyRegTab[k].name);
-			k++;
-		}
-		strm->oClose();
-	}
-}
-
-const ShellItemFx menuEthFx[] = { //
-		{ "s", "status etherneta", funEthStatus }, //
-				{ "reset", "impuls reset do PHY", funEthResetPhy }, //
-				{ "pwr", "=0 (wyłącz), =1(załącz) zasilanie PHY", funEthPhyOnOff }, //
-				{ "reg", "pokaż rejestry PHY", funEthShowPhy }, //
 				{ NULL, NULL } };
 
 //--------TimeMenu-----------------------------------------------------------------
@@ -742,6 +696,79 @@ const ShellItemFx menuTimeFx[] = { //
 				{ "setdate", "ustaw date - rrrr.mm.dd", funSetDate }, //
 				{ "init", "init RTC", funInitRtc }, //
 				{ NULL, NULL, NULL } };
+
+#if (ETHERNET)
+
+//--------EthMenu-----------------------------------------------------------------
+
+static void funEthStatus(OutStream *strm, const char *cmd, void *arg) {
+
+}
+static void funEthResetPhy(OutStream *strm, const char *cmd, void *arg) {
+	strm->oMsgX(colWHITE, "PHY Reset");
+	Hdw::phyReset(1);
+	osDelay(50);
+	Hdw::phyReset(0);
+}
+static void funEthPhyOnOff(OutStream *strm, const char *cmd, void *arg) {
+	int val;
+	if (Token::getAsInt(&cmd, &val)) {
+		strm->oMsgX(colWHITE, "PHY power = %d", val);
+		Hdw::phyPower(val != 0);
+	}
+}
+
+typedef struct {
+	const char *name;
+	int adr;
+} PhyRegItemDef;
+
+const PhyRegItemDef phyRegTab[] = { //
+		{ "BCR", 0 }, //
+				{ "BSR", 1 }, //
+				{ "ID1", 2 }, //
+				{ "ID2", 3 }, //
+				{ "NegAdver", 4 }, //
+				{ "NegPartner", 5 }, //
+				{ "NegExpan", 6 }, //
+				{ "Mode Control/Status Reg", 17 }, //
+				{ "Special Mode Reg", 18 }, //
+				{ "SymbolErrCntReg", 26 }, //
+				{ "Special Control/Status Indications Register", 27 }, //
+				{ "Interrupt Source Flag Register", 29 }, //
+				{ "Interrupt Mask Register", 30 }, //
+				{ "PHY Special Control/Status Register", 31 }, //
+				{ NULL, -1 }, };
+
+extern "C" void ethGetPhyReg(const uint16_t *adrTab, uint16_t *valTab);
+
+static void funEthShowPhy(OutStream *strm, const char *cmd, void *arg) {
+	uint16_t adrTab[30];
+	uint16_t valTab[30];
+	int k = 0;
+	while (phyRegTab[k].name != NULL) {
+		adrTab[k] = phyRegTab[k].adr;
+		k++;
+	}
+	adrTab[k] = 0xFFFF;
+	ethGetPhyReg(adrTab, valTab);
+	if (strm->oOpen(colWHITE)) {
+		int k = 0;
+		while (phyRegTab[k].name != NULL) {
+			strm->oMsg("%2u. %04X %s", phyRegTab[k].adr, valTab[k], phyRegTab[k].name);
+			k++;
+		}
+		strm->oClose();
+	}
+}
+
+const ShellItemFx menuEthFx[] = { //
+		{ "s", "status etherneta", funEthStatus }, //
+				{ "reset", "impuls reset do PHY", funEthResetPhy }, //
+				{ "pwr", "=0 (wyłącz), =1(załącz) zasilanie PHY", funEthPhyOnOff }, //
+				{ "reg", "pokaż rejestry PHY", funEthShowPhy }, //
+				{ NULL, NULL } };
+
 
 //--------NetMenu-----------------------------------------------------------------
 
@@ -939,3 +966,4 @@ int Ping(ip4_addr_t addr, int length)
 
 	return iResult;
 }
+#endif

@@ -16,7 +16,6 @@
 #include "ShellItem.h"
 #include "Filters.h"
 
-
 //-----------------------------------------------------------------------------------------------------------------
 // MdbUart
 //-----------------------------------------------------------------------------------------------------------------
@@ -71,7 +70,7 @@ typedef enum {
 } ReqSrc;
 
 class MdbMasterTask;
-class MdbDev : public UniDev {
+class MdbDev: public UniDev {
 	friend class MdbMasterTask;
 
 protected:
@@ -90,6 +89,7 @@ protected:
 	uint8_t getMdbNr();
 	uint32_t getSentTick();
 	bool isCurrenReq();
+	int getDbgLevel() ;
 	void sendMdbFun3(ReqSrc reqSrc, uint8_t DevNr, uint16_t regAdr, uint16_t regCnt);
 	void sendMdbFun4(ReqSrc reqSrc, uint8_t DevNr, uint16_t regAdr, uint16_t regCnt);
 	void sendMdbFun6(ReqSrc reqSrc, uint8_t DevNr, uint16_t regAdr, uint16_t regVal);
@@ -117,7 +117,6 @@ typedef struct {
 	uint16_t regCnt;
 	uint16_t regVal[MAX_VAL_CNT];
 } ReqConsola;
-
 
 class MdbMasterTask: public TaskClass {
 	friend class MdbDev;
