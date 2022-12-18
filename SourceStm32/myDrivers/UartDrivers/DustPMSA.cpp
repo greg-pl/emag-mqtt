@@ -30,9 +30,12 @@ enum {
 };
 
 DustPMSA::DustPMSA(bool formal_exist) :
-		DustSensorBase::DustSensorBase("PMSA"), TUart::TUart(TUart::myUART5, 7) {
+		DustSensorBase::DustSensorBase("PMSA003"), TUart::TUart(TUart::myUART5, 7) {
 
 	mFormaldehydeExist = formal_exist;
+	if (mFormaldehydeExist){
+		setName("PMS5003ST");
+	}
 	memset(&state, 0, sizeof(state));
 	memset(&rxRec, 0, sizeof(rxRec));
 	memset(&txRec, 0, sizeof(txRec));

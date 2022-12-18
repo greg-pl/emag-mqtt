@@ -7,7 +7,7 @@
 
 #include <NoiseDetector.h>
 
-#if (SENSOR_NOISE)
+#if (DEV_NOISE)
 
 #include "utils.h"
 #include "main.h"
@@ -129,13 +129,15 @@ void NoiseDetector::showMeas(OutStream *strm) {
 
 }
 
-bool NoiseDetector::isAnyConfiguredData(){
-	return config->data.R.sensExist[ssNOISE];
-}
-
 bool NoiseDetector::isDataError() {
 	return ((autoRd.redTick == 0) || (HAL_GetTick() - autoRd.redTick > TIME_MEAS_VALID));
 }
+
+bool NoiseDetector::isMeasServiced(MeasType measType){
+	return (measType == ssNOISE);
+}
+
+
 
 bool NoiseDetector::getMeasValue(MeasType measType, float *val) {
 	if (measType != ssNOISE) {

@@ -4,6 +4,10 @@
  *  Created on: 6 lut 2021
  *      Author: Grzegorz
  */
+
+#include "ProjectConfig.h"
+#if(MDB_EXIST)
+
 #include <MdbMasterTask.h>
 
 #include "utils.h"
@@ -518,6 +522,7 @@ bool MdbMasterTask::isAnyConfiguredData() {
 	}
 	return false;
 }
+
 bool MdbMasterTask::isDataError() {
 	bool err = false;
 	for (int i = 0; i < devs.cnt; i++) {
@@ -682,3 +687,4 @@ void MdbMasterTask::shell(OutStream *strm, const char *cmd) {
 		execMenuCmdArg(strm, menuExp.menuTab, cmd, menuExp.argTab, menuName);
 }
 
+#endif //MDB_EXIST

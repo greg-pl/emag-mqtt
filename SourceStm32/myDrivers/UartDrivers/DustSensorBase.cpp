@@ -9,7 +9,6 @@
 
 #if (DEV_DUST_INTERN)
 
-
 #include <math.h>
 #include <config.h>
 
@@ -35,15 +34,17 @@ bool DustSensorBase::isDataError() {
 	return (HAL_GetTick() - exportDt.mLastRdDataTick > MAX_MEAS_VALID);
 }
 
-bool DustSensorBase::isAnyConfiguredData() {
+
+bool DustSensorBase::isMeasServiced(MeasType measType) {
 	bool q = false;
-	q |= config->data.R.sensExist[ssPM1_0];
-	q |= config->data.R.sensExist[ssPM2_5];
-	q |= config->data.R.sensExist[ssPM10];
+	if (!isNullDevice()) {
+		q |= (measType == ssPM1_0);
+		q |= (measType == ssPM2_5);
+		q |= (measType == ssPM10);
 #if(SENSOR_CH_SO)
-	if (isFormaldehyde())
-		q |= config->data.R.sensExist[ssCh2o];
+		q |= ((measType == ssCh2o) && isFormaldehyde());
 #endif
+	}
 	return q;
 }
 
@@ -110,9 +111,6 @@ bool DustSensorNull::isDataError() {
 	return true;
 }
 
-bool DustSensorNull::isAnyConfiguredData() {
-	return false;
-}
 
 void DustSensorNull::setPower(bool on) {
 }

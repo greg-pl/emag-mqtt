@@ -8,6 +8,9 @@
 #ifndef MDBMASTERTASK_H_
 #define MDBMASTERTASK_H_
 
+#include "ProjectConfig.h"
+#if(MDB_EXIST)
+
 #include <IOStream.h>
 #include "UniDev.h"
 #include "TaskClass.h"
@@ -218,5 +221,7 @@ public:
 	bool isAnyConfiguredData();
 	bool isDataError();
 };
+
+#endif  //MDB_EXIST
 
 #endif

@@ -8,6 +8,10 @@
 #ifndef GASS873_H_
 #define GASS873_H_
 
+#include "Projectconfig.h"
+#if (DEV_S873)
+
+
 #include <MdbMasterTask.h>
 #include <Config.h>
 
@@ -74,9 +78,10 @@ public:
 public:
 	//Unidev
 	virtual bool getMeasValue(MeasType measType, float *val);
-	virtual bool isAnyConfiguredData();
+	virtual bool isMeasServiced(MeasType measType);
 	virtual bool isDataError();
 	virtual void getDeviceStatusTxt(char *txt, int max);
 };
 
+#endif // DEV_S873
 #endif /* GASS873_H_ */

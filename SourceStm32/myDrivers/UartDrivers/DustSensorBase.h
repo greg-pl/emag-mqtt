@@ -17,8 +17,7 @@
 #include "utils.h"
 #include "UniDev.h"
 
-
-class DustSensorBase : public UniDev{
+class DustSensorBase : public UniDev {
 private:
 	osMutexId mDustMutex;
 protected:
@@ -34,6 +33,10 @@ protected:
 		DtFilter filterPM10;
 		DtFilter filterFormaldehyde;
 	} exportDt;
+	virtual bool isNullDevice(){
+		return false;
+	}
+
 #if(SENSOR_CH_SO)
 	virtual bool isFormaldehyde(){
 		return false;
@@ -52,10 +55,14 @@ public:
 	//Unidev
 	virtual bool isDataError();
 	virtual bool getMeasValue(MeasType measType, float *val);
-	virtual bool isAnyConfiguredData();
+	virtual bool isMeasServiced(MeasType measType);
 };
 
 class DustSensorNull: public DustSensorBase {
+protected:
+	virtual bool isNullDevice(){
+		return true;
+	}
 public:
 	DustSensorNull();
 	virtual void StartMeas();
@@ -67,7 +74,6 @@ public:
 public:
 	//Unidev
 	virtual bool isDataError();
-	virtual bool isAnyConfiguredData();
 };
 
 #endif

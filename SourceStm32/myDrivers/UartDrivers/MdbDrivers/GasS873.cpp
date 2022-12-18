@@ -5,6 +5,8 @@
  *      Author: Grzegorz
  */
 
+#include "Projectconfig.h"
+#if (DEV_S873)
 #include "GasS873.h"
 
 #include <IOStream.h>
@@ -177,23 +179,20 @@ const char* GasS873::getSensValidStr(uint16_t status) {
 		return "OK";
 }
 
-bool GasS873::isAnyConfiguredData() {
-	if (config->data.R.sensExist[ssCO])
-		return true;
-	if (config->data.R.sensExist[ssCO2])
-		return true;
-	if (config->data.R.sensExist[ssTEMPERATURE])
-		return true;
-	if (config->data.R.sensExist[ssHUMIDITY])
-		return true;
-	if (config->data.R.sensExist[ssPRESSURE])
-		return true;
-	return false;
-}
-
 bool GasS873::isDataError() {
 	return ((autoRd.redTick == 0) || (HAL_GetTick() - autoRd.redTick > TIME_MEAS_VALID));
 }
+
+bool GasS873::isMeasServiced(MeasType measType){
+	bool q=false;
+	q |= (measType == ssCO);
+	q |= (measType == ssCO2);
+	q |= (measType == ssTEMPERATURE);
+	q |= (measType == ssHUMIDITY);
+	q |= (measType == ssPRESSURE);
+	return q;
+}
+
 
 bool GasS873::getMeasValue(MeasType measType, float *val) {
 
@@ -285,3 +284,4 @@ void GasS873::shell(OutStream *strm, const char *cmd) {
 	execMenuCmd(strm, menuGasFx, cmd, this, "Menu S873(gas)");
 }
 
+#endif

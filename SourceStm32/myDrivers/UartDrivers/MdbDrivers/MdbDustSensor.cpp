@@ -169,14 +169,18 @@ bool ExtDustsensor::isMeasValid() {
 	return ((dustData.PmStatus & 0x7F) == 0);
 }
 
-bool ExtDustsensor::isAnyConfiguredData() {
-	return (config->data.R.sensExist[ssPM1_0] || config->data.R.sensExist[ssPM2_5] || config->data.R.sensExist[ssPM10]);
-}
 
 bool ExtDustsensor::isDataError() {
 	return ((autoRd.redTick == 0) || (HAL_GetTick() - autoRd.redTick > TIME_MEAS_VALID));
 }
 
+bool ExtDustsensor::isMeasServiced(MeasType measType){
+	bool q=false;
+	q |= (measType == ssPM1_0);
+	q |= (measType == ssPM2_5);
+	q |= (measType == ssPM10);
+	return q;
+}
 
 bool ExtDustsensor::getMeasValue(MeasType measType, float *val) {
 	if (!isDataError() && isMeasValid()) {

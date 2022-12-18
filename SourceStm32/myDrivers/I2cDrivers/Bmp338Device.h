@@ -8,6 +8,9 @@
 #ifndef BMP338DEVICE_H_
 #define BMP338DEVICE_H_
 
+#include "ProjectConfig.h"
+#if(DEV_BMP338)
+
 #include <I2cDev.h>
 #include <Utils.h>
 
@@ -72,10 +75,12 @@ public:
 public:
 	//Unidev
 	virtual bool getMeasValue(MeasType measType, float *val);
-	virtual bool isAnyConfiguredData();
+	virtual bool isMeasServiced(MeasType measType);
 	virtual bool isDataError();
 	//virtual void getDeviceStatusTxt(char *txt, int max);
 
 };
+
+#endif //DEV_BMP338
 
 #endif /* BMP338DEVICE_H_ */

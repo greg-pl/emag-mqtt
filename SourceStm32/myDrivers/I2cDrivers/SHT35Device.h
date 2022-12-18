@@ -8,6 +8,9 @@
 #ifndef SHT35DEVICE_H_
 #define SHT35DEVICE_H_
 
+#include <ProjectConfig.h>
+#if (DEV_SHT35)
+
 #include <I2cDev.h>
 #include <Utils.h>
 
@@ -119,10 +122,12 @@ public:
 public:
 	//Unidev
 	virtual bool getMeasValue(MeasType measType, float *val);
-	virtual bool isAnyConfiguredData();
+	virtual bool isMeasServiced(MeasType measType);
 	virtual bool isDataError();
 	//virtual void getDeviceStatusTxt(char *txt, int max);
 
 };
+
+#endif //DEV_SHT35
 
 #endif /* SHT35DEVICE_H_ */

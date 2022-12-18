@@ -5,6 +5,9 @@
  *      Author: Grzegorz
  */
 
+#include "ProjectConfig.h"
+#if(DEV_BMP338)
+
 #include <Bmp338Device.h>
 #include <math.h>
 #include <Config.h>
@@ -184,14 +187,14 @@ HAL_StatusTypeDef Bmp338Device::measure(double *temp, double *press) {
 	return st;
 }
 
-bool Bmp338Device::isAnyConfiguredData() {
-	return config->data.R.sensExist[ssTEMPERATURE] || config->data.R.sensExist[ssPRESSURE];
-}
 
 bool Bmp338Device::isDataError() {
 	return (HAL_GetTick() - mLastRdDataTick > TIME_DT_VALID);
 }
 
+bool Bmp338Device::isMeasServiced(MeasType measType) {
+	return (measType == ssTEMPERATURE) || (measType == ssPRESSURE);
+}
 
 bool Bmp338Device::getMeasValue(MeasType measType, float *val) {
 	if (isDataError())
@@ -283,4 +286,6 @@ const ShellItemFx menuBmpFx[] = { //
 void Bmp338Device::shell(OutStream *strm, const char *cmd) {
 	execMenuCmd(strm, menuBmpFx, cmd, this, "Bmp338 Menu");
 }
+
+#endif //(DEV_BMP338
 

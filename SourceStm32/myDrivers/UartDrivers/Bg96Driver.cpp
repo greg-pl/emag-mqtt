@@ -22,7 +22,9 @@
 #include "AirDetRs.h"
 #include "Token.h"
 
+#if (DEV_AIR_DET_RS)
 extern AirDetRs *airDetRs;
+#endif
 
 //-------------------------------------------------------------------------------------------------------------------------
 //
@@ -1470,8 +1472,10 @@ void Bg96Driver::execNewSMS() {
 		Token::get(&ptr, tok, sizeof(tok));
 		if (strcmp(tok, "ZERO-GAS") == 0) {
 			getOutStream()->oMsgX(colBLUE, "SMS: ZERO-GAS");
+#if (DEV_AIR_DET_RS)
 			if (airDetRs != NULL)
 				airDetRs->zeroGasFromSMS(ptr, state.sendSms.msg, sizeof(state.sendSms.msg) - 1);
+#endif
 			repl = true;
 		} else if (strcmp(tok, "REBOOT") == 0) {
 			getOutStream()->oMsgX(colBLUE, "SMS: REBOOT");

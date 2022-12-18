@@ -33,12 +33,7 @@
 #include <stdarg.h>
 
 extern Bg96Driver *bg96;
-extern MdbMasterTask *mdbMaster_1;
-extern MdbMasterTask *mdbMaster_2;
-extern SHT35Device *sht35;
-extern Bmp338Device *bmp338;
 extern I2cBus *i2cBus1;
-extern GasS873 *gasS873;
 
 //-------------------------------------------------------------------------------------------------------------------------
 // ShellConnection
@@ -409,16 +404,30 @@ static void funShowState(OutStream *strm, const char *cmd, void *arg) {
 #if (DEV_DUST_INTERN)
 		strm->oMsg("DustInternSensor:%s", ErrOk(GlobData::getDustSensor()->isDataError()));
 #endif
-#if (SENSOR_NOISE)
+#if (DEV_NOISE)
 		if (noiseDet != NULL) {
 			strm->oMsg("NoiseSensor     :%s", ErrOk(noiseDet->isDataError()));
 		}
 #endif
-		if (gasS873->isAnyConfiguredData()) {
-			strm->oMsg("GasSensor       :%s", ErrOk(gasS873->isDataError()));
+#if (DEV_AIR_DET_RS)
+		if (airDetRs->isAnyConfiguredData()) {
+			strm->oMsg("GasSensor       :%s", ErrOk(airDetRs->isDataError()));
 		}
-		strm->oMsg("Bmp338          :%s", ErrOk(bmp338->isDataError()));
+
+#endif
+
+#if (DEV_S873)
+		if (gasS873->isAnyConfiguredData()) {
+			strm->oMsg("Gas S873        :%s", ErrOk(gasS873->isDataError()));
+		}
+#endif
+#if (DEV_SHT35)
 		strm->oMsg("Sht35           :%s", ErrOk(sht35->isDataError()));
+#endif
+#if(DEV_BMP338)
+		strm->oMsg("Bmp338          :%s", ErrOk(bmp338->isDataError()));
+#endif
+
 		strm->oMsg("SIM card rdy    :%s", YN(bg96->isSimCardInserted()));
 		strm->oMsg("Network regist. :%s", YN(bg96->isNetworkRegistered()));
 		strm->oMsg("Network IP rdy  :%s", YN(bg96->isIPready()));
@@ -489,12 +498,17 @@ static void funMenuDust(OutStream *strm, const char *cmd, void *arg) {
 }
 #endif
 
+#if(MDB1_EXIST)
 static void funMenuMdb1(OutStream *strm, const char *cmd, void *arg) {
 	mdbMaster_1->shell(strm, cmd);
 }
+#endif
+
+#if(MDB2_EXIST)
 static void funMenuMdb2(OutStream *strm, const char *cmd, void *arg) {
 	mdbMaster_2->shell(strm, cmd);
 }
+#endif
 
 #if (LED_MATRIX)
 static void funMenuLedMatrix(OutStream *strm, const char *cmd, void *arg) {
@@ -505,6 +519,26 @@ static void funMenuLedMatrix(OutStream *strm, const char *cmd, void *arg) {
 	}
 }
 #endif
+
+static void funShowDevList(OutStream *strm, const char *cmd, void *arg) {
+	if (strm->oOpen(colWHITE)) {
+		strm->oMsg("Serviced device list. Cnt=%u", UniDevTab::mDevCnt);
+		for (int i = 0; i < UniDevTab::mDevCnt; i++) {
+			UniDev *dev = UniDevTab::mDevTab[i];
+			strm->oMsgNN("%u. %-10s| ", i + 1, dev->getName());
+			for (int meas = 0; meas < SENSOR_CNT; meas++) {
+				if (dev->isMeasServiced((MeasType)meas)) {
+					strm->oMsgNN("%s,", GlobData::GetMeasName((MeasType) meas));
+				}
+			}
+
+			strm->oMsg("");
+		}
+
+		strm->oClose();
+	}
+
+}
 
 static void funShowTask(OutStream *strm, const char *cmd, void *arg) {
 	if (strm->oOpen(colWHITE)) {
@@ -602,15 +636,21 @@ const ShellItemFx mainMenuFx[] = { //
 				{ "net", ">> menu tcp/ip", funMenuIP }, //
 #endif
 				{ "bg", ">> menu BG96", funMenuBG96 }, //
+
 				{ "iic", ">> menu układów i2c", funMenuI2C }, //
 #if (DEV_DUST_INTERN)
 				{ "dust", ">> menu czujnika pyłów", funMenuDust }, //
 #endif
+#if(MDB1_EXIST)
 				{ "mdb1", ">> menu modbus master X7", funMenuMdb1 }, //
+#endif
+#if(MDB2_EXIST)
 				{ "mdb2", ">> menu modbus master X6", funMenuMdb2 }, //
+#endif
 #if (LED_MATRIX)
 				{ "matrix", ">> menu LedMatrix", funMenuLedMatrix }, //
 #endif
+				{ "dev", "lista urządzeń", funShowDevList }, //
 				{ "ps", "lista wątków", funShowTask }, //
 				{ "psx", "lista tasków", funShowTaskEx }, //
 				{ "mem", "informacja o pamięci", funShowMemUsage }, //

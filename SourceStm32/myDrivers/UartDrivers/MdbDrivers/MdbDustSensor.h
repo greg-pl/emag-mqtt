@@ -76,7 +76,7 @@ public:
 public:
 	//Unidev
 	virtual bool getMeasValue(MeasType measType, float *val);
-	virtual bool isAnyConfiguredData();
+	virtual bool isMeasServiced(MeasType measType);
 	virtual bool isDataError();
 	//virtual void getDeviceStatusTxt(char *txt, int max);
 

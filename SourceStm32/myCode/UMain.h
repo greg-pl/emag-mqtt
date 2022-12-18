@@ -59,7 +59,31 @@ extern OutStream* getOutStream();
 #include <Config.h>
 extern Config *config;
 
-#if (SENSOR_NOISE)
+
+#include <MdbMasterTask.h>
+#if(MDB1_EXIST)
+extern MdbMasterTask *mdbMaster_1;
+#endif
+#if(MDB2_EXIST)
+extern MdbMasterTask *mdbMaster_2;
+#endif
+#if(MDB3_EXIST)
+extern MdbMasterTask *mdbMaster_3;
+#endif
+
+
+
+#if (DEV_SHT35)
+#include <SHT35Device.h>
+extern SHT35Device *sht35;
+#endif
+
+#if(DEV_BMP338)
+#include <Bmp338Device.h>
+extern Bmp338Device *bmp338;
+#endif
+
+#if (DEV_NOISE)
 #include "Noisedetector.h"
 extern NoiseDetector *noiseDet;
 #endif
@@ -78,6 +102,18 @@ extern DustSensorBase *dustInternSensor;
 #include "MdbDustSensor.h"
 extern ExtDustsensor *dustExternSensor;
 #endif
+
+#if (DEV_AIR_DET_RS)
+#include "AirDetRs.h"
+extern AirDetRs *airDetRs;
+#endif
+
+#if (DEV_S873)
+#include "GasS873.h"
+extern GasS873 *gasS873;
+#endif
+
+
 
 #if (TEMP_NTC)
 

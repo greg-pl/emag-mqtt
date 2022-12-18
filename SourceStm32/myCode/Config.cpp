@@ -55,19 +55,35 @@ const CpxFloatDefItem floatGpsLongitudeDef = { min:-180, //
 		};
 
 const CpxDescr SensorOnOffDscr[] = { //
+#if (SENSOR_TEMPERATURE)
 		{ ctype : cpxBOOL, id:1, ofs: ssTEMPERATURE, Name : "existSensTemper", size : sizeof(bool) }, //
-				{ ctype : cpxBOOL, id:2, ofs: ssHUMIDITY, Name : "existSensHumidity", size: sizeof(bool) }, //
-				{ ctype : cpxBOOL, id:3, ofs: ssPRESSURE, Name : "existSensPressure", size: sizeof(bool) }, //
+#endif
+#if (SENSOR_HUMIDITY)
+		{ ctype : cpxBOOL, id:2, ofs: ssHUMIDITY, Name : "existSensHumidity", size: sizeof(bool) }, //
+#endif
+#if (SENSOR_PRESSURE)
+		{ ctype : cpxBOOL, id:3, ofs: ssPRESSURE, Name : "existSensPressure", size: sizeof(bool) }, //
+#endif
 #if(SENSOR_DUST)
 				{ ctype : cpxBOOL, id:4, ofs: ssPM1_0, Name : "existSensPM1_0", size: sizeof(bool) }, //
 				{ ctype : cpxBOOL, id:5, ofs: ssPM2_5, Name : "existSensPM2_5", size: sizeof(bool) }, //
 				{ ctype : cpxBOOL, id:6, ofs: ssPM10, Name : "existSensPM10", size : sizeof(bool) }, //
 #endif
+#if(SENSOR_NO2)
 				{ ctype : cpxBOOL, id:7, ofs: ssNO2, Name : "existSensNO2", size: sizeof(bool) }, //
+#endif
+#if(SENSOR_O3)
 				{ ctype : cpxBOOL, id:8, ofs: ssO3, Name : "existSensO3", size: sizeof(bool) }, //
+#endif
+#if(SENSOR_CO)
 				{ ctype : cpxBOOL, id:9, ofs: ssCO, Name : "existSensCO", size: sizeof(bool) }, //
+#endif
+#if(SENSOR_CO2)
 				{ ctype : cpxBOOL, id:10, ofs: ssCO2, Name : "existSensCO2", size: sizeof(bool) }, //
+#endif
+#if (SENSOR_SO2)
 				{ ctype : cpxBOOL, id:11, ofs: ssSO2, Name : "existSensSO2", size: sizeof(bool) }, //
+#endif
 #if(SENSOR_CH_SO)
 				{ ctype : cpxBOOL, id:12, ofs: ssCh2o, Name : "existSensCH2O", size: sizeof(bool) }, //
 #endif
@@ -723,7 +739,7 @@ void Config::funHelp(OutStream *strm, const char *cmd, void *arg) {
 	if (strm->oOpen(colWHITE)) {
 		strm->oMsg("Cfg Help");
 		strm->oMsg("--------------------");
-		strm->oMsg("DustSensorType: 0-SPS30(Sensirion), 1-HPMA(Honeywel), 2-PMSA003, 3-PMS5003ST");
+		strm->oMsg("DustSensorType: 0-SPS30(Sensirion), 1-PMSA003, 2-PMS5003ST");
 		strm->oMsg("GasFiltrType: 0-OFF, 1-FIR, 2-IR");
 		strm->oClose();
 	}

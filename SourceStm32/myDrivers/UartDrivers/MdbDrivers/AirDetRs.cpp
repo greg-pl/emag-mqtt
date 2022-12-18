@@ -5,6 +5,9 @@
  *      Author: Grzegorz
  */
 
+#include <ProjectConfig.h>
+#if (DEV_AIR_DET_RS)
+
 #include "AirDetRs.h"
 
 #include "utils.h"
@@ -184,7 +187,8 @@ void AirDetRs::onReciveData(bool replOK, uint8_t mdbFun, const uint8_t *tab, int
 				break;
 			}
 		} else {
-			getOutStream()->oMsgX(colRED, "MDB%u: Send zero offset ERROR. Phase=%u sensNr=%u", getMdbNr(), zeroOfs.phase, zeroOfs.sensNr);
+			if (getDbgLevel() > 1)
+				getOutStream()->oMsgX(colRED, "MDB%u: Send zero offset ERROR. Phase=%u sensNr=%u", getMdbNr(), zeroOfs.phase, zeroOfs.sensNr);
 			zeroOfs.phase = 0;
 		}
 	}
@@ -193,13 +197,16 @@ void AirDetRs::onReciveData(bool replOK, uint8_t mdbFun, const uint8_t *tab, int
 void AirDetRs::onTimeOut() {
 	if (zeroOfs.phase > 0) {
 		zeroOfs.phase = 0;
-		getOutStream()->oMsgX(colRED, "MDB%u: Send zero offset TIMEOUT. Phase=%u sensNr=%u", getMdbNr(), zeroOfs.phase, zeroOfs.sensNr);
+		if (getDbgLevel() > 1)
+			getOutStream()->oMsgX(colRED, "MDB%u: Send zero offset TIMEOUT. Phase=%u sensNr=%u", getMdbNr(), zeroOfs.phase, zeroOfs.sensNr);
 	} else if (autoRd.phase > 0) {
 		autoRd.phase = 0;
-		getOutStream()->oMsgX(colRED, "MDB%u: read measure TIMEOUT", getMdbNr());
+		if (getDbgLevel() > 1)
+			getOutStream()->oMsgX(colRED, "MDB%u: read measure TIMEOUT", getMdbNr());
 		strcpy(autoRd.statusTxt, "TimeOut");
 	} else {
-		getOutStream()->oMsgX(colRED, "MDB%u: TIMEOUT", getMdbNr());
+		if (getDbgLevel() > 1)
+			getOutStream()->oMsgX(colRED, "MDB%u: TIMEOUT", getMdbNr());
 	}
 }
 
@@ -363,16 +370,13 @@ bool AirDetRs::isDataError() {
 	return ((autoRd.redTick == 0) || (HAL_GetTick() - autoRd.redTick > TIME_MEAS_VALID));
 }
 
-bool AirDetRs::isAnyConfiguredData() {
-	if (config->data.R.sensExist[ssCO])
-		return true;
-	if (config->data.R.sensExist[ssSO2])
-		return true;
-	if (config->data.R.sensExist[ssO3])
-		return true;
-	if (config->data.R.sensExist[ssNO2])
-		return true;
-	return false;
+bool AirDetRs::isMeasServiced(MeasType measType) {
+	bool q = false;
+	q |= (measType == ssNO2);
+	q |= (measType == ssO3);
+	q |= (measType == ssCO);
+	q |= (measType == ssSO2);
+	return q;
 }
 
 bool AirDetRs::getMeasValue(MeasType measType, float *val) {
@@ -495,3 +499,4 @@ void AirDetRs::shell(OutStream *strm, const char *cmd) {
 	execMenuCmd(strm, menuGasFx, cmd, this, "GAS sensor Menu");
 }
 
+#endif

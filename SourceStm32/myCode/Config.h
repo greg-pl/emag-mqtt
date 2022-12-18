@@ -14,7 +14,6 @@
 #include "CxString.h"
 #include "ProjectConfig.h"
 
-
 #define CFG_REC_SIZE 0x800
 #define CFG_REC_SIZE_4 (CFG_REC_SIZE/4)
 
@@ -34,19 +33,35 @@ extern const CpxFloatDefItem floatGpsLongitudeDef;
 
 typedef enum {
 	ssUNKNOWN = 0, //
+#if (SENSOR_TEMPERATURE)
 	ssTEMPERATURE, //
+#endif
+#if (SENSOR_HUMIDITY)
 	ssHUMIDITY, //
+#endif
+#if (SENSOR_PRESSURE)
 	ssPRESSURE, //
+#endif
 #if (SENSOR_DUST)
 	ssPM1_0, //
 	ssPM2_5, //
 	ssPM10, //
 #endif
+#if(SENSOR_NO2)
 	ssNO2, //
+#endif
+#if(SENSOR_O3)
 	ssO3, //
+#endif
+#if(SENSOR_CO)
 	ssCO, //8
+#endif
+#if(SENSOR_CO2)
 	ssCO2, //8
+#endif
+#if(SENSOR_SO2)
 	ssSO2, //9
+#endif
 #if(SENSOR_CH_SO)
 	ssCh2o, //10
 #endif
@@ -55,7 +70,6 @@ typedef enum {
 #endif
 	SENSOR_CNT
 } MeasType;
-
 
 #if (DEV_DUST_INTERN)
 typedef enum {
@@ -151,7 +165,6 @@ typedef union {
 	};
 } DevCfg;
 
-
 typedef union {
 	char bg96buf[0x100];
 	struct {
@@ -181,7 +194,7 @@ typedef union {
 } TcpCfg;
 #endif
 
-typedef union{
+typedef union {
 	char buf[0x100];
 	struct {
 		int mdb1dbgLevel; //poziom komunikatów na Modbus 1
@@ -199,7 +212,6 @@ typedef union{
 #endif
 	};
 } RestCfg;
-
 
 typedef union __PACKED {
 	uint8_t tab_b[CFG_REC_SIZE];

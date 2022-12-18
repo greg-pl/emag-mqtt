@@ -20,16 +20,6 @@
 #include "_SensorDrivers.h"
 
 extern Bg96Driver *bg96;
-extern SHT35Device *sht35;
-extern Bmp338Device *bmp338;
-
-extern MdbMasterTask *mdbMaster_1;
-extern MdbMasterTask *mdbMaster_2;
-extern GasS873 *gasS873;
-
-#if (SENSOR_NOISE)
-extern NoiseDetector *noiseDet;
-#endif
 
 GlobDtRec GlobData::dt;
 osMutexId GlobData::mGlobMutex = NULL;
@@ -101,20 +91,36 @@ typedef struct {
 } SensorName;
 
 const SensorName sensorNameTab[] = { //
-		{ ssUNKNOWN, "unknown", "??", "%.0f" }, //
+		{ ssUNKNOWN, "Empty", "??", "%.0f" }, //
+#if (SENSOR_TEMPERATURE)
 				{ ssTEMPERATURE, "temperature", "*C", "%.2f" }, //
+#endif
+#if (SENSOR_HUMIDITY)
 				{ ssHUMIDITY, "humidity", "%", "%.2f" }, //
+#endif
+#if (SENSOR_PRESSURE)
 				{ ssPRESSURE, "pressure", "kPa", "%.1f" }, //
+#endif
 #if (SENSOR_DUST)
 				{ ssPM1_0, "pm1", "ug/m3", "%.1f" }, //
 				{ ssPM2_5, "pm2.5", "ug/m3", "%.1f" }, //
 				{ ssPM10, "pm10", "ug/m3", "%.1f" }, //
 #endif
+#if(SENSOR_NO2)
 				{ ssNO2, "no2", "xx", "%.2f" }, //
+#endif
+#if(SENSOR_O3)
 				{ ssO3, "o3", "xx", "%.2f" }, //
+#endif
+#if(SENSOR_CO)
 				{ ssCO, "co", "ppb", "%.0f" }, //
+#endif
+#if(SENSOR_CO2)
 				{ ssCO2, "co2", "ppm", "%.0f" }, //
+#endif
+#if (SENSOR_SO2)
 				{ ssSO2, "so2", "xx", "%.2f" }, //
+#endif
 #if(SENSOR_CH_SO)
 				{ ssCh2o, "ch2o", "xx", "%.2f" }, //
 #endif
@@ -174,50 +180,20 @@ void GlobData::FillMeas(float *tab) {
 
 	for (int i = 0; i < SENSOR_CNT; i++) {
 		tab[i] = NAN;
+		UniDevTab::getMeasValue((MeasType) i, &tab[i]);
 	}
 
-	float temperature1 = NAN, humidity = NAN;
-	float temperature2 = NAN, pressure = NAN;
-
-	if (sht35 != NULL) {
-		sht35->getMeasValue(ssTEMPERATURE, &temperature1);
-		sht35->getMeasValue(ssHUMIDITY, &humidity);
+#if (FORCE_S873)
+	for (int i = 0; i < SENSOR_CNT; i++) {
+		if (gasS873->isMeasServiced((MeasType) i)) {
+			float val;
+			bool q = gasS873->getMeasValue((MeasType) i, &val);
+			if (q && (!isnan(val))) {
+				tab[i] = val;
+			}
+		}
 	}
-	if (bmp338 != NULL) {
-		bmp338->getMeasValue(ssTEMPERATURE, &temperature2);
-		bmp338->getMeasValue(ssPRESSURE, &pressure);
-	}
-
-	tab[ssTEMPERATURE] = temperature1;
-	if (isnan(temperature1))
-		tab[ssTEMPERATURE] = temperature2;
-
-	tab[ssHUMIDITY] = humidity;
-	tab[ssPRESSURE] = pressure;
-#if (SENSOR_DUST)
-	UniDev *dustDev = getDustSensor();
-	dustDev->getMeasValue(ssPM1_0, &tab[ssPM1_0]);
-	dustDev->getMeasValue(ssPM2_5, &tab[ssPM2_5]);
-	dustDev->getMeasValue(ssPM10, &tab[ssPM10]);
-#endif
-#if(SENSOR_CH_SO)
-	dustDev->getMeasValue(ssCh2o, &tab[ssCh2o]);
-#endif
-
-	if (mdbMaster_2 != NULL) {
-		//gas
-		gasS873->getMeasValue(ssNO2, &tab[ssNO2]);
-		gasS873->getMeasValue(ssO3, &tab[ssO3]);
-		gasS873->getMeasValue(ssCO, &tab[ssCO]);
-		gasS873->getMeasValue(ssCO2, &tab[ssCO2]);
-		gasS873->getMeasValue(ssSO2, &tab[ssSO2]);
-	}
-
-#if (SENSOR_NOISE)
-	if (noiseDet != NULL) {
-		noiseDet->getMeasValue(ssNOISE, &tab[ssNOISE]);
-	}
-#endif
+#endif //FORCE_S873
 
 }
 
@@ -251,7 +227,9 @@ void GlobData::Fill() {
 		strncpy(dt.info, config->data.R.dev.DevInfo, sizeof(dt.info));
 		dt.pktNr = bg96->state.mqtt.mSendMsgID;
 		Rtc::ReadTime(&dt.time);
+#if (DEV_S873)
 		gasS873->getDeviceStatusTxt(dt.komoraSt, sizeof(dt.komoraSt));
+#endif
 #if (TEMP_NTC)
 		dt.tempNTC = NTC::temp;
 #endif
@@ -287,9 +265,9 @@ void GlobData::Fill() {
 		}
 		//jesli nie ma żadnego czujnika to dodajemy temperature
 		if (k == 0) {
-			dt.sensorDt[k].measType = ssTEMPERATURE;
-			strlcpy(dt.sensorDt[k].code, GetMeasName(ssTEMPERATURE), sizeof(SensorDt::code));
-			dt.sensorDt[0].value = tab[ssTEMPERATURE];
+			dt.sensorDt[k].measType = ssUNKNOWN;
+			strlcpy(dt.sensorDt[k].code, GetMeasName(ssUNKNOWN), sizeof(SensorDt::code));
+			dt.sensorDt[0].value = 1.0;
 			k = 1;
 		}
 		sensorGroupInfo.itemCnt = k;

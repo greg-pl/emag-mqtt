@@ -10,7 +10,7 @@
 
 #include <MdbMasterTask.h>
 
-#if (SENSOR_NOISE)
+#if (DEV_NOISE)
 
 class NoiseDetector: public MdbDev {
 private:
@@ -53,7 +53,7 @@ public:
 public:
 	//Unidev
 	virtual bool getMeasValue(MeasType measType, float *val);
-	virtual bool isAnyConfiguredData();
+	virtual bool isMeasServiced(MeasType measType);
 	virtual bool isDataError();
 	//virtual void getDeviceStatusTxt(char *txt, int max);
 

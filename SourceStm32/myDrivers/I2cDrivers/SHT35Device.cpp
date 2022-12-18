@@ -5,6 +5,9 @@
  *      Author: Grzegorz
  */
 
+#include <ProjectConfig.h>
+#if (DEV_SHT35)
+
 #include <SHT35Device.h>
 #include <math.h>
 #include <Config.h>
@@ -62,12 +65,12 @@ void SHT35Device::init() {
 	mDevExist = (checkDevMtx() == HAL_OK);
 
 	//SoftReset();
-	ReadSerialNumber(&serialNr);
+	ReadSerialNumber (&serialNr);
 	mMeasStart = StartPeriodicMeasurment(REPEATAB_HIGH, FREQUENCY_2HZ);
 	DisableHeater();
 	filterTemp.init(FILTR_FACTOR);
 	filterHumidity.init(FILTR_FACTOR);
-	meas.mReadTick= 0;
+	meas.mReadTick = 0;
 	mLastTryRdTick = 0;
 
 }
@@ -290,8 +293,9 @@ bool SHT35Device::isDataError() {
 	return (HAL_GetTick() - meas.mReadTick > TIME_DT_VALID);
 }
 
-bool SHT35Device::isAnyConfiguredData() {
-	return config->data.R.sensExist[ssTEMPERATURE] || config->data.R.sensExist[ssHUMIDITY];
+
+bool SHT35Device::isMeasServiced(MeasType measType) {
+	return (measType == ssTEMPERATURE) || (measType == ssHUMIDITY);
 }
 
 bool SHT35Device::getMeasValue(MeasType measType, float *val) {
@@ -496,4 +500,6 @@ const ShellItemFx menuShtFx[] = { //
 void SHT35Device::shell(OutStream *strm, const char *cmd) {
 	execMenuCmd(strm, menuShtFx, cmd, this, "SHT35 Menu");
 }
+
+#endif //DEV_SHT35
 

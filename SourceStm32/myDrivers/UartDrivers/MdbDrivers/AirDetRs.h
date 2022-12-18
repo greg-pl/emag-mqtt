@@ -8,6 +8,9 @@
 #ifndef AIRDETRS_H_
 #define AIRDETRS_H_
 
+#include <ProjectConfig.h>
+#if (DEV_AIR_DET_RS)
+
 #include <MdbMasterTask.h>
 
 typedef struct {
@@ -84,10 +87,12 @@ public:
 public:
 	//Unidev
 	virtual bool getMeasValue(MeasType measType, float *val);
-	virtual bool isAnyConfiguredData();
+	virtual bool isMeasServiced(MeasType measType);
 	virtual bool isDataError();
 	virtual void getDeviceStatusTxt(char *txt, int max);
 
 };
+
+#endif  //DEV_AIR_DET_RS
 
 #endif /* AIRDETRS_H_ */
