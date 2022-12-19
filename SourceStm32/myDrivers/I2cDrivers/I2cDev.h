@@ -17,6 +17,7 @@
 #define FILTR_FACTOR    0.8
 #define TIME_DT_RD      2000
 #define TIME_DT_VALID   5000
+#define TIME_REINIT	    6000
 
 class I2cBus;
 

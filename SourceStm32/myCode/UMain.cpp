@@ -99,7 +99,7 @@ SEC_LABEL char DevLabel[] = "TTT             "
 		"                "
 		"                "
 		"****************"
-		"*    AIR-PRO   *"
+		DEVICE_NAME
 		"*              *"
 		"****************";
 

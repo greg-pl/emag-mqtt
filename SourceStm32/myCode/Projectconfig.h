@@ -1,5 +1,33 @@
 #pragma once
 
+//Hardware type definition
+#define DEVICE_AIR_PRO        1
+#define DEVICE_S872     	  2
+
+#define DEVICE_TYP              DEVICE_S872
+
+#if (DEVICE_TYP==DEVICE_AIR_PRO)
+
+#define DEVICE_NAME      		"*    AIR-PRO   *"
+
+#define ETHERNET				1
+#define LED_MATRIX 				0
+#define SSD1306 				0
+#define HEATER   				1
+#define TEMP_NTC	        	1
+
+#define DEV_BMP338				1
+#define DEV_SHT35				1
+#define DEV_S873				0
+#define DEV_AIR_DET_RS			1
+#define DEV_NOISE       		1
+
+#define FORCE_S873				0
+
+#elif (DEVICE_TYP==DEVICE_S872)
+
+#define DEVICE_NAME     		"*    _S872__   *"
+
 #define ETHERNET				0
 #define LED_MATRIX 				0
 #define SSD1306 				0
@@ -12,8 +40,13 @@
 #define DEV_AIR_DET_RS			0
 #define DEV_NOISE       		0
 
-#define DEV_GAS                 (DEV_S873 || DEV_AIR_DET_RS)
+#define FORCE_S873				1  // measurements from S873 more important
 
+#endif
+
+
+
+#define DEV_GAS                 (DEV_S873 || DEV_AIR_DET_RS)
 
 #define DEV_DUST_PMSA   	    0
 #define DEV_DUST_PMS5003ST  	0  // with Formaldehyde sensor
@@ -44,4 +77,6 @@
 #define SENSOR_CO2              (DEV_S873)
 
 
-#define FORCE_S873				1  // mesurements from S873 more important
+
+
+

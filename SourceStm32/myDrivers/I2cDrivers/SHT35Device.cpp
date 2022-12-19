@@ -351,9 +351,15 @@ void SHT35Device::tick() {
 	if (tt - meas.mReadTick > TIME_DT_RD) {
 		if (tt - mLastTryRdTick > 200) {
 			mLastTryRdTick = tt;
+			if (tt - meas.mReadTick > TIME_REINIT) {
+				mMeasStart = StartPeriodicMeasurment(REPEATAB_HIGH, FREQUENCY_2HZ);
+			}
 			readData();
 		}
 	}
+
+
+
 }
 
 void SHT35Device::showAlert(OutStream *strm) {
