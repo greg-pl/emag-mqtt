@@ -59,10 +59,10 @@ const CpxDescr SensorOnOffDscr[] = { //
 		{ ctype : cpxBOOL, id:1, ofs: ssTEMPERATURE, Name : "existSensTemper", size : sizeof(bool) }, //
 #endif
 #if (SENSOR_HUMIDITY)
-		{ ctype : cpxBOOL, id:2, ofs: ssHUMIDITY, Name : "existSensHumidity", size: sizeof(bool) }, //
+				{ ctype : cpxBOOL, id:2, ofs: ssHUMIDITY, Name : "existSensHumidity", size: sizeof(bool) }, //
 #endif
 #if (SENSOR_PRESSURE)
-		{ ctype : cpxBOOL, id:3, ofs: ssPRESSURE, Name : "existSensPressure", size: sizeof(bool) }, //
+				{ ctype : cpxBOOL, id:3, ofs: ssPRESSURE, Name : "existSensPressure", size: sizeof(bool) }, //
 #endif
 #if(SENSOR_DUST)
 				{ ctype : cpxBOOL, id:4, ofs: ssPM1_0, Name : "existSensPM1_0", size: sizeof(bool) }, //
@@ -252,6 +252,14 @@ const CpxDescr RestCfgDescr[] = { //
 				{ ctype : cpxINT, id:10, ofs: offsetof(RestCfg, noiseFiltrFIRLength), Name : "NoiseFiltrFIRLength", size : sizeof(RestCfg::noiseFiltrFIRLength) }, //
 				{ ctype : cpxFLOAT, id:11, ofs: offsetof(RestCfg, noiseFiltrIRConst), Name : "NoiseFiltrIRConst", size : sizeof(RestCfg::noiseFiltrIRConst) }, //
 #endif
+#if(DEV_SHT35)
+				{ ctype : cpxBOOL, id:12, ofs: offsetof(RestCfg, Sht23Active), Name : "Sht23Active", size: sizeof(RestCfg::Sht23Active) }, //
+#endif
+#if(DEV_BMP338)
+				{ ctype : cpxBOOL, id:13, ofs: offsetof(RestCfg, Bmp338Active), Name : "Bmp338Active", size: sizeof(RestCfg::Bmp338Active) }, //
+
+#endif
+
 				{ ctype : cpxNULL } };
 
 const CpxChildInfo restCfgGroup = { //
@@ -428,7 +436,6 @@ bool Config::checkRange(int v, int min, int max) {
 bool Config::Korekt() {
 	bool r = false;
 
-
 #if(SENSOR_NOISE)
 	if (data.R.rest.noiseFiltrType < 0 || data.R.rest.noiseFiltrType >= 3) {
 		data.R.rest.noiseFiltrType = 0;
@@ -599,6 +606,14 @@ void Config::Default() {
 #endif
 	for (int i = 1; i < SENSOR_CNT; i++)
 		data.R.sensExist[i] = 1;
+
+#if(DEV_SHT35)
+	data.R.rest.Sht23Active = false;
+#endif
+#if(DEV_BMP338)
+	data.R.rest.Bmp338Active = false;
+#endif
+
 #if (LED_MATRIX)
 	data.R.ledMatrix.limitTab[0] = 13;
 	data.R.ledMatrix.limitTab[1] = 35;

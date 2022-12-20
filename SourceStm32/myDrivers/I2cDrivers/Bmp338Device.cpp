@@ -192,6 +192,13 @@ bool Bmp338Device::isDataError() {
 	return (HAL_GetTick() - mLastRdDataTick > TIME_DT_VALID);
 }
 
+bool Bmp338Device::isAnyConfiguredData() {
+	bool q = UniDev::isAnyConfiguredData();
+	q &= config->data.R.rest.Bmp338Active;
+	return q;
+}
+
+
 bool Bmp338Device::isMeasServiced(MeasType measType) {
 	return (measType == ssTEMPERATURE) || (measType == ssPRESSURE);
 }

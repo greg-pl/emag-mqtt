@@ -421,11 +421,24 @@ static void funShowState(OutStream *strm, const char *cmd, void *arg) {
 			strm->oMsg("Gas S873        :%s", ErrOk(gasS873->isDataError()));
 		}
 #endif
+
+		const char *p;
 #if (DEV_SHT35)
-		strm->oMsg("Sht35           :%s", ErrOk(sht35->isDataError()));
+		if (sht35->isAnyConfiguredData()) {
+			p = ErrOk(sht35->isDataError());
+		} else {
+			p = "Not run";
+		}
+		strm->oMsg("Sht35           :%s", p);
 #endif
+
 #if(DEV_BMP338)
-		strm->oMsg("Bmp338          :%s", ErrOk(bmp338->isDataError()));
+		if (bmp338->isAnyConfiguredData()) {
+			p = ErrOk(bmp338->isDataError());
+		} else {
+			p = "Not run";
+		}
+		strm->oMsg("Bmp338          :%s", p);
 #endif
 
 		strm->oMsg("SIM card rdy    :%s", YN(bg96->isSimCardInserted()));
@@ -527,7 +540,7 @@ static void funShowDevList(OutStream *strm, const char *cmd, void *arg) {
 			UniDev *dev = UniDevTab::mDevTab[i];
 			strm->oMsgNN("%u. %-10s| ", i + 1, dev->getName());
 			for (int meas = 0; meas < SENSOR_CNT; meas++) {
-				if (dev->isMeasServiced((MeasType)meas)) {
+				if (dev->isMeasServiced((MeasType) meas)) {
 					strm->oMsgNN("%s,", GlobData::GetMeasName((MeasType) meas));
 				}
 			}

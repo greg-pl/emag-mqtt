@@ -15,7 +15,7 @@ protected:
 	char mName[16];
 public:
 	UniDev(const char *name);
-	bool isAnyConfiguredData();
+	virtual bool isAnyConfiguredData();
 	virtual bool isDataError() {
 		return false;
 	}

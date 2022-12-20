@@ -124,6 +124,8 @@ public:
 	virtual bool getMeasValue(MeasType measType, float *val);
 	virtual bool isMeasServiced(MeasType measType);
 	virtual bool isDataError();
+	virtual bool isAnyConfiguredData();
+
 	//virtual void getDeviceStatusTxt(char *txt, int max);
 
 };

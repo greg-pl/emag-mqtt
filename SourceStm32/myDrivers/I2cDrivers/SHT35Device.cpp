@@ -65,7 +65,7 @@ void SHT35Device::init() {
 	mDevExist = (checkDevMtx() == HAL_OK);
 
 	//SoftReset();
-	ReadSerialNumber (&serialNr);
+	ReadSerialNumber(&serialNr);
 	mMeasStart = StartPeriodicMeasurment(REPEATAB_HIGH, FREQUENCY_2HZ);
 	DisableHeater();
 	filterTemp.init(FILTR_FACTOR);
@@ -293,6 +293,11 @@ bool SHT35Device::isDataError() {
 	return (HAL_GetTick() - meas.mReadTick > TIME_DT_VALID);
 }
 
+bool SHT35Device::isAnyConfiguredData() {
+	bool q = UniDev::isAnyConfiguredData();
+	q &= config->data.R.rest.Sht23Active;
+	return q;
+}
 
 bool SHT35Device::isMeasServiced(MeasType measType) {
 	return (measType == ssTEMPERATURE) || (measType == ssHUMIDITY);
@@ -357,8 +362,6 @@ void SHT35Device::tick() {
 			readData();
 		}
 	}
-
-
 
 }
 

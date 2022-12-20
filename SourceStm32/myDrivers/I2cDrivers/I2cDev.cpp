@@ -288,7 +288,9 @@ void I2cBus::tick() {
 bool I2cBus::isDataError() {
 	bool q = 0;
 	for (int i = 0; i < devs.cnt; i++) {
-		q |= devs.tab[i]->isDataError();
+		if (devs.tab[i]->isAnyConfiguredData()) {
+			q |= devs.tab[i]->isDataError();
+		}
 	}
 	return q;
 }

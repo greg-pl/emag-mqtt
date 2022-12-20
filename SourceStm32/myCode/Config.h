@@ -222,6 +222,13 @@ typedef union {
 		int noiseFiltrFIRLength;
 		float noiseFiltrIRConst;
 #endif
+#if(DEV_SHT35)
+		bool Sht23Active;;
+#endif
+#if(DEV_BMP338)
+		bool Bmp338Active;;
+#endif
+
 	};
 } RestCfg;
 
